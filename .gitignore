@@ -122,3 +122,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+docs/source/sphinx_gallery_examples/index.rst
+console.py
