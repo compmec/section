@@ -7,25 +7,25 @@ Introduction
 
 Notations
 
-We use the notation :math:`\vec{u}` as a bidimensional vector, while :math:`\mathbf{u}` represents a :math:`n`-dimensional vector.
+We use the notation :math:`\mathbf{u}` as a bidimensional vector, while :math:`\mathbf{u}` represents a :math:`n`-dimensional vector.
 
 Operations between vectors
 --------------------------
 
-The inner product between two vectors is defined as :math:`\langle \vec{u}, \  \vec{v}\rangle`
+The inner product between two vectors is defined as :math:`\langle \mathbf{u}, \  \mathbf{v}\rangle`
 
 .. math::
-    \langle \vec{u}, \  \vec{v}\rangle = u_x \cdot v_x + u_y \cdot v_y
+    \langle \mathbf{u}, \  \mathbf{v}\rangle = u_x \cdot v_x + u_y \cdot v_y
 
 Between two :math:`n`-dimensional vectors
 
 .. math::
     \langle \mathbf{u}, \  \mathbf{v}\rangle = \sum_{i} u_i \cdot v_i
 
-The cross product between two bidimensional vectors :math:`\vec{u} \times \vec{v}` gives an scalar:
+The cross product between two bidimensional vectors :math:`\mathbf{u} \times \mathbf{v}` gives an scalar:
 
 .. math::
-    \vec{u} \times \vec{v} = u_x \cdot v_y - u_y \cdot v_x
+    \mathbf{u} \times \mathbf{v} = u_x \cdot v_y - u_y \cdot v_x
 
 
 ===============
@@ -34,14 +34,21 @@ Basic geometric
 
 
 
-The geometric properties
+The most basic geometric properties are
 
+* Area
 .. math::
     A = \int_{\Omega} \ dx \ dy
+
+* First moment of area
+
 .. math::
-    S_x = \int_{\Omega} x \ dx \ dy
+    Q_x = \int_{\Omega} x \ dx \ dy
 .. math::
-    S_y = \int_{\Omega} y \ dx \ dy
+    Q_y = \int_{\Omega} y \ dx \ dy
+
+* Second moment of area
+
 .. math::
     I_{xx} = \int_{\Omega} x^2 \ dx \ dy
 .. math::
@@ -50,26 +57,135 @@ The geometric properties
     I_{yy} = \int_{\Omega} y^2 \ dx \ dy
 
 
+
 =======
 Torsion
 =======
 
-From Saint-venant theory, the warping function :math:`\phi(x, \ y)` is used to compute stress when torsion moments are applied.
+From Saint-venant theory, the warping function :math:`\omega(x, \ y)` is used to compute stresses when torsion is applied.
 
 .. math::
-    \nabla^2 \phi = 0
+    \nabla^2 \omega = 0
 
 .. math::
-    \left\langle \nabla \phi, \ \vec{n}\right\rangle = \vec{n} \times \vec{p}
+    \left\langle \nabla \omega, \ \mathbf{n}\right\rangle = \mathbf{n} \times \mathbf{p}
 
-With :math:`\vec{p} = (x, \ y)`.
+With :math:`\mathbf{p} = (x, \ y)` begin a point on the boundary. The boundary condition can be rewriten as
 
-This function is computed by boundary element method (see bellow).
-Once :math:`\phi` is found, the stress can be computed 
+.. math::
+    \left\langle \nabla \omega, \ \mathbf{n}\right\rangle = \dfrac{\langle \mathbf{p}', \ \mathbf{p} \rangle}{\|\mathbf{p}'\|} 
+
+This function is found by :ref:`boundary_element_method`.
+
+Once :math:`\phi` is found, the torsion constant can be computed
+
+.. math::
+    J = I_{xx} + I_{yy} - \int_{\Omega} y \dfrac{\partial \omega}{\partial x} - x \dfrac{\partial \omega}{\partial y} \ dx \ dy
+
+Since we use boundary methods, we rewrite as
+
+.. math::
+    J = I_{xx} + I_{yy} - \int_{\Gamma} \phi \cdot \dfrac{\langle \mathbf{p}, \ \mathbf{p}'\rangle}{\|\mathbf{p}'\|} \ d\Gamma
+
+
+.. _shear_properties:
+
+================
+Shear properties
+================
+
+Main shear properties are:
+
+* Shear center
+
+.. note::
+    For now, assume :math:`I_{xx} = I_{\bar{xx}}` and so on
+
+Functions :math:`\Psi` and :math:`\Phi` are used:
+
+.. math::
+    \nabla^2 \Psi = 2\left(- I_{xx} \cdot x + I_{xy} \cdot y \right)
+
+.. math::
+    \nabla^2 \Phi = 2\left(I_{xy} \cdot x - I_{yy} \cdot y\right)
+
+And boundary conditions
+
+.. math::
+    \left\langle\nabla \Psi, \ \mathbf{n}\right\rangle = \left\langle\mathbf{h}_{x}, \mathbf{n}\right\rangle
+.. math::
+    \left\langle \nabla \Phi, \ \mathbf{n}\right\rangle = \left\langle\mathbf{h}_{y}, \mathbf{n}\right\rangle
+.. math::
+    \mathbf{h}_{x} = \dfrac{\nu}{2}\left(I_{xx}\begin{bmatrix}1 & 0 & -1 \\ 0 & 1 & 0\end{bmatrix}+ I_{xy}\begin{bmatrix}0 & -1 & 0 \\ 1 & 0 & -1\end{bmatrix}\right)\begin{bmatrix}x^2 \\ 2xy \\ y^2\end{bmatrix}
+.. math::
+    \mathbf{h}_{y} = \dfrac{\nu}{2}\left(I_{xy}\begin{bmatrix}-1 & 0 & 1 \\ 0 & -1 & 0\end{bmatrix}+ I_{yy}\begin{bmatrix}0 & 1 & 0 \\ -1 & 0 & 1\end{bmatrix}\right)\begin{bmatrix}x^2 \\ 2xy \\ y^2\end{bmatrix}
+
+Both equations are in fact Poisson equations.
+We solve an equavalent problem by using the solution for homogeneous problem.
+Set :math:`\Psi^{*}` and :math:`\Phi^{*}` as
+
+.. math::
+    \Psi^{*} = \dfrac{1}{4}\left(x^2+y^2\right)\left(-I_{xx} \cdot x + I_{xy} \cdot y\right)
+
+.. math::
+    \Phi^{*} = \dfrac{1}{4}\left(x^2+y^2\right)\left(I_{xy} \cdot x - I_{yy} \cdot y\right)
+
+Note that :math:`\Psi^{\star} = \Psi - \Psi^{*}` and :math:`\Phi^{\star} = \Phi - \Phi^{*}` satisfy the Laplace equation with the boundary conditions
+
+.. math::
+    \nabla^2 \Psi^{\star} = 0
+
+.. math::
+    \nabla^2 \Phi^{\star} = 0
+
+.. math::
+    \left\langle \Psi^{\star}, \ \mathbf{n}\right\rangle = \left\langle \mathbf{g}_x, \mathbf{n}\right\rangle
+.. math::
+    \left\langle \Phi^{\star}, \ \mathbf{n}\right\rangle =\left\langle \mathbf{g}_{y}, \mathbf{n}\right\rangle
+
+.. math::
+    \mathbf{g}_x = \left(-I_{xx} \begin{bmatrix}\frac{3-2\nu}{4} & 0 & \frac{1+2\nu}{4} \\ 0 & \frac{1-2\nu}{4} & 0\end{bmatrix} + I_{xy}\begin{bmatrix}0 & \frac{1-2\nu}{4} & 0 \\ \frac{1+2\nu}{4} & 0 & \frac{3-2\nu}{4}\end{bmatrix}\right)\begin{bmatrix}x^2 \\ 2xy \\ y^2\end{bmatrix}
+.. math::
+    \mathbf{g}_y = \left(I_{xy}\begin{bmatrix}\frac{3-2\nu}{4} & 0 & \frac{1+2\nu}{4} \\ 0 & \frac{1-2\nu}{4} & 0\end{bmatrix} - I_{yy}\begin{bmatrix}0 & \frac{1-2\nu}{4} & 0 \\ \frac{1+2\nu}{4} & 0 & \frac{3-2\nu}{4}\end{bmatrix}\right)\begin{bmatrix}x^2 \\ 2xy \\ y^2\end{bmatrix}
+
+======
+Others
+======
+
+There are some other metrics like
+
+.. math::
+    Q_{\omega} = \int_{\Omega} \omega \ dx \ dy = \dfrac{1}{2}\int_{\Gamma} w \cdot \mathbf{p} \times \mathbf{p}' \ d\Gamma - \dfrac{1}{4}\int_{\Gamma}\langle \mathbf{p}, \ \mathbf{p}\rangle \cdot \dfrac{\langle \mathbf{p}, \ \mathbf{p}'\rangle}{\|\mathbf{p}'\|}
+
+.. math::
+    I_{x\omega} = \int_{\Omega} x \cdot \omega \ dx \ dy
+
+.. math::
+    I_{y\omega} = \int_{\Omega} y \cdot \omega \ dx \ dy
+.. math::
+    I_{\omega\omega} = \int_{\Omega} \omega^2 \ dx \ dy
+
+
+.. _stress:
+
+=================
+Stress and Strain
+=================
+
+The stress in a beam is given by
+
+.. math::
+    \mathbf{\sigma} = \begin{bmatrix}\sigma_{xx} & \tau_{xy} & \tau_{xz} \\ \tau_{xy} & 0 & 0 \\ \tau_{xz} & 0 & 0\end{bmatrix}
+
+While the strain is given by
+
+
+.. math::
+    \mathbf{\varepsilon} = \begin{bmatrix}\varepsilon_{xx} & \varepsilon_{xy} & \varepsilon_{xz} \\ \varepsilon_{xy} & 0 & 0 \\ \varepsilon_{xz} & 0 & 0\end{bmatrix}
 
 
 
-
+.. _boundary_element_method:
 
 =======================
 Boundary element method
@@ -86,16 +202,17 @@ The boundary element method is used to find numerically the Laplace equation
 This method transforms the PDE into a boundary version
 
 .. math::
-    \xi\left(\vec{s}\right) \cdot u\left(\vec{s}\right) = \int_{\Gamma} u \cdot \dfrac{\partial v}{\partial n} \ d\Gamma - \int_{\Gamma} \dfrac{\partial u}{\partial n}  \cdot v \ d\Gamma
+    \xi\left(\mathbf{s}\right) \cdot u\left(\mathbf{s}\right) = \int_{\Gamma} u \cdot \dfrac{\partial v}{\partial n} \ d\Gamma - \int_{\Gamma} \dfrac{\partial u}{\partial n}  \cdot v \ d\Gamma
 
-Which :math:`\vec{s}` is the source point of the Green function :math:`v` and :math:`\xi(\vec{s})` is the winding number.
+Which :math:`\mathbf{s}` is the source point of the Green function :math:`v` and :math:`\xi(\mathbf{s})` is the winding number.
 
 .. math::
-    v = \dfrac{1}{2\pi} \ln r = \dfrac{1}{2\pi} \ln \|\vec{p} - \vec{s}\|
+    v = \dfrac{1}{2\pi} \ln r = \dfrac{1}{2\pi} \ln \|\mathbf{p} - \mathbf{s}\|
 
-Since the gives all the values of :math:`\dfrac{\partial u}{\partial n}`, the principia is find all the values of :math:`u` at the boundary. With :math:`u` and :math:`\dfrac{\partial u}{\partial n}` known at the boundary, it's possible to compute :math:`u(x, y)` at any point inside.
+Since all laplace's equations so far have only Neumann's boundary condtions, it known all the values of :math:`\dfrac{\partial u}{\partial n}`, the principia is find all the values of :math:`u` at the boundary.
+Once :math:`u` and :math:`\dfrac{\partial u}{\partial n}` known at the boundary, it's possible to compute :math:`u(x, y)` at any point inside.
 
-Parametrizing the curve :math:`\Gamma` by :math:`\vec{p}(t)`, fixing the source point :math:`\vec{s}_i = \vec{p}(t_i)` at the boundary, and setting :math:`u` as a linear combination of :math:`n` basis functions :math:`\varphi` and weights :math:`\mathbf{U}`
+Parametrizing the curve :math:`\Gamma` by :math:`\mathbf{p}(t)`, fixing the source point :math:`\mathbf{s}_i = \mathbf{p}(t_i)` at the boundary, and setting :math:`u` as a linear combination of :math:`n` basis functions :math:`\varphi` and weights :math:`\mathbf{U}`
 
 .. math::
     u(t) = \sum_{j=0}^{n-1} \varphi_j(t) \cdot U_j
@@ -106,7 +223,7 @@ Parametrizing the curve :math:`\Gamma` by :math:`\vec{p}(t)`, fixing the source 
 With the auxiliar values which depends only on the geometry, the source point and the basis functions
 
 .. math::
-    E_{ij} = 2\pi \cdot \xi\left(\vec{s}_i\right) \cdot \varphi_j\left(t_i\right)
+    E_{ij} = 2\pi \cdot \xi\left(\mathbf{s}_i\right) \cdot \varphi_j\left(t_i\right)
 
 .. math::
     H_{ij} = 2\pi \int_{\Gamma} \varphi_j \cdot \dfrac{\partial v_i}{\partial n} \ d\Gamma
@@ -114,7 +231,7 @@ With the auxiliar values which depends only on the geometry, the source point an
 .. math::
     G_{i} = 2\pi \int_{\Gamma} \dfrac{\partial u}{\partial n} \cdot v_i \ d\Gamma
 
-Applying for :math:`n` different source points :math:`\vec{s}_i`, we get the matrices :math:`E`, :math:`H` and :math:`\mathbf{G}` such
+Applying for :math:`n` different source points :math:`\mathbf{s}_i`, we get the matrices :math:`E`, :math:`H` and :math:`\mathbf{G}` such
 
 .. math::
     \left(H-E\right) \cdot \mathbf{U} = \mathbf{G}
@@ -127,12 +244,12 @@ Matrix H
 We use
 
 .. math::
-    \dfrac{\partial v}{\partial n} ds = \dfrac{1}{2\pi} \cdot \dfrac{\vec{r} \times \vec{p}'}{\left\langle\vec{r}, \ \vec{r}\right\rangle}
+    \dfrac{\partial v}{\partial n} ds = \dfrac{1}{2\pi} \cdot \dfrac{\mathbf{r} \times \mathbf{p}'}{\left\langle\mathbf{r}, \ \mathbf{r}\right\rangle}
 
 to write
 
 .. math::
-    H_{ij} = \int_{t_{min}}^{t_{max}} \varphi_{j}(t) \cdot \dfrac{\vec{r} \times \vec{p}'}{\left\langle\vec{r}, \ \vec{r}\right\rangle} \ dt
+    H_{ij} = \int_{t_{min}}^{t_{max}} \varphi_{j}(t) \cdot \dfrac{\mathbf{r} \times \mathbf{p}'}{\left\langle\mathbf{r}, \ \mathbf{r}\right\rangle} \ dt
 
 Vector :math:`G`
 ^^^^^^^^^^^^^^^^
@@ -142,43 +259,59 @@ This depends on the Neumann's boundary condition.
 * For warping function
 
     .. math::
-        \dfrac{\partial u}{\partial n} = \left\langle \nabla u, \ \vec{n}\right\rangle = \vec{n} \times \vec{p}
+        \dfrac{\partial u}{\partial n} = \mathbf{n} \times \mathbf{p}
 
     .. math::
-        G_i = \int_{t_{min}}^{t_{max}} \left\langle p, \ p'\right\rangle \cdot \ln r
+        G_i = \int_{t_{min}}^{t_{max}} \left\langle \mathbf{p}, \ \mathbf{p}'\right\rangle \cdot \ln r \ dt
+
+* For shear properties
+
+    .. math::
+        \dfrac{\partial u}{\partial n} = \left\langle \mathbf{h}, \ \mathbf{n}\right\rangle
+    
+    .. math::
+        G_i = \int_{t_{min}}^{t_{max}} \begin{bmatrix}y' & -x'\end{bmatrix}\begin{bmatrix}\square & \square & \square \\ \square & \square & \square \end{bmatrix}\begin{bmatrix}x^2 \\ 2xy \\ y^2\end{bmatrix} \cdot \ln r \ dt
 
 Winding number
 ^^^^^^^^^^^^^^^
 
-This number is the mesure if a given point is inside the domain :math:`\Omega`.
+This number is the mesure for a given point with respect to its position to the domain :math:`\Omega`.
 
 .. math::
-    \xi\left(\vec{s}\right) = \begin{cases}0 \ \ \ \ \ \ \ \ \text{if} \ \vec{s} \notin \Omega \\ \dfrac{\alpha}{2\pi} \ \ \ \ \text{if} \ \vec{s} \in \partial \Omega \\   1 \ \ \ \ \ \ \ \ \text{if} \ \vec{s} \in \Omega \end{cases}
+    \xi\left(\mathbf{s}\right) = \begin{cases}0 \ \ \ \ \ \ \ \ \text{if} \ \mathbf{s} \notin \Omega \\ \dfrac{\alpha}{2\pi} \ \ \ \ \text{if} \ \mathbf{s} \in \partial \Omega \\   1 \ \ \ \ \ \ \ \ \text{if} \ \mathbf{s} \in \Omega \end{cases}
 
-Now, suppose that :math:`\vec{s}` is on the boundary. Then exists a value :math:`\tau` such :math:`\vec{p}(\tau) = \vec{s}` and the angle :math:`\alpha` is computed by
-
-.. math::
-    \vec{v}_0 = \lim_{\delta \to 0^{+}} \vec{p}'\left(\tau - \delta\right)
+Now, suppose that :math:`\mathbf{s}` is on the boundary. Then exists a value :math:`\tau` such :math:`\mathbf{p}(\tau) = \mathbf{s}` and the angle :math:`\alpha` is computed by
 
 .. math::
-    \vec{v}_1 = \lim_{\delta \to 0^{+}} \vec{p}'\left(\tau + \delta\right)
+    \mathbf{v}_0 = \lim_{\delta \to 0^{+}} \mathbf{p}'\left(\tau - \delta\right)
 
 .. math::
-    \alpha = \arg\left(\langle\vec{v_0}, \ \vec{v_1} \rangle + i \cdot \left(\vec{v_0} \times \vec{v_1}\right)\right)
+    \mathbf{v}_1 = \lim_{\delta \to 0^{+}} \mathbf{p}'\left(\tau + \delta\right)
+
+.. math::
+    \alpha = \arg\left(\langle\mathbf{v_0}, \ \mathbf{v_1} \rangle + i \cdot \left(\mathbf{v_0} \times \mathbf{v_1}\right)\right)
 
 .. note::
     In python code, it's in fact used ``alpha = arctan2(cross(v0, v1), inner(v0, v1))``
 
-If :math:`\vec{p}\left(\tau\right)` is not a corner (it's a smooth region and first derivative of :math:`\vec{p}` is continuous), then the winding number is :math:`\dfrac{1}{2}`.
+For smooth regions, the first derivative of :math:`\mathbf{p}` is continuous and therefore then :math:`\alpha = \pi`.
 
 
 Computing matrices
 ^^^^^^^^^^^^^^^^^^
 
-The matrices highly depend on the basis functions :math:`\varphi`, which were not yet defined.
+The matrices highly depend on the basis functions :math:`\varphi`.
 
-In the expressions of :math:`H_{ij}` and :math:`G_{i}`, there are the terms :math:`\dfrac{1}{r}` and :math:`\ln r`, which makes these integrals singular.
-The main idea to compute them is decompose the integral in intervals, use standard techniques for intervals which :math:`r\ne 0` (called outside integration), and make special methods for elements when :math:`r=0` inside an interval.
+To compute the coefficients :math:`H_{ij}` and :math:`G_{i}`, it's used numerical integration, like Gaussian-Quadrature.
+Unfortunatelly, when :math:`r\approx 0` the integrants are singular and special techniques are required.
+
+The main idea to compute them is decompose the integral in intervals, use standard techniques for intervals which :math:`r\ne 0` (called outside integration), and make special methods for elements when :math:`r=0` inside an interval (called inside integration).
+
+* **Outside integration**: uses :ref:`regular_integrals` for elements which :math:`r\ne 0` for every point in the element
+
+* **Inside integration**: uses :ref:`singular_integrals` for elements which :math:`r=0`
+
+
 
 
 
@@ -194,21 +327,44 @@ Let's say the parametric space :math:`t` is divided by the knots :math:`t_0`, :m
 The function :math:`\varphi_{j}(t)` is represented by
 
 .. math::
-    \varphi_{j}(t) = \begin{cases}\frac{t - t_{j-1}}{t_{j}-t_{j-1}} \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \text{if} \ t_{j-1} \le t < t_{j} \\ \left(\frac{t_{j+1} - t}{t_{j+1}-t_{j}}\right) \ \ \ \ \ \text{if} \ t_{j} \le t < t_{j+1} \\ 0 \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \text{else}  \end{cases}
+    \varphi_{j}(t) = \begin{cases}\frac{t - t_{j-1}}{t_{j}-t_{j-1}} \ \ \ \ \ \text{if} \ t_{j-1} \le t < t_{j} \\ \frac{t_{j+1} - t}{t_{j+1}-t_{j}} \ \ \ \ \ \text{if} \ t_{j} \le t < t_{j+1} \\ 0 \ \ \ \ \ \ \ \ \ \ \ \ \ \ \text{else}  \end{cases}
 
-Call :math:`\vec{P}_{j} = (x_j, \ y_j)` the vertex :math:`j`, then
-
-.. math::
-    \vec{p}(t) = \sum_{j=0}^{n} \varphi_{j}(t) \cdot \vec{P}_{j}
-
-For the interval :math:`\left(t_{j}, \ t_{j+1}\right)`
+Call :math:`\mathbf{P}_{j} = (x_j, \ y_j)` the vertex :math:`j`, then
 
 .. math::
-    \vec{p}(t) = \dfrac{t-t_{j}}{t_{j+1}-t_{j}} \cdot \vec{P}_{j} + \dfrac{t-t_{j}}{t_{j+1}-t_{j}} \cdot \vec{P}_{j+1}
+    \mathbf{p}(t) = \sum_{j=0}^{n} \varphi_{j}(t) \cdot \mathbf{P}_{j}
+
+For the interval :math:`\mathbb{I}_{j} = \left(t_{j}, \ t_{j+1}\right)`
 
 .. math::
-    \vec{p}'(t) = \vec{P}_{j+1} - \vec{P}_j
+    \mathbf{p}(t) = \dfrac{t-t_{j}}{t_{j+1}-t_{j}} \cdot \mathbf{P}_{j} + \dfrac{t-t_{j}}{t_{j+1}-t_{j}} \cdot \mathbf{P}_{j+1}
 
+.. math::
+    \mathbf{p}'(t) = \mathbf{P}_{j+1} - \mathbf{P}_j
+
+And then
+
+.. math::
+    \mathbf{r}(t) = \mathbf{p}(t) - \mathbf{P}_i
+
+Matrix :math:`H`
+^^^^^^^^^^^^^^^^
+
+Since 
+
+.. math::
+    H_{ij} = \int_{t_{min}}^{t_{max}} \varphi_{j} \cdot \dfrac{\mathbf{r} \times \mathbf{p}'}{\left\langle \mathbf{r}, \mathbf{r}\right\rangle} dt = \sum_{k=0}^{n-1} H_{ijk} 
+
+.. math::
+    H_{ijk} = \int_{t_{k}}^{t_{k+1}} \varphi_{j} \cdot \dfrac{\mathbf{r} \times \mathbf{p}'}{\left\langle \mathbf{r}, \mathbf{r}\right\rangle} dt
+
+* For outside integral, when :math:`k\ne i-1` or :math:`k \ne i`, then $H_{ij}$ is computed by :ref:`regular_integrals`.
+
+* For the integrals over the intervals :math:`\left[t_{i-1}, \ t_{i}\right]` and :math:`\left[t_{i}, \ t_{i+1}\right]`, then we divide it into parts:
+
+
+.. math::
+    H_{ij} = \sum_{k=0}^{n-1} \int_{t_{k}}^{t_{k+1}} \varphi_{j} \cdot \dfrac{\mathbf{r} \times \mathbf{p}'}{\left\langle \mathbf{r}, \mathbf{r}\right\rangle} \ dt = \sum_{k=0}^{n-1} \int_{0}^{1} \varphi_{j} \cdot \dfrac{\left(\mathbf{p}_j\times\mathbf{p}_i\right)}{\left\langle \mathbf{r}, \mathbf{r}\right\rangle} \ dt
 
 
 
@@ -243,6 +399,8 @@ Then
 
 .. math::
     I_{a, b} = \dfrac{\alpha - 1}{b+1} \int_{\Gamma} x^{a} \cdot y^{b+1} \ dx + \dfrac{\alpha}{a+1} \int_{\Gamma} x^{a+1} \cdot y^b \ dy
+
+.. _regular_integrals:
 
 Regular integrals
 ------------------
