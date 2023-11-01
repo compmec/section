@@ -5,9 +5,22 @@ from compmec.shape.shape import DefinedShape, IntegrateShape
 
 from compmec.section.material import Material
 
+from .bem2d import WarpingFunction
+
 
 class Section:
-    def __init__(self, shapes: Tuple[DefinedShape], materials: Tuple[Material]):
+    """
+    Section's class
+
+
+    """
+
+    def __init__(
+        self,
+        shapes: Tuple[DefinedShape],
+        materials: Tuple[Material],
+        reference: float = None,
+    ):
         for shape in shapes:
             if not isinstance(shape, DefinedShape):
                 raise TypeError
@@ -20,6 +33,8 @@ class Section:
         self.__first = None
         self.__second = None
         self.__weight = True
+        self.__warping = None
+        self.__reference = reference
 
     def __iter__(self) -> Tuple[DefinedShape, Material]:
         for shape, material in zip(self.__shapes, self.__materials):
@@ -71,7 +86,7 @@ class Section:
                 values[i, 0, 0] += IntegrateShape.polynomial(shape, 2, 0)
                 values[i, 0, 1] += IntegrateShape.polynomial(shape, 1, 1)
                 values[i, 1, 1] += IntegrateShape.polynomial(shape, 0, 2)
-            values[:, 1, 0] = values[:, 1, 0]
+            values[:, 1, 0] = values[:, 0, 1]
             if self.weight:
                 weights = tuple(mat.young_modulus for mat in self.__materials)
                 self.__second = np.einsum("ijk,i->jk", values, weights) / max(weights)
@@ -86,7 +101,16 @@ class Section:
         return second - np.tensordot(first, first, axes=0) / area
 
     def torsion_constant(self) -> float:
-        raise NotImplementedError
+        if self.__warping is None:
+            shape = self.__shapes[0]
+            vertices = shape.jordans[0].vertices
+            vertices = tuple(tuple(map(np.float64, pt)) for pt in vertices)
+            self.__warping = WarpingFunction([vertices])
+            self.__warping.solve()
+        second = self.second_momentum()
+        polar = second[0, 0] + second[1, 1]
+        torsion = self.__warping.torsion_contribuition()
+        return polar - torsion
 
     def gyradius(self) -> Tuple[float]:
         area = self.area()
