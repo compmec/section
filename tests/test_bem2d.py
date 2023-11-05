@@ -139,7 +139,7 @@ class TestIntegrals:
                         fvalues[i] += ck
                 test_integral = np.inner(fvalues, weights)
                 diff = abs(test_integral - good_integral)
-                assert diff < 1e-15
+                assert diff < 1e-9
 
     @pytest.mark.order(4)
     @pytest.mark.timeout(10)

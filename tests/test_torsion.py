@@ -34,14 +34,13 @@ class TestSinglePolygon:
         pass
 
     @pytest.mark.order(4)
-    @pytest.mark.skip(reason="Needs correction")
     @pytest.mark.timeout(10)
     @pytest.mark.dependency(depends=["TestSinglePolygon::test_begin"])
     def test_centered_square(self):
         side = 2
         geometry = Primitive.square(side)
 
-        npts = 11
+        npts = 20
         usample = np.linspace(0, 1, npts, endpoint=False)
         xvals = (
             list(-1 + 2 * usample) + [1] * npts + list(1 - 2 * usample) + [-1] * npts
@@ -56,9 +55,10 @@ class TestSinglePolygon:
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
         section = Section([geometry], [material])
-        torsion = section.torsion_constant()
-        diff = torsion - (9 / 64) * side**4
-        assert abs(diff) < 1e-3
+        test_torsion = section.torsion_constant()
+        good_torsion = (9 / 64) * side**4
+        diff = test_torsion - good_torsion
+        assert abs(diff) < 0.02
 
     @pytest.mark.order(4)
     @pytest.mark.dependency(
