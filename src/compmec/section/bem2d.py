@@ -297,71 +297,100 @@ def IntegralUnV(vertices):
     return result
 
 
-def IntegrateUnV(vertices: Tuple[Tuple[float]]) -> Tuple[float]:
+def TorsionVector(vertices):
     """
     Computes the integral
 
-    2*pi * int_{Gamma} (du/dn) * v ds
+    I = int w * <p, p'> dt
+
+    In fact returns the vector
+
+    V = [V_0, ..., V_{n-1}]
 
     with
 
-    * u the objective function
-    * v the green function with source at S_i
-    S_i = closedcurve(source)
-
-    It in fact returns the vector like
-
-    A = [A_0, A_1, ..., A_{n-1}]
-
-    (n) is the number of degree of freedom
-
-    The integral is transformed to the equivalent
-
-    A_{ij} = 2*pi * sum_k int_{a_k}^{b_k} phi_j ln(r) * abs(p') dt
-
-    with r(t) = p(t) - S_i
+    V_j = int phi_j * <p, p'> dt
     """
-    vertices = np.array(vertices, dtype="float64")
     nverts = len(vertices)
     vectors = np.roll(vertices, -1, axis=0) - vertices
-    # normvectors = np.linalg.norm(vectors, axis=1)
-    alphs = np.einsum("ij,ij->i", vertices, vectors)
-    betas = np.einsum("ij,ij->i", vectors, vectors)
-    result = np.zeros(nverts, dtype="float64")
-    gauss_nodes, gauss_weights = Integration.gauss(5)
-    for i, Si in enumerate(vertices):
-        for j0, dVj in enumerate(vectors):
-            alp, bet = alphs[j0], betas[j0]
-            j1 = j0 % nverts
-            Vj0 = vertices[j0] - Si
-            if j0 == i:
-                # Associated with basis function (t)
-                result[i] -= alp + bet / 4
-                absdV = np.linalg.norm(dVj)
-                result[i] += (alp + bet / 2) * np.log(absdV)
-            elif j1 == i:
-                result[i] -= alp + 3 * bet / 4
-                # Associated with basis function (1-t)
-                absdV = np.linalg.norm(dVj)
-                result[i] += (alp + bet / 2) * np.log(absdV)
-            else:
-                radius = np.array(
-                    tuple(Vj0 + t * dVj for t in gauss_nodes), dtype="float64"
-                )
-                lnradius = np.log(np.linalg.norm(radius, axis=1))
-                phis = alp + bet * gauss_nodes
-                result[i] += np.einsum("i,i,i", phis, lnradius, gauss_weights)
+    result = np.zeros(len(vectors), dtype="float64")
+    nodes, weights = Integration.gauss(15)
+    phi1 = nodes  # Increase
+    phi2 = 1 - nodes  # Decrease
+    for j, vector in enumerate(vectors):
+        j1 = (j + 1) % nverts
+        points = vertices[j] + np.tensordot(nodes, vector, axes=0)
+        prods = np.einsum("ij,j->i", points, vector)
+        result[j] += np.einsum("i,i,i", prods, phi2, weights)
+        result[j1] += np.einsum("i,i,i", prods, phi1, weights)
     return result
 
 
-def CornerAngles(vertices):
-    """
-    Returns the value of the angle of each vertice
-    """
-    vectors0 = np.roll(vertices, -1, axis=0) - vertices
-    vectors1 = np.roll(vectors0, -1, axis=0)
-    crosses = tuple(np.cross(v0, v1) for v0, v1 in zip(vectors0, vectors1))
-    inners = tuple(np.inner(v0, v1) for v0, v1 in zip(vectors0, vectors1))
-    angles = tuple(np.arctan2(cross, inner) for cross, inner in zip(crosses, inners))
-    angles = np.array(angles, dtype="float64")
-    return angles
+class WarpingFunction:
+    def __init__(self, all_vertices: Tuple[Tuple[Tuple[float]]]):
+        self.__all_vertices = []
+        for vertices in all_vertices:
+            vertices = np.array(vertices, dtype="float64")
+            self.__all_vertices.append(vertices)
+        if len(self.__all_vertices) != 1:
+            msg = "For now, only 1 group of vertices is allowed"
+            raise ValueError(msg)
+        self.__all_vertices = tuple(self.__all_vertices)
+        self.__solution = None
+
+    def __mount_matrix(self):
+        vertices = self.__all_vertices[0]
+        matrix = IntegralUVn(vertices)
+        matrix -= np.pi * np.eye(len(matrix))
+        return matrix
+
+    def __warping_vector(self):
+        vertices = self.__all_vertices[0]
+        vector = IntegralUnV(vertices)
+        return vector
+
+    def __torsion_vector(self):
+        vertices = self.__all_vertices[0]
+        vector = TorsionVector(vertices)
+        return vector
+
+    def torsion_contribuition(self):
+        vector = self.__torsion_vector()
+        return np.inner(vector, self.__solution)
+
+    def solve(self):
+        matrix = self.__mount_matrix()
+        matrix = np.pad(matrix, ((0, 1), (0, 1)), constant_values=1)
+        matrix[-1, -1] = 0
+        vector = self.__warping_vector()
+        vector = np.pad(vector, (0, 1))
+        solution = np.linalg.solve(matrix, vector)
+        self.__solution = solution[:-1]
+
+    def eval_boundary(self, param: float) -> float:
+        pass
+
+    def eval_interior(self, point: Tuple[float]) -> float:
+        pass
+
+    def eval(self, points: Tuple[Tuple[float]]) -> float:
+        """
+        Evaluates the warping function at given point
+        """
+        raise NotImplementedError
+        points = np.array(points, dtype="float64")
+        values = np.zeros(len(points))
+        for i, point in enumerate(points):
+            param = projection(point)
+            projected_pt = curve(param)
+            if np.linalg.norm(projected_pt - point) < 1e-9:
+                values[i] = self.eval_boundary(param)
+            elif point in shape:
+                values[i] = self.eval_interior(point)
+        return values
+
+    def __call__(self, points: Union[Tuple[float], Tuple[Tuple[float]]]):
+        points = np.array(points, dtype="float64")
+        if points.ndim == 2:
+            return self.eval(points)
+        return self.eval([points])[0]
