@@ -202,52 +202,98 @@ class Integration:
         return nodes, weights
 
 
-def IntegrateUVn(vertices: Tuple[Tuple[float]]) -> Tuple[Tuple[float]]:
+def IntegralUVn(vertices):
     """
-    Computes the integral
+    Given vertices, this functions computes the matrix [H]
 
-    2*pi * int_{Gamma} u * (dv/dn) ds
+    H_ij = int_{Gamma} phi_j * dv/dn * dGamma
 
-    with
+    phi_j are the basis function
 
-    * u the objective function
-    * v the green function with source at S_i
-    S_i = closedcurve(source)
+    U(t) = sum_j U_j * phi_j
+    v = ln r -> dv/dn = (r x p')/(<r, r> * abs(p'))
+    H_{ij} = int_{tmin}^{tmax} phi_j * (r x p')/<r, r> dt
 
-    It in fact returns the vector like
+    For j != i, use standard gaussian integration
 
-    B = [B_0, B_1, ..., B_{n-1}]
+    For j == i,
+        p(t) = p_{i} + z * vec
+        r = (z-1/2) * vec
+        r x p' = 0
+        H_{ii} = 0
 
-    (n) is the number of degree of freedom
-
-    The integral is transformed to the equivalent
-
-    B_{ij} = 2*pi * sum_k int_{a_k}^{b_k} phi_j (r x p')/(r^2) dt
-
-    with r(t) = p(t) - S_i
     """
-    vertices = np.array(vertices, dtype="float64")
-    vectors = np.roll(vertices, -1, axis=0) - vertices
     nverts = len(vertices)
-    result = np.zeros((nverts, nverts), dtype="float64")
+    vectors = np.roll(vertices, -1, axis=0) - vertices
+    sources = 0.5 * (np.roll(vertices, -1, axis=0) + vertices)
+    matrix = np.zeros((nverts, nverts), dtype="float64")
+    nodes, weights = Integration.gauss(5)
+    phi1 = nodes  # Increase
+    phi2 = 1 - nodes  # Decrease
+    for i, source in enumerate(sources):
+        for j, vector in enumerate(vectors):
+            if j == i:
+                continue
+            j1 = (j + 1) % nverts
+            vect0 = vertices[j] - source
+            numera = np.cross(vect0, vector)  # r x p'
+            radius = vect0 + np.tensordot(nodes, vector, axes=0)
+            radsqu = np.einsum("ij,ij->i", radius, radius)  # <r, r>
+            funcvals = numera / radsqu
+            # Increase
+            val = np.einsum("i,i,i", phi1, weights, funcvals)
+            matrix[i, j1] += val
+            # Decrease
+            val = np.einsum("i,i,i", phi2, weights, funcvals)
+            matrix[i, j] += val
+    return matrix
 
-    gauss_nodes, gauss_weights = Integration.gauss(8)
-    for i, Si in enumerate(vertices):
-        # Source point at Si
-        for j0, dVj in enumerate(vectors):
-            # Integral over the segment j
-            # between points V[j] and V[j+1]
-            j1 = (j0 + 1) % nverts
-            Vj0 = vertices[j0] - Si
-            radius = tuple(Vj0 + t * dVj for t in gauss_nodes)
-            funcs = tuple(np.cross(rad, dVj) / np.inner(rad, rad) for rad in radius)
-            phi1 = gauss_nodes
-            phi2 = 1 - gauss_nodes
-            if j0 != i:
-                result[i, j0] += np.einsum("k,k,k", phi2, funcs, gauss_weights)
-            if j1 != i:
-                result[i, j1] += np.einsum("k,k,k", phi1, funcs, gauss_weights)
-        vertices += Si
+
+def IntegralUnV(vertices):
+    """
+    Given vertices, this functions computes the matrix [H]
+
+    G_i = int_{Gamma} du/dn * v * dGamma
+
+    du/dn = <p, p'>/abs(p')
+    v = ln r
+
+    G_i = int_{tmin}^{tmax} <p, p'> * ln(r) dt
+    G_i = sum_j int_{t_j}^{t_{j+1}} <p, p'> ln(r) dt
+
+    For j != i, then the integral is computed by gaussian quadrature
+
+    for j = i, then
+        vec = p_{i+1} - p_{i}
+        p(z) = p_{i} + z * vec
+        r(z) = p(z) - (p_i + p_{i+1})/2
+        r(z) = (z-1/2) * vec
+        a = <p_{i}, vec>
+        b = <vec, vec>
+        <p, p'> = a + z * b
+        ln |r| = ln |vec| + ln |z-1/2|
+
+        int_{t_{i-1}}^{t_i} <p, p'> ln |r| dt =
+        int_{0}^{1} (a + z * b) * (ln |vec| + ln |z-1/2|) dz =
+        (ln |vec| - 1 - ln(2)) * (a + b/2)
+
+    """
+    vectors = np.roll(vertices, -1, axis=0) - vertices
+    sources = 0.5 * (np.roll(vertices, -1, axis=0) + vertices)
+    avals = np.einsum("ij,ij->i", vertices, vectors)
+    bvals = np.einsum("ij,ij->i", vectors, vectors)
+    result = (avals + bvals / 2) * (0.5 * np.log(bvals) - 1 - np.log(2))
+    nodes, weights = Integration.gauss(5)
+    for i, source in enumerate(sources):
+        for j, vector in enumerate(vectors):
+            if j == i:
+                continue
+            points = vertices[j] + np.tensordot(nodes, vector, axes=0)
+            radius = points - source
+            lograds = np.log(np.einsum("ij,ij->i", radius, radius)) / 2  # ln(r)
+            funcvals = np.einsum("ij,j->i", points, vector)
+            val = np.einsum("i,i,i", lograds, weights, funcvals)
+            result[i] += val
     return result
 
 
