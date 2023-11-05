@@ -6,9 +6,11 @@
 # full list see the documentation:
 # http://www.sphinx-doc.org/en/master/config
 
-from sphinx_gallery.sorting import FileNameSortKey
-from sphinx_gallery.scrapers import matplotlib_scraper
+import os
+import sys
 
+from sphinx_gallery.scrapers import matplotlib_scraper
+from sphinx_gallery.sorting import FileNameSortKey
 
 # -- Path setup --------------------------------------------------------------
 
@@ -16,8 +18,6 @@ from sphinx_gallery.scrapers import matplotlib_scraper
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
-import os
-import sys
 
 sys.path.insert(0, os.path.abspath("../../src/compmec/"))
 from section import __version__ as ver
@@ -53,6 +53,8 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx_gallery.gen_gallery",
     "sphinx_design",
+    "sphinx.ext.mathjax",
+    "sphinx-mathjax-offline",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -153,7 +155,9 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(master_doc, "compmec-section", "compmec-section Documentation", [author], 1)]
+man_pages = [
+    (master_doc, "compmec-section", "compmec-section Documentation", [author], 1)
+]
 
 
 # -- Options for Texinfo output ----------------------------------------------
@@ -203,3 +207,9 @@ sphinx_gallery_conf = {
 # }
 
 # -- Extension configuration -------------------------------------------------
+
+numfig = True
+
+math_numfig = True
+numfig_secnum_depth = 2
+math_eqref_format = "Eq. ({number})"
