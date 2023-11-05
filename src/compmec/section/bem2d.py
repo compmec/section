@@ -6,7 +6,7 @@ nabla^2_u = f(x, y)
 
 """
 import math
-from typing import Tuple
+from typing import Tuple, Union
 
 import numpy as np
 
@@ -21,101 +21,116 @@ class Integration:
         """Return nodes and weights to integrate:
 
         .. math::
-            I = \\gauss_{0}^{1} f(x) \\cdot ln(x) dx
+            I = \\int_{0}^{1} f(x) \\cdot ln(x) dx
+
+        .. math::
+            I = \\sum_{i} f(x_i) \cdot w_i
+
+        Values extracted from BEM book
         """
         if not isinstance(npts, int) or npts <= 0:
             raise ValueError("npts must be a positive integer")
-        if npts == 1:
-            nodes = [0.36787_94411_71442_32159_55237_70161]
-            weights = [1]
-        elif npts == 2:
-            nodes = [
-                0.88296_86513_76530_11759_59513_85185e-1,
-                0.67518_64909_09887_20103_62743_16962,
-            ]
-            weights = [
-                0.29849_98937_05524_91470_84741_43289,
-                0.70150_01062_94475_08529_15258_56711,
-            ]
-        elif npts == 3:
-            nodes = [
-                0.28811_66253_09518_31174_32844_63059e-1,
-                0.30406_37296_12137_65261_08623_58639,
-                0.81166_92253_44078_11686_37051_77761,
-            ]
-            weights = [
-                0.10333_07079_64928_64676_92515_92664,
-                0.45463_65259_70098_70884_06911_21425,
-                0.44203_27660_64972_64439_00572_85911,
-            ]
-        elif npts == 4:
-            nodes = [
-                0.11802_59099_78449_18264_91730_11095e-1,
-                0.14282_56799_77483_69513_68513_69176,
-                0.48920_15226_54574_47871_90313_05699,
-                0.87867_99740_69183_70280_76889_06265,
-            ]
-            weights = [
-                0.43391_02877_84143_91101_89836_96321e-1,
-                0.24045_20976_59460_67597_84500_61567,
-                0.42140_34522_59775_93197_88150_24211,
-                0.29475_34213_02349_00094_08365_44590,
-            ]
-        elif npts == 5:
-            nodes = [
-                0.56522_28205_08009_71359_27256_19673e-2,
-                0.73430_37174_26522_73406_15889_38883e-1,
-                0.28495_74044_62558_15371_45276_01926,
-                0.61948_22640_84778_38140_68089_43051,
-                0.91575_80830_04698_33378_46091_80928,
-            ]
-            weights = [
-                0.21046_94579_18546_29119_00268_26421e-1,
-                0.13070_55407_44446_69759_10762_54992,
-                0.28970_23016_71314_15684_15903_51057,
-                0.35022_03701_20398_71028_55468_04135,
-                0.20832_48416_71985_80616_27839_07174,
-            ]
-        elif npts == 6:
-            nodes = [
-                0.30258_02137_54625_87097_29970_37526e-2,
-                0.40978_25415_59506_15053_46596_31089e-1,
-                0.17086_32955_26877_29472_51498_29786,
-                0.41325_57088_44793_24766_64814_55164,
-                0.70909_51467_90628_54395_00459_17084,
-                0.93823_95903_77167_09135_50205_94716,
-            ]
-            weights = [
-                0.11351_33881_72726_09440_49112_38284e-1,
-                0.75241_06995_49165_22917_35628_91092e-1,
-                0.18879_00416_15416_35460_95079_43772,
-                0.28582_07218_27227_31198_66834_80085,
-                0.28448_64278_91408_80004_51516_69844,
-                0.15431_03998_93758_40100_08094_93362,
-            ]
-        elif npts == 7:
-            nodes = [
-                0.17596_52118_46577_42805_62642_84949e-2,
-                0.24469_65071_25133_67427_64533_73497e-1,
-                0.10674_80568_58788_95418_02597_81083,
-                0.27580_76412_95917_38307_78595_12057,
-                0.51785_51421_51833_71615_86689_61982,
-                0.77181_54853_62384_90027_46468_69494,
-                0.95284_13405_81090_55899_43065_88503,
-            ]
-            weights = [
-                0.66326_66319_02570_51178_39049_89051e-2,
-                0.45799_70797_84753_34125_57673_48120e-1,
-                0.12384_02080_71318_19455_04895_64922,
-                0.21210_19260_23811_93010_79148_75456,
-                0.26139_06456_72007_72564_65806_06859,
-                0.23163_61802_90909_38431_88155_26104,
-                0.11859_86656_44451_72613_27836_41957,
-            ]
-        else:
+        if npts > 8:
             raise NotImplementedError
-        nodes = np.array(nodes, dtype="float64")
-        weights = np.array(weights, dtype="float64")
+
+        all_nodes = (
+            ("1.78b56362cef38p-2",),
+            ("1.cac9bef59e5f4p-4", "1.345da38f030f6p-1"),
+            ("1.05b25a2d35842p-4", "1.79da5dc3ea182p-2", "1.88a48902ba847p-1"),
+            (
+                "1.538bc35d9baf2p-5",
+                "1.f6bb8d47f68ddp-3",
+                "1.1cc1b7e469ad6p-1",
+                "1.b2add206cc41dp-1",
+            ),
+            (
+                "1.dd56d5450d669p-6",
+                "1.644e2a4bb324cp-3",
+                "1.a595587137bcbp-2",
+                "1.5ac8ec69e6a0ep-1",
+                "1.ca1f78ca0d19ep-1",
+            ),
+            (
+                "1.627398e53ec00p-6",
+                "1.09630458ec1b0p-3",
+                "1.418e93aaa2f0dp-2",
+                "1.13cae0f88f8a8p-1",
+                "1.838a6837c0e52p-1",
+                "1.d8680d3b5cbe6p-1",
+            ),
+            (
+                "1.11ee0f2c13284p-6",
+                "1.9a5c4c22ce7e7p-4",
+                "1.f8691e253f8d6p-3",
+                "1.bbddda9e320bdp-2",
+                "1.43c3823a84528p-1",
+                "1.9f4af0ce0ce4bp-1",
+                "1.e1b6d9d554160p-1",
+            ),
+            (
+                "1.b47a4e85dbb85p-7",
+                "1.46a862c74e6e4p-4",
+                "1.953d67fe41326p-3",
+                "1.6aa7583df4f58p-2",
+                "1.0f1531c27102cp-1",
+                "1.67543bebe45fcp-1",
+                "1.b2e1d8a662f24p-1",
+                "1.e81a678acec40p-1",
+            ),
+        )
+        all_weights = (
+            ("1.0000000000000p+0",),
+            ("1.6fe462b840500p-1", "1.20373a8f7f600p-2"),
+            ("1.06dcf622e93a3p-1", "1.91633746949acp-2", "1.838b71ce63c35p-4"),
+            (
+                "1.88d7b2183cef9p-2",
+                "1.8c28724ee498fp-2",
+                "1.85983ff68c584p-3",
+                "1.419ddcecc25b0p-5",
+            ),
+            (
+                "1.310afc7bff6b4p-2",
+                "1.662bbd372b9b9p-2",
+                "1.e03b658845f82p-3",
+                "1.95381b033c2dcp-4",
+                "1.35d8cc7e2f1abp-6",
+            ),
+            (
+                "1.e8fcec51fbfacp-3",
+                "1.3baf79b807afbp-2",
+                "1.f668fba1d2b19p-3",
+                "1.22d57ca996d0fp-3",
+                "1.c648c5a98474fp-5",
+                "1.4d376882a0614p-7",
+            ),
+            (
+                "1.91c141c07636ap-3",
+                "1.14ca376441e9dp-2",
+                "1.eade547018af3p-3",
+                "1.53823fda3d2f7p-3",
+                "1.6c4fbbbc1c6b5p-4",
+                "1.0fed8073ff8a0p-5",
+                "1.84cfa6343fde8p-8",
+            ),
+            (
+                "1.50b9a721cf1d1p-3",
+                "1.e673d3b819b4bp-3",
+                "1.d09287c3f569fp-3",
+                "1.67f1c12bc1e40p-3",
+                "1.ce896d8d7a3e3p-4",
+                "1.da16d28c29bd2p-5",
+                "1.57b89ce7dc83bp-6",
+                "1.e32f4be730620p-9",
+            ),
+        )
+        all_nodes = tuple(tuple(map(np.float64.fromhex, nodes)) for nodes in all_nodes)
+        all_weights = tuple(
+            tuple(map(np.float64.fromhex, weights)) for weights in all_weights
+        )
+        # https://dlmf.nist.gov/3.5#v
+
+        nodes = np.array(all_nodes[npts - 1], dtype="float64")
+        weights = -np.array(all_weights[npts - 1], dtype="float64")
         return nodes, weights
 
     def gauss(npts: int) -> Tuple[Tuple[float]]:
@@ -129,78 +144,61 @@ class Integration:
 
     def closed(npts: int) -> Tuple[Tuple[float]]:
         """Closed newton cotes formula"""
-        if not isinstance(npts, int) or npts < 1:
+        if not isinstance(npts, int) or npts < 2:
             raise ValueError(f"npts invalid: {npts}")
-        if npts == 1:
-            nodes = [0.5]
-            weights = [1]
-        elif npts == 2:
-            nodes = [0, 1]
-            weights = [0.5, 0.5]
-        elif npts == 3:
-            nodes = [0, 0.5, 1]
-            weights = [1 / 6, 2 / 3, 1 / 6]
-        elif npts == 4:
-            nodes = (0, 1 / 3, 2 / 3, 1 / 3)
-            weights = (1 / 8, 3 / 8, 3 / 8, 1 / 8)
-        elif npts == 5:
-            nodes = (0, 1 / 4, 1 / 2, 3 / 4, 1)
-            weights = (7 / 90, 16 / 45, 2 / 15, 16 / 45, 7 / 90)
-        elif npts == 6:
-            nodes = (0, 1 / 5, 2 / 5, 3 / 5, 4 / 5, 1)
-            weights = (19 / 288, 25 / 96, 25 / 144, 25 / 144, 25 / 96, 19 / 288)
-        elif npts == 7:
-            nodes = (0, 1 / 6, 1 / 3, 1 / 2, 2 / 3, 5 / 6, 1)
-            weights = (41 / 840, 9 / 35, 9 / 280, 45 / 105, 9 / 280, 9 / 35, 41 / 840)
-        else:
+        if npts > 7:
             raise NotImplementedError
-        nodes = np.array(nodes, dtype="float64")
-        weights = np.array(weights, dtype="float64")
+        nodes = np.linspace(0, 1, npts)
+        weights = (
+            (0.5, 0.5),
+            (1 / 6, 2 / 3, 1 / 6),
+            (1 / 8, 3 / 8, 3 / 8, 1 / 8),
+            (7 / 90, 16 / 45, 2 / 15, 16 / 45, 7 / 90),
+            (19 / 288, 25 / 96, 25 / 144, 25 / 144, 25 / 96, 19 / 288),
+            (41 / 840, 9 / 35, 9 / 280, 34 / 105, 9 / 280, 9 / 35, 41 / 840),
+        )
+        weights = np.array(weights[npts - 2], dtype="float64")
         return nodes, weights
 
     def chebyshev(npts: int) -> Tuple[Tuple[float]]:
         if not isinstance(npts, int) or npts < 1:
             raise ValueError(f"npts invalid: {npts}")
+        if npts > 6:
+            raise NotImplementedError
         nums = range(1, 2 * npts, 2)
         nums = tuple(np.float64(num) / (2 * npts) for num in nums)
         nodes = tuple(math.sin(0.5 * math.pi * num) ** 2 for num in nums)
-        if npts == 1:
-            weights = (1,)
-        elif npts == 2:
-            weights = (0.5, 0.5)
-        elif npts == 3:
-            weights = (2 / 9, 5 / 9, 2 / 9)
-        elif npts == 4:
-            root2 = np.sqrt(2)
-            weights = (
+        root2 = np.sqrt(2)
+        root3 = np.sqrt(3)
+        root5 = np.sqrt(5)
+        all_weights = (
+            (1,),
+            (0.5, 0.5),
+            (2 / 9, 5 / 9, 2 / 9),
+            (
                 (3 - root2) / 12,
+                (3 + root2) / 12,
+                (3 + root2) / 12,
                 (3 - root2) / 12,
-                (3 - root2) / 12,
-                (3 - root2) / 12,
-            )
-        elif npts == 5:
-            root5 = np.sqrt(5)
-            weights = (
+            ),
+            (
                 (13 - 3 * root5) / 75,
                 (13 + 3 * root5) / 75,
                 23 / 75,
                 (13 + 3 * root5) / 75,
                 (13 - 3 * root5) / 75,
-            )
-        elif npts == 6:
-            root3 = np.sqrt(3)
-            weights = (
+            ),
+            (
                 (14 - 5 * root3) / 90,
                 17 / 90,
                 (14 + 5 * root3) / 90,
                 (14 + 5 * root3) / 90,
                 17 / 90,
                 (14 - 5 * root3) / 90,
-            )
-        else:
-            raise NotImplementedError
+            ),
+        )
         nodes = np.array(nodes, dtype="float64")
-        weights = np.array(weights, dtype="float64")
+        weights = np.array(all_weights[npts - 1], dtype="float64")
         return nodes, weights
 
 
