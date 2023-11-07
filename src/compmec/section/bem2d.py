@@ -326,6 +326,89 @@ def TorsionVector(vertices):
     return result
 
 
+def TorsionConstraintVector(vertices: Tuple[Tuple[float]]) -> Tuple[Tuple[float]]:
+    """
+    Receives n vertices, a matrix of shape (n, 3)
+    Returns a matrix of shape A = (3, n) and B of shape (3, )
+    Which
+
+    A_{0j} = int phi_j * (p x p') dt
+    A_{1j} = int phi_j * (x^2) dy
+    A_{2j} = - int phi_j * (y^2) dx
+
+    B_0 = (1/2) * int <p, p> * <p, p'> dt
+    B_1 = (1/3) * int x^3 * <p, p'> dt
+    B_2 = (1/3) * int y^3 * <p, p'> dt
+    """
+    nverts = len(vertices)
+    vectors = np.roll(vertices, -1, axis=0) - vertices
+    amatrix = np.zeros((3, nverts), dtype="float64")
+    bvector = np.zeros(3, dtype="float64")
+    nodes, weights = Integration.gauss(5)
+    phi1 = nodes  # Increase
+    phi2 = 1 - nodes  # Decrease
+    for j0, vector in enumerate(vectors):
+        vertex = vertices[j0]
+        j1 = (j0 + 1) % nverts
+        amatrix[0, j0] += np.cross(vertex, vector) * np.einsum("i,i", weights, phi2)
+        amatrix[0, j1] += np.cross(vertex, vector) * np.einsum("i,i", weights, phi1)
+        xvals = vertex[0] + nodes * vector[0]
+        yvals = vertex[1] + nodes * vector[1]
+        xvals2 = xvals**2
+        yvals2 = yvals**2
+        xvals3 = xvals2 * xvals
+        yvals3 = yvals2 * yvals
+        amatrix[1, j0] += vector[1] * np.einsum("i,i,i", weights, phi2, xvals2)
+        amatrix[1, j1] += vector[1] * np.einsum("i,i,i", weights, phi1, xvals2)
+        amatrix[2, j0] -= vector[0] * np.einsum("i,i,i", weights, phi2, yvals2)
+        amatrix[2, j1] -= vector[0] * np.einsum("i,i,i", weights, phi1, yvals2)
+
+        pinnerdp = xvals * vector[0] + yvals * vector[1]
+        bvector[0] += np.einsum("i,i,i", weights, pinnerdp, xvals2 + yvals2)
+        bvector[1] += np.einsum("i,i,i", weights, pinnerdp, xvals3)
+        bvector[2] += np.einsum("i,i,i", weights, pinnerdp, yvals3)
+
+    amatrix /= 2
+    bvector[0] *= 1 / 4
+    bvector[1:] *= 1 / 6
+    return amatrix, bvector
+
+
+def AreaProperties(vertices: Tuple[Tuple[float]]) -> Tuple[Tuple[float]]:
+    """
+    Receives n vertices, a matrix of shape (n, 3)
+    Returns a matrix of shape C = (3, 3) such
+
+            [1  -y     x]
+    C = int [x  -xy  x^2] dx dy
+            [y  -y^2  xy]
+
+    These values are computed suposing we use a polygon
+    """
+    nverts = len(vertices)
+    area = 0
+    mqx = 0
+    mqy = 0
+    ixx = 0
+    ixy = 0
+    iyy = 0
+    for j0, (x0, y0) in enumerate(vertices):
+        j1 = (j0 + 1) % nverts
+        x1, y1 = vertices[j1]
+        dx = x1 - x0
+        dy = y1 - y0
+        area += (x0 + x1) * dy / 2
+        mqx += (x0**2 + x0 * x1 + x1**2) * dy / 6
+        mqy -= dx * (y0**2 + y0 * y1 + y1**2) / 6
+        ixx += dy * (x1**3 + x1**2 * x0 + x1 * x0**2 + x0**3) / 12
+        val = 2 * x0 * y0 + x1 * y0 + x0 * y1 + 2 * x1 * y1
+        ixy += val * (x0 * y1 - x1 * y0) / 24
+        iyy -= dx * (y1**3 + y1**2 * y0 + y1 * y0**2 + y0**3) / 12
+
+    matrix = np.array([[area, -mqy, mqx], [mqx, -ixy, ixx], [mqy, -iyy, ixy]])
+    return matrix
+
+
 class WarpingFunction:
     def __init__(self, all_vertices: Tuple[Tuple[Tuple[float]]]):
         self.__all_vertices = []
@@ -337,6 +420,7 @@ class WarpingFunction:
             raise ValueError(msg)
         self.__all_vertices = tuple(self.__all_vertices)
         self.__solution = None
+        self.__center = None
 
     def __mount_matrix(self):
         vertices = self.__all_vertices[0]
@@ -360,18 +444,27 @@ class WarpingFunction:
 
     def solve(self):
         matrix = self.__mount_matrix()
+        vector = self.__warping_vector()
         matrix = np.pad(matrix, ((0, 1), (0, 1)), constant_values=1)
         matrix[-1, -1] = 0
-        vector = self.__warping_vector()
-        vector = np.pad(vector, (0, 1))
-        solution = np.linalg.solve(matrix, vector)
-        self.__solution = solution[:-1]
+        vector = np.pad(vector, (0, 1), constant_values=0)
+        warpvals = np.linalg.solve(matrix, vector)[:-1]
+        # Now compute torsion center
+        amatrix, bvector = TorsionConstraintVector(self.__all_vertices[0])
+        bvector += np.einsum("ij,j->i", amatrix, warpvals)
+        cmatrix = AreaProperties(self.__all_vertices[0])
+        c0, x0, y0 = np.linalg.solve(cmatrix, bvector)
+        self.__center = (x0, y0)
+        vertices = self.__all_vertices[0]
+        self.__solution = warpvals - c0
+        self.__solution += x0 * vertices[:, 1]
+        self.__solution -= y0 * vertices[:, 0]
 
     def eval_boundary(self, param: float) -> float:
-        pass
+        raise NotImplementedError
 
     def eval_interior(self, point: Tuple[float]) -> float:
-        pass
+        raise NotImplementedError
 
     def eval(self, points: Tuple[Tuple[float]]) -> float:
         """
@@ -394,3 +487,8 @@ class WarpingFunction:
         if points.ndim == 2:
             return self.eval(points)
         return self.eval([points])[0]
+
+    def center(self):
+        if self.__center is None:
+            self.solve()
+        return self.__center

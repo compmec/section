@@ -112,6 +112,15 @@ class Section:
         torsion = self.__warping.torsion_contribuition()
         return polar - torsion
 
+    def torsion_center(self) -> Tuple[float]:
+        if self.__warping is None:
+            shape = self.__shapes[0]
+            vertices = shape.jordans[0].vertices
+            vertices = tuple(tuple(map(np.float64, pt)) for pt in vertices)
+            self.__warping = WarpingFunction([vertices])
+            self.__warping.solve()
+        return self.__warping.center()
+
     def gyradius(self) -> Tuple[float]:
         area = self.area()
         second = self.second_momentum()

@@ -48,7 +48,7 @@ class TestSinglePolygon:
         yvals = (
             [-1] * npts + list(-1 + 2 * usample) + [1] * npts + list(1 - 2 * usample)
         )
-        vertices = np.transpose([xvals, yvals])
+        vertices = 0.5 * side * np.transpose([xvals, yvals])
         geometry = Primitive.polygon(vertices)
 
         material = Isotropic()

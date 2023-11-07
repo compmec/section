@@ -29,9 +29,9 @@ The cross product between two bidimensional vectors :math:`\mathbf{u} \times \ma
 
 .. _boundary_element_method:
 
-========================
+=======================
 Boundary element method
-========================
+=======================
 
 Introduction
 ------------
@@ -421,19 +421,11 @@ This function is found by :ref:`boundary_element_method`.
 
 Once :math:`\omega` is found, the torsion properties can be computed
 
-Twisting center
+Torsion center
 ---------------
 
 As described in :ref:`constraint_solution`, we solve a Neumann's problem.
-
-
-.. math::
-    \nabla^2 \omega = 0
-
-.. math::
-    \langle\nabla \omega, \ \mathbf{n}\rangle = \mathbf{n} \times \mathbf{p}
-
-Finding :math:`\omega^{\star}`, then :math:`\omega^{*} = \omega^{\star} + y_0 x - x_0 y + c_0` is also a solution.
+If :math:`\omega^{\star}` is a solution, then :math:`\omega^{*} = \omega^{\star} + y_0 x - x_0 y + c_0` is also a solution.
 
 Choosing arbitrarily the values of :math:`x_0`, :math:`y_0` and :math:`c_0` doesn't change the torsion properties or the stresses due to torsion, it can be understood as a *rigid body rotation in the plane of cross-section and a displacement parallel to the axis of the bar* (from BOOK BEM).
 
@@ -457,14 +449,37 @@ These integrals are transformed to the boundary equivalent.
 
 .. dropdown:: Boundary reformulation of :math:`Q_{\omega}`, :math:`I_{x\omega}` and :math:`I_{y\omega}` 
 
+    Let :math:`u` be a function such
+
+    .. math::
+        \nabla^2 u = g(x, y)
+
+    Select :math:`u` respectivelly as
+    
+    .. math::
+        u_{1} = \frac{1}{4}(x^2+y^2)
+    
+    .. math::
+        u_{x} = \frac{x^3}{6}
+     
+    .. math::
+        u_{y} = \frac{y^3}{6}
+        
+    and use Green's second identity
+
+    .. math::
+        \int_{\Omega} \omega \cdot g \ d\Omega & = \int_{\Omega} \omega \nabla^2 u - u \nabla^2 \omega \ d\Omega \\ & = \oint_{\Gamma} \omega \dfrac{\partial u}{\partial n} \ d\Gamma  - u \dfrac{\partial \omega}{\partial n} \ d\Gamma \\ & = \oint_{\Gamma} \omega \dfrac{\partial u}{\partial n} \ d\Gamma - \oint_{\Gamma} u \cdot \langle \mathbf{p}, \ \mathbf{p}'\rangle \ dt
+
+    Transforming to
+
     .. math::
         Q_{\omega} = \dfrac{1}{2}\int_{t_{min}}^{t_{max}} \omega \cdot \mathbf{p} \times \mathbf{p}' \ dt - \dfrac{1}{4}\int_{t_{min}}^{t_{max}} \langle \mathbf{p}, \ \mathbf{p} \rangle \cdot \langle \mathbf{p}, \ \mathbf{p}' \rangle \ dt
 
     .. math::
-        I_{x\omega} = \dfrac{1}{8} \int_{t_{min}}^{t_{max}} \omega \cdot \left((3x^2+y^2)y' - 2xy \cdot x'\right) \ dt - \dfrac{1}{8}\int_{t_{min}}^{t_{max}} x\langle \mathbf{p}, \ \mathbf{p} \rangle \cdot \langle \mathbf{p}, \ \mathbf{p}' \rangle  \ dy
+        I_{x\omega} = \dfrac{1}{2} \oint_{\Gamma} \omega \cdot x^2 \ dy - \dfrac{1}{6}\int_{t_{min}}^{t_{max}} x^3 \cdot \langle \mathbf{p}, \ \mathbf{p}' \rangle  \ dt
 
     .. math::
-        I_{y\omega} = \dfrac{1}{8} \int_{t_{min}}^{t_{max}} \omega \cdot \left(2xy \cdot y' - (x^2+3y^2) \cdot x'\right) \ dt - \dfrac{1}{8}\int_{t_{min}}^{t_{max}} y\langle \mathbf{p}, \ \mathbf{p} \rangle \cdot \langle \mathbf{p}, \ \mathbf{p}' \rangle  \ dy
+        I_{y\omega} = \dfrac{-1}{2} \int_{t_{min}}^{t_{max}} \omega \cdot y^2 \ dx - \dfrac{1}{6}\int_{t_{min}}^{t_{max}} y^3 \cdot \langle \mathbf{p}, \ \mathbf{p}' \rangle  \ dt
 
 .. note::
     Not implemented this part yet. The vector :math:`\mathbf{C}` for lagrange multiplier is a vector of ones.
