@@ -450,9 +450,10 @@ class WarpingFunction:
         vector = np.pad(vector, (0, 1), constant_values=0)
         warpvals = np.linalg.solve(matrix, vector)[:-1]
         # Now compute torsion center
-        amatrix, bvector = TorsionConstraintVector(self.__all_vertices[0])
+        vertices = self.__all_vertices[0]
+        amatrix, bvector = TorsionConstraintVector(vertices)
         bvector += np.einsum("ij,j->i", amatrix, warpvals)
-        cmatrix = AreaProperties(self.__all_vertices[0])
+        cmatrix = AreaProperties(vertices)
         result = np.linalg.solve(cmatrix, bvector)
         c0, x0, y0 = result[0], -result[2], result[1]
         self.__center = (x0, y0)
