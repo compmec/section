@@ -5,3 +5,5 @@ sphinx
 sphinx-rtd-theme
 sphinx-gallery
 sphinx-design
+sphinx-math-dollar
+sphinx-mathjax-offline
