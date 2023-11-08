@@ -379,9 +379,9 @@ def AreaProperties(vertices: Tuple[Tuple[float]]) -> Tuple[Tuple[float]]:
     Receives n vertices, a matrix of shape (n, 3)
     Returns a matrix of shape C = (3, 3) such
 
-            [1  -y     x]
-    C = int [x  -xy  x^2] dx dy
-            [y  -y^2  xy]
+            [1    x    y]
+    C = int [x  x^2   xy] dx dy
+            [y   xy  y^2]
 
     These values are computed suposing we use a polygon
     """
@@ -405,7 +405,7 @@ def AreaProperties(vertices: Tuple[Tuple[float]]) -> Tuple[Tuple[float]]:
         ixy += val * (x0 * y1 - x1 * y0) / 24
         iyy -= dx * (y1**3 + y1**2 * y0 + y1 * y0**2 + y0**3) / 12
 
-    matrix = np.array([[area, -mqy, mqx], [mqx, -ixy, ixx], [mqy, -iyy, ixy]])
+    matrix = np.array([[area, mqx, mqy], [mqx, ixx, ixy], [mqy, ixy, iyy]])
     return matrix
 
 
@@ -453,9 +453,10 @@ class WarpingFunction:
         amatrix, bvector = TorsionConstraintVector(self.__all_vertices[0])
         bvector += np.einsum("ij,j->i", amatrix, warpvals)
         cmatrix = AreaProperties(self.__all_vertices[0])
-        c0, x0, y0 = np.linalg.solve(cmatrix, bvector)
+        result = np.linalg.solve(cmatrix, bvector)
+        c0, x0, y0 = result[0], -result[2], result[1]
         self.__center = (x0, y0)
-        vertices = self.__all_vertices[0]
+        self.__solution = warpvals
         self.__solution = warpvals - c0
         self.__solution += x0 * vertices[:, 1]
         self.__solution -= y0 * vertices[:, 0]
