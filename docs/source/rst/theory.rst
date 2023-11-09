@@ -30,13 +30,13 @@ The cross product between two bidimensional vectors :math:`\mathbf{u} \times \ma
 .. _boundary_element_method:
 
 =======================
-Boundary element method
+Boundary Element Method
 =======================
 
 Introduction
 ------------
 
-The boundary element method (BEM for short) is used to find :math:`u` numerically
+The Boundary Element Method (BEM for short) is used to find :math:`u` numerically
 
 .. math:: 
     :label: eq_laplace
@@ -58,7 +58,8 @@ Which :math:`\mathbf{s}` is the source point of the Green function :math:`v` and
     v(\mathbf{p}, \ \mathbf{s}) = \ln r = \ln \|\mathbf{r}\| = \ln \|\mathbf{p} - \mathbf{s}\|
 
 Since all the PDEs used in this package have only Neumann's boundary conditions, the values of :math:`\dfrac{\partial u}{\partial n}` are known and the objective is finding all the values of :math:`u` at the boundary.
-Once :math:`u` and :math:`\dfrac{\partial u}{\partial n}` are known at the boundary, it's possible to compute :math:`u(x, y)` at any point inside by using :eq:`eq_bem`, as well the other properties
+
+Once :math:`u` and :math:`\dfrac{\partial u}{\partial n}` are known at the boundary, it's possible to compute :math:`u(x, y)` at any point inside by using :eq:`eq_bem`.
 
 
 Discretize solution
@@ -94,53 +95,18 @@ With the auxiliar values which depends only on the geometry, the source point an
 .. math::
     F_{i} = \int_{\Gamma} \dfrac{\partial u}{\partial n} \cdot v_i \ d\Gamma
 
-Applying for :math:`n` different source points :math:`\mathbf{s}_i` at boundary, we get the matrices :math:`A`, :math:`M` and :math:`\mathbf{F}` such
+Applying for :math:`n` different source points :math:`\mathbf{s}_i` at boundary, we get the matrices :math:`\mathbb{A}`, :math:`\mathbb{M}` and :math:`\mathbf{F}` such
 
 .. math::
     :label: eq_linear_system
 
-    \left(M-A\right) \cdot \mathbf{U} = K \cdot \mathbf{U} = \mathbf{F}
+    \left(\mathbb{M}-\mathbb{A}\right) \cdot \mathbf{U} = \mathbb{K} \cdot \mathbf{U} = \mathbf{F}
 
 Finding the values of :math:`\mathbf{U}` means solving the linear system :eq:`eq_linear_system`
 
-Matrix M
-^^^^^^^^
 
-We use
-
-.. math::
-    \dfrac{\partial v}{\partial n} ds = \dfrac{\mathbf{r} \times \mathbf{p}'}{\left\langle\mathbf{r}, \ \mathbf{r}\right\rangle}
-
-to write
-
-.. math::
-    M_{ij} = \int_{t_{min}}^{t_{max}} \varphi_{j}(t) \cdot \dfrac{\mathbf{r} \times \mathbf{p}'}{\left\langle\mathbf{r}, \ \mathbf{r}\right\rangle} \ dt
-
-Vector :math:`F`
-^^^^^^^^^^^^^^^^
-
-This vector depends on the Neumann's boundary condition.
-
-* For warping function
-
-    .. math::
-        \dfrac{\partial u}{\partial n} = \mathbf{n} \times \mathbf{p} = \dfrac{\langle \mathbf{p}, \ \mathbf{p}'\rangle}{\|\mathbf{p}'\|}
-
-    .. math::
-        F_i = \int_{t_{min}}^{t_{max}} \left\langle \mathbf{p}, \ \mathbf{p}'\right\rangle \cdot \ln \|\mathbf{r}_i\| \ dt
-
-* For shear properties
-
-    .. math::
-        \dfrac{\partial u}{\partial n} = \left\langle \mathbf{h}, \ \mathbf{n}\right\rangle = \dfrac{\mathbf{h} \times \mathbf{p}'}{\|\mathbf{p}'\|}
-    
-    .. math::
-        F_i = \int_{t_{min}}^{t_{max}} \begin{bmatrix}y' & -x'\end{bmatrix}\left[\bar{F}\right]\begin{bmatrix}x^2 \\ 2xy \\ y^2\end{bmatrix} \cdot \ln r \ dt
-
-    Which :math:`\left[\bar{F}\right]` is the :math:`(2 \times 3)` matrix shown in :ref:`shear_properties`.
-
-Angle at boundary
-^^^^^^^^^^^^^^^^^
+Matrix :math:`\mathbb{A}`
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The angle :math:`\alpha` is the mesure for a given point with respect to its position to the domain :math:`\Omega`.
 
@@ -163,8 +129,45 @@ For smooth regions, the first derivative of :math:`\mathbf{p}` is continuous and
 .. note::
     In python code, it's in fact used ``alpha = arctan2(cross(v0, v1), inner(v0, v1))``
 
-Computing matrices
-^^^^^^^^^^^^^^^^^^
+Matrix :math:`\mathbb{M}`
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We use
+
+.. math::
+    \dfrac{\partial v}{\partial n} ds = \dfrac{\mathbf{r} \times \mathbf{p}'}{\left\langle\mathbf{r}, \ \mathbf{r}\right\rangle}
+
+to write
+
+.. math::
+    M_{ij} = \int_{t_{min}}^{t_{max}} \varphi_{j}(t) \cdot \dfrac{\mathbf{r} \times \mathbf{p}'}{\left\langle\mathbf{r}, \ \mathbf{r}\right\rangle} \ dt
+
+Vector :math:`\mathbf{F}`
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This vector depends on the Neumann's boundary condition.
+
+* For warping function
+
+    .. math::
+        \dfrac{\partial u}{\partial n} = \mathbf{n} \times \mathbf{p} = \dfrac{\langle \mathbf{p}, \ \mathbf{p}'\rangle}{\|\mathbf{p}'\|}
+
+    .. math::
+        F_i = \int_{t_{min}}^{t_{max}} \left\langle \mathbf{p}, \ \mathbf{p}'\right\rangle \cdot \ln \|\mathbf{r}_i\| \ dt
+
+* For shear properties
+
+    .. math::
+        \dfrac{\partial u}{\partial n} = \left\langle \mathbf{h}, \ \mathbf{n}\right\rangle = \dfrac{\mathbf{h} \times \mathbf{p}'}{\|\mathbf{p}'\|}
+    
+    .. math::
+        F_i = \int_{t_{min}}^{t_{max}} \begin{bmatrix}y' & -x'\end{bmatrix}\left[\bar{F}\right]\begin{bmatrix}x^2 \\ 2xy \\ y^2\end{bmatrix} \cdot \ln r \ dt
+
+    Which :math:`\left[\bar{F}\right]` is the :math:`(2 \times 3)` matrix shown in :ref:`shear_properties`.
+
+
+Evaluating matrices
+^^^^^^^^^^^^^^^^^^^
 
 The matrices highly depend on the geometry and the basis functions :math:`\varphi`.
 
@@ -173,31 +176,32 @@ Unfortunatelly, when :math:`r = 0` at some point, the integrants are singular an
 
 The main idea to compute them is decompose the integral in intervals and use
 
-* **Outside integration**: uses :ref:`regular_integrals` for elements which :math:`r\ne 0` for every point in the element
+* **Outside integration**: uses :ref:`regular_integrals` for elements which :math:`r\ne 0` for all points
 
-* **Inside integration**: uses :ref:`singular_integrals` for elements which :math:`r=0`
+* **Inside integration**: uses :ref:`singular_integrals` for elements which :math:`r=0` at any point
 
-For polygonal domains, when :math:`\mathbf{p}(t)` is linear piecewise, the **Inside integration** is not required cause it can be done analiticaly. But for higher degrees, it's indeed necessary
+For polygonal domains the **Inside integration** is not required cause it can be done analiticaly. But for higher degrees, it's indeed necessary
 
 .. _constraint_solution:
 
 Constraint solution
 ^^^^^^^^^^^^^^^^^^^
 
-All the PDEs have Neumann's boundary conditions, if :math:`u^{\star}` is a solution, then :math:`\left(u^{\star} + \text{const}\right)` also is a solution.
-Although both functions give the same properties cause it envolves only the derivatives of :math:`u`, we restrict the solution by setting an exact value at a certain point.
+Although the matrix :math:`\mathbb{K}=\mathbb{M}-\mathbb{A}` is not singular, all the PDEs have Neumann's boundary conditions and has no unique solution.
 
-* For warping function, we set :math:`u(\mathbf{c}_t) = 0`, which :math:`\mathbf{c}_t` is the twisting center
+If :math:`u^{\star}` is found as solution, then :math:`\left(u^{\star} + \text{const}\right)` also is a solution.
 
-These values are obtained by minimizing the total deformation energy
-
-The lagrange multiplier is used and the following system is solved instead:
+Although both functions give the same properties cause it envolves only the derivatives of :math:`u`, we restrict the solution by solving the system with Lagrange Multiplier.
 
 .. math::
+    \begin{bmatrix}K & \mathbf{C} \\ \mathbf{C}^T & 0\end{bmatrix} \begin{bmatrix}\mathbf{U} \\ \lambda \end{bmatrix} = \begin{bmatrix}\mathbf{F} \\ 0\end{bmatrix}
 
-    \begin{bmatrix}K & \mathbf{C}^T \\ \mathbf{C} & 0\end{bmatrix} \begin{bmatrix}\mathbf{U} \\ \lambda \end{bmatrix} = \begin{bmatrix}\mathbf{F} \\ 0\end{bmatrix}
+Which vector :math:`\mathbf{C}` is a vector of ones.
 
-Which vector :math:`\mathbf{C}` is obtained from the constraint and depends on the problem: torsion or shear
+The determination exacly of the constant depends on the problem and are better treated in :ref:`torsion_center` and :ref:`shear_center`.
+
+
+.. _bem_polygonal_domain:
 
 Polygonal domain
 ----------------
@@ -236,6 +240,8 @@ Matrix :math:`M`
 .. math::
     M_{ij} = \sum_{k=0}^{m-1} \int_{t_{k}}^{t_{k+1}} \varphi_{j} \cdot \dfrac{\mathbf{r} \times \mathbf{p}'}{\left\langle \mathbf{r}, \mathbf{r}\right\rangle} \ dt
 
+When :math:`t_i \notin \left[t_k, \ t_{k+1}\right]`, then the evaluation is made by :ref:`regular_integrals`
+
 When :math:`t_i \in \left[t_k, \ t_{k+1}\right]`
 
 .. math::
@@ -248,19 +254,16 @@ When :math:`t_i \in \left[t_k, \ t_{k+1}\right]`
 Therefore, we can ignore the integration over the interval :math:`\left[t_k, \ t_{k+1}\right]`
 
 
-Matrix :math:`F` for warping
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Vector :math:`\mathbf{F}` for warping
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 For warping function, the expression :math:`F_i` is written as
 
 .. math::
     \dfrac{\partial u}{\partial n} = \dfrac{\left\langle \mathbf{p}, \ \mathbf{p}'\right\rangle}{\|\mathbf{p}'\|}
-
-.. math::
-    F_{i} = \sum_{k=0}^{m-1} F_{ik}
     
 .. math::
-    F_{ik} = \int_{0}^{1} \left(\alpha_k + z \cdot \beta_k \right) \ln\|\mathbf{r}\| \ dz
+    F_{i} = \sum_{k=0}^{m-1} \int_{0}^{1} \left(\alpha_k + z \cdot \beta_k \right) \ln\|\mathbf{r}\| \ dz
 
 .. math::
     \alpha_k = \left\langle \mathbf{P}_k, \ \mathbf{V}_k\right\rangle
@@ -309,12 +312,16 @@ Cross-section geometric properties
 ==================================
 
 
+.. _cross_sectional_area:
+
 Cross-section area
 ------------------
 
 .. math::
     A = \int_{\Omega} \ dx \ dy
 
+
+.. _first_moment_area:
 
 First moment of area
 --------------------
@@ -324,15 +331,24 @@ First moment of area
 .. math::
     Q_y = \int_{\Omega} y \ dx \ dy
 
-Geometric centroid
-------------------
+
+.. _geometric_center:
+
+Geometric center
+----------------
 
 .. math::
     x_{gc} = \dfrac{Q_x}{A}
 .. math::
     y_{gc} = \dfrac{Q_y}{A}
+
+We denote the geometric centroid by :math:`\boldsymbol{G}`
+
 .. math::
-    \mathbf{c}_g = \left(x_{gc}, \ y_{gc}\right)
+    \boldsymbol{G} = \left(x_{gc}, \ y_{gc}\right)
+
+
+.. _second_moment_area:
 
 Second moment of area
 ---------------------
@@ -361,6 +377,8 @@ The local second moment of inertia are computed with respect to the geometric ce
 
     
 
+
+.. _radius_gyration:
 
 Radius of Gyration
 ------------------
@@ -396,15 +414,27 @@ It's also computed as
     \phi = \arg\left(I_{\overline{xy}} + i \cdot \left(I_{\overline{xx}}-I_{11}\right)\right) = \text{arctan}\left(\dfrac{I_{\overline{xx}}-I_{11}}{I_{\overline{xy}}}\right)
 
 
+.. _bending_center:
+
+Bending Center
+--------------
+
+The bending center is the intersection of the two neutral lines.
+It's computed by
+
+
 
 ===============================
-Saint-Venant Torsion Properties
+Torsion Properties
 ===============================
+
+.. _warping_function:
 
 Warping Function
 ----------------
 
-From Saint-venant theory, the warping function :math:`\omega(x, \ y)` is used to compute stresses when torsion is applied.
+From Saint-venant theory, the warping function :math:`\omega(x, \ y)` is fundamental to compute torsion properties.
+From :math:`\omega`, it's possible to find the :ref:`torsion_constant`, :ref:`torsion_center` and stresses/strains due to :ref:`torsion_moment`.
 
 .. math::
     \nabla^2 \omega = 0
@@ -412,28 +442,62 @@ From Saint-venant theory, the warping function :math:`\omega(x, \ y)` is used to
 .. math::
     \left\langle \nabla \omega, \ \mathbf{n}\right\rangle = \mathbf{n} \times \mathbf{p}
 
-With :math:`\mathbf{p} = (x, \ y)` begin a point on the boundary. The boundary condition can be rewriten as
+With :math:`\mathbf{p} = (x, \ y)` begin a point on the boundary.
+
+The boundary condition can be rewriten as
 
 .. math::
     \left\langle \nabla \omega, \ \mathbf{n}\right\rangle = \dfrac{\langle \mathbf{p}', \ \mathbf{p} \rangle}{\|\mathbf{p}'\|} 
 
-This function is found by :ref:`boundary_element_method`.
+We solve this PDE by using the :ref:`boundary_element_method`, by solving the linear system
 
-Once :math:`\omega` is found, the torsion properties can be computed
+.. math::
+    \begin{bmatrix}K & \mathbf{C} \\ \mathbf{C}^{T} & 0\end{bmatrix}\begin{bmatrix}\mathbf{W} \\ \lambda\end{bmatrix} = \begin{bmatrix}\mathbf{F} \\ 0\end{bmatrix}
+
+With :math:`\omega = \langle \varphi, \ \mathbf{W}\rangle` at the boundary
+
+.. _torsion_constant:
+
+Torsion constant
+----------------
+
+The torsion constant can be computed
+
+.. math::
+    J = I_{xx} + I_{yy} - \mathbb{J}_{\omega}
+
+With
+
+.. math::
+    \mathbb{J}_{\omega} = \int_{\Omega} y \dfrac{\partial \omega}{\partial x} - x \dfrac{\partial \omega}{\partial y} \ dx \ dy
+
+We transform this integral into a boundary one
+
+.. math::
+    \mathbb{J}_{\omega} = \int_{t_{min}}^{t_{max}} \omega \cdot \left\langle \mathbf{p}, \ \mathbf{p}'\right\rangle \ dt
+
+Since :math:`\omega = \langle \varphi, \ \mathbf{W}\rangle`, then
+
+.. math::
+    \mathbb{J}_{\omega} = \langle \int_{t_{min}}^{t_{max}} \varphi_j \cdot \left\langle \mathbf{p}, \ \mathbf{p}'\right\rangle \ dt, \mathbf{W} \rangle
+
+
+.. _torsion_center:
 
 Torsion center
 ---------------
 
 As described in :ref:`constraint_solution`, we solve a Neumann's problem.
-If :math:`\omega^{\star}` is a solution, then :math:`\omega^{*} = \omega^{\star} + y_0 x - x_0 y + c_0` is also a solution.
+If :math:`\omega^{\star}` is a solution, then :math:`\omega^{*} = \omega^{\star} + c_0` is also a solution.
 
+This constant is arbitrary and don't change the torsion properties or the stresses due to torsion moment. Let :math:`\omega^{*}` be the solution of  
 Choosing arbitrarily the values of :math:`x_0`, :math:`y_0` and :math:`c_0` doesn't change the torsion properties or the stresses due to torsion, it can be understood as a *rigid body rotation in the plane of cross-section and a displacement parallel to the axis of the bar* (from BOOK BEM).
 
 The quantities :math:`x_0`, :math:`y_0` and :math:`c_0` can be obtained by minimizing the strain energy produced by axial normal warping stresses, which are ignored by Saint-Venant's theory.
 Doing so, leads to the linear system
 
 .. math::
-    \left(\int_{\Omega} \begin{bmatrix}1 \\ x \\ y \end{bmatrix}\begin{bmatrix}1 & -y & x \end{bmatrix} \ d\Omega\right) \begin{bmatrix}c_0 \\ x_0 \\ y_0\end{bmatrix} = \int_{\Omega} \omega\begin{bmatrix}1 \\ x \\ y\end{bmatrix} \ d\Omega
+    \left(\int_{\Omega} \begin{bmatrix}1 & x & y \\ x & x^2 & xy \\ y & xy & y^2 \end{bmatrix} \ d\Omega\right) \begin{bmatrix}c_0 \\ y_0 \\ -x_0\end{bmatrix} = \int_{\Omega} \omega\begin{bmatrix}1 \\ x \\ y\end{bmatrix} \ d\Omega
 
 The matrix on the left side is already computed by the values :math:`A`, :math:`Q_x`, :math:`Q_y`, :math:`I_{xx}`, :math:`I_{xy}`, :math:`I_{yy}`, while the values on the right side are
 
@@ -445,7 +509,6 @@ The matrix on the left side is already computed by the values :math:`A`, :math:`
     I_{y\omega} = \int_{\Omega} y \omega \ dx \ dy
 
 These integrals are transformed to the boundary equivalent.
-
 
 .. dropdown:: Boundary reformulation of :math:`Q_{\omega}`, :math:`I_{x\omega}` and :math:`I_{y\omega}` 
 
@@ -484,31 +547,6 @@ These integrals are transformed to the boundary equivalent.
 .. note::
     Not implemented this part yet. The vector :math:`\mathbf{C}` for lagrange multiplier is a vector of ones.
 
-Torsion constant
-----------------
-
-The torsion constant can be computed
-
-.. math::
-    J = I_{xx} + I_{yy} - \mathbb{J}_{\omega}
-
-With
-
-.. math::
-    \mathbb{J}_{\omega} = \int_{\Omega} y \dfrac{\partial \omega}{\partial x} - x \dfrac{\partial \omega}{\partial y} \ dx \ dy
-
-We transform this integral into a boundary one
-
-.. math::
-    \mathbb{J}_{\omega} = \int_{t_{min}}^{t_{max}} \omega \cdot \left\langle \mathbf{p}, \ \mathbf{p}'\right\rangle \ dt
-
-Since :math:`\omega = \langle \varphi, \ \mathbf{W}\rangle`, then
-
-.. math::
-    \mathbb{J}_{\omega} = \langle \Lambda, \mathbf{W} \rangle
-
-.. math::
-    \Lambda_j = \int_{t_{min}}^{t_{max}} \varphi_j \cdot \left\langle \mathbf{p}, \ \mathbf{p}'\right\rangle \ dt
 
 .. _shear_properties:
 
@@ -516,9 +554,13 @@ Since :math:`\omega = \langle \varphi, \ \mathbf{W}\rangle`, then
 Shear properties
 ================
 
-Main shear properties are:
+.. _shear_center:
 
-* Shear center
+Shear center
+------------
+
+The shear properties 
+
 
 .. note::
     For now, assume :math:`I_{xx} = I_{\bar{xx}}` and so on
@@ -538,89 +580,136 @@ And boundary conditions
 .. math::
     \left\langle \nabla \Phi, \ \mathbf{n}\right\rangle = \left\langle\mathbf{h}_{y}, \mathbf{n}\right\rangle
 .. math::
-    \mathbf{h}_{x} = \dfrac{\nu}{2}\left(I_{xx}\begin{bmatrix}1 & 0 & -1 \\ 0 & 1 & 0\end{bmatrix}+ I_{xy}\begin{bmatrix}0 & -1 & 0 \\ 1 & 0 & -1\end{bmatrix}\right)\begin{bmatrix}x^2 \\ 2xy \\ y^2\end{bmatrix}
+    \mathbf{h}_{x} = \dfrac{\nu}{2}\left(I_{xx}\begin{bmatrix}1 & 0 \\ 0 & 1\end{bmatrix}+ I_{xy}\begin{bmatrix}0 & -1 \\ 1 & 0 \end{bmatrix}\right)\begin{bmatrix}x^2-y^2 \\ 2xy \end{bmatrix}
 .. math::
-    \mathbf{h}_{y} = \dfrac{\nu}{2}\left(I_{xy}\begin{bmatrix}-1 & 0 & 1 \\ 0 & -1 & 0\end{bmatrix}+ I_{yy}\begin{bmatrix}0 & 1 & 0 \\ -1 & 0 & 1\end{bmatrix}\right)\begin{bmatrix}x^2 \\ 2xy \\ y^2\end{bmatrix}
+    \mathbf{h}_{y} = \dfrac{\nu}{2}\left(I_{xy}\begin{bmatrix}-1 & 0 \\ 0 & -1 \end{bmatrix}+ I_{yy}\begin{bmatrix}0 & 1 \\ -1 & 0\end{bmatrix}\right)\begin{bmatrix}x^2-y^2 \\ 2xy\end{bmatrix}
 
 Both equations are in fact Poisson equations.
-We solve an equavalent problem by using the solution for homogeneous problem.
-Set :math:`\Psi^{*}` and :math:`\Phi^{*}` as
+We solve the problem by transforming the PDE to Laplace's equation, by using functions :math:`\Psi_{0}` and :math:`\Phi_{0}`, and transforming the boundary conditions
 
 .. math::
-    \Psi^{*} = \dfrac{1}{4}\left(x^2+y^2\right)\left(-I_{xx} \cdot x + I_{xy} \cdot y\right)
+    \Psi_0 = \dfrac{1}{4}\left(x^2+y^2\right)\left(-I_{xx} \cdot x + I_{xy} \cdot y\right)
 
 .. math::
-    \Phi^{*} = \dfrac{1}{4}\left(x^2+y^2\right)\left(I_{xy} \cdot x - I_{yy} \cdot y\right)
+    \Phi_0 = \dfrac{1}{4}\left(x^2+y^2\right)\left(I_{xy} \cdot x - I_{yy} \cdot y\right)
 
-Note that :math:`\Psi^{\star} = \Psi - \Psi^{*}` and :math:`\Phi^{\star} = \Phi - \Phi^{*}` satisfy the Laplace equation with the boundary conditions
+.. math::
+    \mathbf{g}_{x} = \mathbf{h}_{x} + \nabla \Psi_0
+
+.. math::
+    \mathbf{g}_{y} = \mathbf{h}_{y} + \nabla \Phi_0
+
+Let :math:`\Psi^{\star} = \Psi + \Psi_{0}` and :math:`\Phi^{\star}=\Phi + \Phi_{0}`, then we solve the PDE
 
 .. math::
     \nabla^2 \Psi^{\star} = 0
-
 .. math::
     \nabla^2 \Phi^{\star} = 0
 
 .. math::
-    \left\langle \Psi^{\star}, \ \mathbf{n}\right\rangle = \left\langle \mathbf{g}_x, \mathbf{n}\right\rangle
+    \left\langle\nabla \Psi^{\star}, \ \mathbf{n}\right\rangle = \left\langle\mathbf{g}_{x}, \mathbf{n}\right\rangle
 .. math::
-    \left\langle \Phi^{\star}, \ \mathbf{n}\right\rangle =\left\langle \mathbf{g}_{y}, \mathbf{n}\right\rangle
+    \left\langle \nabla \Phi^{\star}, \ \mathbf{n}\right\rangle = \left\langle\mathbf{g}_{y}, \mathbf{n}\right\rangle
 
-.. math::
-    \mathbf{g}_x = \left[F_x\right]\begin{bmatrix}x^2 \\ 2xy \\ y^2\end{bmatrix}
-.. math::
-    \mathbf{g}_y = \left[F_y\right]\begin{bmatrix}x^2 \\ 2xy \\ y^2\end{bmatrix}
-
-.. math::
-    \left[F_x\right] = -I_{xx} \begin{bmatrix}\frac{3-2\nu}{4} & 0 & \frac{1+2\nu}{4} \\ 0 & \frac{1-2\nu}{4} & 0\end{bmatrix} + I_{xy}\begin{bmatrix}0 & \frac{1-2\nu}{4} & 0 \\ \frac{1+2\nu}{4} & 0 & \frac{3-2\nu}{4}\end{bmatrix}
-
-.. math::
-    \left[F_x\right] = I_{xy}\begin{bmatrix}\frac{3-2\nu}{4} & 0 & \frac{1+2\nu}{4} \\ 0 & \frac{1-2\nu}{4} & 0\end{bmatrix} - I_{yy}\begin{bmatrix}0 & \frac{1-2\nu}{4} & 0 \\ \frac{1+2\nu}{4} & 0 & \frac{3-2\nu}{4}\end{bmatrix}
-
-======
-Others
-======
-
-There are some other metrics like
-
-.. math::
-    Q_{\omega} = \int_{\Omega} \omega \ dx \ dy = \dfrac{1}{2}\int_{\Gamma} w \cdot \mathbf{p} \times \mathbf{p}' \ d\Gamma - \dfrac{1}{4}\int_{\Gamma}\langle \mathbf{p}, \ \mathbf{p}\rangle \cdot \dfrac{\langle \mathbf{p}, \ \mathbf{p}'\rangle}{\|\mathbf{p}'\|}
-
-.. math::
-    I_{x\omega} = \int_{\Omega} x \cdot \omega \ dx \ dy
-
-.. math::
-    I_{y\omega} = \int_{\Omega} y \cdot \omega \ dx \ dy
-.. math::
-    I_{\omega\omega} = \int_{\Omega} \omega^2 \ dx \ dy
+Which is easier to solve by BEM.
 
 
-.. _stress:
+
+.. _stress_and_strain:
 
 =================
 Stress and Strain
 =================
 
-The stress in a beam is given by
+
+Introduction
+------------
+
+The stress :math:`\sigma` and strain :math:`\varepsilon` are one of the fundamental quantities to evaluate. They arrive from 4 different phenomenums:
+
+* Axial Force (1 quantity: :math:`\mathrm{F}_{z}`)
+* Shear Forces (2 quantities: :math:`\mathrm{F}_{x}` and :math:`\mathrm{F}_{y}`) 
+* Bending Moment (2 quantities: :math:`\mathrm{M}_{x}` and :math:`\mathrm{M}_{y}`) 
+* Torsion Moment (1 quantity: :math:`\mathrm{M}_{z}`)
+
+Here we develop expressions to compute stress and strain for any point :math:`\mathbf{p}` inside the section.
+The stress tensor in a beam is given by
 
 .. math::
-    \mathbf{\sigma} = \begin{bmatrix}0 & 0 & \tau_{xz} \\ 0 & 0 & \tau_{yz} \\ \tau_{xz} & \tau_{yz} & \sigma_{zz}\end{bmatrix}
+    \boldsymbol{\sigma} = \begin{bmatrix}0 & 0 & \sigma_{xz} \\ 0 & 0 & \sigma_{yz} \\ \sigma_{xz} & \sigma_{yz} & \sigma_{zz}\end{bmatrix}
 
-While the strain is given by
-
-.. math::
-    \mathbf{\varepsilon} = \begin{bmatrix}\varepsilon_{xx} & 0 & \varepsilon_{xz} \\ 0 & \varepsilon_{yy} & \varepsilon_{yz} \\ \varepsilon_{xz} & \varepsilon_{yz} & \varepsilon_{zz} \end{bmatrix}
-
-And the elasticity law is 
+While the strain tensor is given by
 
 .. math::
-    \mathbf{\sigma} = \lambda \cdot \text{trace}\left(\mathbf{\varepsilon}\right) \cdot \mathbf{I} + 2\mu \cdot \mathbf{\varepsilon}
-.. math::
-    \mathbf{\varepsilon} = \dfrac{1}{2\mu} \cdot \mathbf{\sigma} - \dfrac{\lambda}{2\mu\left(3\lambda + 2\mu\right)} \cdot \text{trace}\left(\mathbf{\sigma}\right) \cdot \mathbf{I}
+    \boldsymbol{\varepsilon} = \begin{bmatrix}\varepsilon_{xx} & 0 & \varepsilon_{xz} \\ 0 & \varepsilon_{yy} & \varepsilon_{yz} \\ \varepsilon_{xz} & \varepsilon_{yz} & \varepsilon_{zz} \end{bmatrix}
 
-The literature shows that the displacement field :math:`\mathbf{u}` is given by
+And the elasticity law, which relates both tensors are 
 
 .. math::
-    \mathbf{u} = 
+    \boldsymbol{\sigma} = \lambda \cdot \text{trace}\left(\boldsymbol{\varepsilon}\right) \cdot \mathbf{I} + 2\mu \cdot \boldsymbol{\varepsilon}
+    
+.. math::
+    \boldsymbol{\varepsilon} & = \dfrac{1}{2\mu} \cdot \boldsymbol{\sigma} - \dfrac{\lambda}{2\mu\left(3\lambda +2\mu\right)} \cdot \text{trace}\left(\boldsymbol{\sigma}\right) \cdot \mathbf{I} \\ & = \dfrac{1+\nu}{E} \cdot \boldsymbol{\sigma} - \dfrac{\nu}{E} \cdot \text{trace}\left(\boldsymbol{\sigma}\right) \cdot \mathbf{I}
+
+With :math:`\lambda` and :math:`\mu` being `Lamé Parameters <https://en.wikipedia.org/wiki/Lam%C3%A9_parameters>`_
+
+.. math::
+    \lambda = \dfrac{E\nu}{(1+\nu)(1-2\nu)} \ \ \ \ \ \ \ \ \ \ \ \mu = \dfrac{E}{2(1+\nu)}
+
+
+.. _axial_force:
+
+Axial Force
+------------
+
+The axial force only leads to axial stress.
+Meaning, in pure axial force case, the stress tensor and strain are given by
+
+.. math::
+    \varepsilon = \begin{bmatrix}\varepsilon_{xx} & 0 & 0 \\ 0 & \varepsilon_{yy} & 0 \\ 0 & 0 & \varepsilon_{zz}\end{bmatrix} \ \ \ \ \ \ \ \ \ \ \ \sigma = \begin{bmatrix}0 & 0 & 0 \\ 0 & 0 & 0 \\ 0 & 0 & \sigma_{zz}\end{bmatrix}
+
+The axial stress is constant when an axial force :math:`\mathrm{F}_{z}` is given by
+
+.. math::
+    \sigma_{zz} = \dfrac{\mathrm{F}_{z}}{A}
+
+Where :math:`A` is the :ref:`cross_sectional_area`.
+
+Hence, the strain is given by elasticity law:
+
+.. math::
+    \varepsilon_{xx} = \varepsilon_{yy} = \left(\dfrac{-\lambda}{2\mu(3\lambda+2\mu)}\right) \cdot \dfrac{\mathrm{F}_{z}}{A} = -\nu \cdot \dfrac{\mathrm{F}_{z}}{EA}
+.. math::
+    \varepsilon_{zz} = \dfrac{1}{3\lambda+2\mu}\left(1+\dfrac{\lambda}{\mu}\right) \cdot \dfrac{\mathrm{F}_{z}}{A} = \dfrac{\mathrm{F}_{z}}{EA}
+
+
+.. _shear_forces:
+
+Shear Forces
+------------
+
+
+.. _bending_moments:
+
+Bending Moments
+---------------
+
+The bending moments :math:`\mathrm{M}_{x}` and :math:`\mathrm{M}_{y}` causes only axial stresses.
+The tensors are 
+
+.. math::
+    \varepsilon = \begin{bmatrix}\varepsilon_{xx} & 0 & 0 \\ 0 & \varepsilon_{yy} & 0 \\ 0 & 0 & \varepsilon_{zz}\end{bmatrix} \ \ \ \ \ \ \ \ \ \ \ \sigma = \begin{bmatrix}0 & 0 & 0 \\ 0 & 0 & 0 \\ 0 & 0 & \sigma_{zz}\end{bmatrix}
+
+The expression of :math:`\sigma_{zz}` depends on the position of the point :math:`\mathbf{p}` in the section.
+In the :ref:`bending_center` :math:`\boldsymbol{B} = \left(x_{bc}, \ y_{bc}\right)` the stress and the strain are zero while and they increase/decrease depending on the distance to the bending center:
+
+.. math::
+    \sigma_{zz} := \sigma_{zz}(\mathbf{p}-\boldsymbol{B})
+
+.. _torsion_moment:
+
+Torsion Moment
+--------------
 
 .. _integrals:
 
@@ -655,6 +744,51 @@ Then
 
 .. math::
     I_{a, b} = \dfrac{\alpha - 1}{b+1} \int_{\Gamma} x^{a} \cdot y^{b+1} \ dx + \dfrac{\alpha}{a+1} \int_{\Gamma} x^{a+1} \cdot y^b \ dy
+
+This integral is computed in the boundary and the expression depends on :math:`\alpha`. 
+
+For polygonal domains, the expressions may be resumed
+
+
+.. dropdown:: Integrals :math:`I_{a,b}` for polygonal domains
+
+    Expanding the expression of :math:`I_{a,b}` we get
+
+    .. math::
+        (a+b+2)\cdot I_{a,b} & = \dfrac{\alpha}{a+1} \sum_{i=0}^{n-1}\left(\left(y_{i+1}-y_{i}\right)\sum_{j=0}^{a+1}\sum_{k=0}^{b}\dfrac{\binom{a+1}{j}\binom{b}{k}}{\binom{a+b+1}{j+k}}x_{i}^{a+1-j}x_{i+1}^{j}y_{i}^{b-k}y_{i+1}^{k}\right) \\ & + \dfrac{\alpha-1}{b+1}\sum_{i=0}^{n-1}\left(\left(x_{i+1}-x_{i}\right)\sum_{j=0}^{a}\sum_{k=0}^{b+1}\dfrac{\binom{a}{j}\binom{b+1}{k}}{\binom{a+b+1}{j+k}}x_{i}^{a-j}x_{i+1}^{j}y_{i}^{b+1-k}y_{i+1}^{k}\right)
+
+    By setting :math:`\alpha = 1`
+    
+    .. math::
+        I_{a,0} = \sum_{i=0}^{n-1} \dfrac{x_{i+1}^{a+2}-x_{i}^{a+2}}{x_{i+1}-x_{i}} \cdot \dfrac{y_{i+1}-y_{i}}{(a+1)(a+2)}
+    
+    And :math:`\alpha = 0`
+
+    .. math::
+        I_{0,b} = -\sum_{i=0}^{n-1} \dfrac{y_{i+1}^{b+2}-y_{i}^{b+2}}{y_{i+1}-y_{i}} \cdot \dfrac{x_{i+1}-x_{i}}{(b+1)(b+2)}
+
+    For any different value, the closed formulas are too complex. I don't have much time to find a :math:`\alpha` value such :math:`I_{a,b}` becomes a simpler expression. 
+
+    Bellow you find values for :math:`\alpha = \dfrac{1}{2}`.
+
+    .. math::
+        I_{0,0} = \dfrac{1}{2}\sum_{i=0}^{n-1} x_{i}y_{i+1}-y_{i}x_{i+1}
+
+    .. math::
+        I_{1,1} = \dfrac{1}{24} \sum_{i=0}^{n-1} \left(x_{i}y_{i+1}-y_{i}x_{i+1}\right)\left(2x_{i}y_{i}+x_{i+1}y_{i}+x_{i}y_{i+1}+2x_{i+1}y_{i+1}\right)
+
+    .. note::
+        It's possible to have :math:`x_{i+1} = x_{i}` or :math:`y_{i+1} = y_{i}` in some edge, which leads to divide by zero in :math:`I_{a,0}` and :math:`I_{0,b}`.
+        
+        In that case, we open the expression:
+
+        .. math::
+            \dfrac{x_{i+1}^{c+1}-x_{i}^{c+1}}{x_{i+1}-x_{i}} = \sum_{j=0}^{c} x_{i}^{c-j}x_{i+1}^{j}
+        .. math::
+            \dfrac{y_{i+1}^{c+1}-y_{i}^{c+1}}{y_{i+1}-y_{i}} = \sum_{j=0}^{c} y_{i}^{c-j}y_{i+1}^{j}
+
+
+
 
 .. _regular_integrals:
 
@@ -694,6 +828,9 @@ There are two types of singular integrals to compute:
 
 .. math::
     \int_{-1}^{1} f(x) \cdot \dfrac{1}{x} \ dx
+
+.. note::
+    The current implementation allows only polygonal domains. Hence, singular integrals are evaluated analiticaly as shown in :ref:`bem_polygonal_domain`
 
 Logarithm singularity
 ^^^^^^^^^^^^^^^^^^^^^
