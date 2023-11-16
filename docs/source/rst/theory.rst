@@ -4,15 +4,15 @@
 Introduction
 ============
 
-What is theory about
---------------------
-
 The main source of theories, hypothesis, equations are from both books of Pikley and BEM.
 
 * Pikley contains the base theory for section
 * BEM's book 
+* 
 
-While Pikley's book uses Finite Element Method (FEM for short), their surface integrals must be transformed to boundary integrals. These transformations happens mainly from Green's Theorem and its identities.
+While Pikley's book uses Finite Element Method (FEM for short), their equations must be adapted to boundary element method.
+
+These transformations happens mainly from Green's Theorem and its identities, which are developed in this text. Since the main sources are from these two books, the repeted citations are ommited.
 
 Notation and utilities
 ----------------------
@@ -764,9 +764,13 @@ Shear center
 The shear center is defined by :math:`\boldsymbol{S} = \left(x_{sc}, \ y_{sc}\right)`
 
 .. math::
-    x_{sc} = \dfrac{1}{\Delta} \left[\dfrac{\nu}{2}\int_{\Omega} \left(I_{yy}x + I_{xy}y\right)\left(x^2+y^2\right) \ d\Omega - \int_{\Omega} \left\langle\left(y, \ -x\right), \ \nabla \Psi\right\rangle \ d\Omega\right]
+    \boldsymbol{S} = \dfrac{\nu}{2\Delta}\begin{bmatrix}I_{yy} & I_{xy} \\ I_{xy} & I_{xx}\end{bmatrix}\begin{bmatrix}I_{yyy}+I_{xxy} \\ I_{xyy}+I_{xxx} \end{bmatrix} - \dfrac{1}{\Delta}\int \begin{bmatrix}\Psi \\ \phi\end{bmatrix} \left\langle \mathbf{p}, \ \mathbf{p}'\right\rangle \ dt
+
+Which
+
 .. math::
-    y_{sc} = \dfrac{1}{\Delta} \left[\dfrac{\nu}{2}\int_{\Omega} \left(I_{xx}y + I_{xy}x\right)\left(x^2+y^2\right) \ d\Omega - \int_{\Omega} \left\langle\left(y, \ -x\right), \ \nabla \Phi\right\rangle \ d\Omega\right]
+    \begin{bmatrix}I_{yyy} \\ I_{xyy} \\ I_{xxy} \\ I_{xxx} \end{bmatrix} = \int \begin{bmatrix}x^3 \\ x^2y \\ xy^2 \\ y^3 \end{bmatrix} \ dx \ dy
+
 .. math::
     \Delta = 2(1+\nu)(I_{xx}I_{yy}-I_{xy})
 

@@ -7,7 +7,7 @@
 Documentation
 =============
 
-*compmec-section* is a python package for bidimensional geometry manipulation.
+*compmec-section* is a python package for beam-section analysis.
 
 .. toctree::
    :maxdepth: 1
@@ -27,6 +27,12 @@ Documentation
    :caption: Theory
 
    rst/theory
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Validation
+
+   rst/validation
 
 
 Support
