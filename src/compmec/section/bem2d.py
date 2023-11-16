@@ -203,24 +203,13 @@ class Integration:
 
 
 def IntegralUVn(vertices):
-    """
-    Given vertices, this functions computes the matrix [H]
+    """Computes the matrix M
 
-    H_ij = int_{Gamma} phi_j * dv/dn * dGamma
+    M_ij = int_{Gamma} phi_j * dv/dn * dGamma
+         = int phi_j * (r x p')/<r, r> dt
 
     phi_j are the basis function
-
-    U(t) = sum_j U_j * phi_j
-    v = ln r -> dv/dn = (r x p')/(<r, r> * abs(p'))
-    H_{ij} = int_{tmin}^{tmax} phi_j * (r x p')/<r, r> dt
-
-    For j != i, use standard gaussian integration
-
-    For j == i,
-        p(t) = p_{i} + z * vec
-        r = (z-1/2) * vec
-        r x p' = 0
-        H_{ii} = 0
+    r = sqrt(<p-s_i, p-s_i>)
 
     """
     nverts = len(vertices)
@@ -251,31 +240,12 @@ def IntegralUVn(vertices):
 
 def IntegralUnV(vertices):
     """
-    Given vertices, this functions computes the matrix [H]
+    Computes the force vector [F]
 
-    G_i = int_{Gamma} du/dn * v * dGamma
+    F_i = int_{Gamma} du/dn * v * dGamma
+        = int ln|r| * <p, p'> dt
 
-    du/dn = <p, p'>/abs(p')
-    v = ln r
-
-    G_i = int_{tmin}^{tmax} <p, p'> * ln(r) dt
-    G_i = sum_j int_{t_j}^{t_{j+1}} <p, p'> ln(r) dt
-
-    For j != i, then the integral is computed by gaussian quadrature
-
-    for j = i, then
-        vec = p_{i+1} - p_{i}
-        p(z) = p_{i} + z * vec
-        r(z) = p(z) - (p_i + p_{i+1})/2
-        r(z) = (z-1/2) * vec
-        a = <p_{i}, vec>
-        b = <vec, vec>
-        <p, p'> = a + z * b
-        ln |r| = ln |vec| + ln |z-1/2|
-
-        int_{t_{i-1}}^{t_i} <p, p'> ln |r| dt =
-        int_{0}^{1} (a + z * b) * (ln |vec| + ln |z-1/2|) dz =
-        (ln |vec| - 1 - ln(2)) * (a + b/2)
+    r = sqrt(<p-s_i, p-s_i>)
 
     """
     vectors = np.roll(vertices, -1, axis=0) - vertices
@@ -298,18 +268,13 @@ def IntegralUnV(vertices):
 
 
 def TorsionVector(vertices):
-    """
-    Computes the integral
-
-    I = int w * <p, p'> dt
-
-    In fact returns the vector
-
-    V = [V_0, ..., V_{n-1}]
-
-    with
+    """Computes the vector V
 
     V_j = int phi_j * <p, p'> dt
+
+    to help computing
+
+    J_w = int w * <p, p'> dt
     """
     nverts = len(vertices)
     vectors = np.roll(vertices, -1, axis=0) - vertices
@@ -326,11 +291,8 @@ def TorsionVector(vertices):
     return result
 
 
-def TorsionConstraintVector(vertices: Tuple[Tuple[float]]) -> Tuple[Tuple[float]]:
-    """
-    Receives n vertices, a matrix of shape (n, 3)
-    Returns a matrix of shape A = (3, n) and B of shape (3, )
-    Which
+def WeightedTorsionVector(vertices: Tuple[Tuple[float]]) -> Tuple[Tuple[float]]:
+    """Returns a matrix A of shape (n, 3) such
 
     A_{0j} = int phi_j * (p x p') dt
     A_{1j} = int phi_j * (x^2) dy
@@ -374,6 +336,19 @@ def TorsionConstraintVector(vertices: Tuple[Tuple[float]]) -> Tuple[Tuple[float]
     return amatrix, bvector
 
 
+def ShearVector(vertices: Tuple[Tuple[float]]) -> Tuple[Tuple[float]]:
+    """
+    Computes the matrix [X] of shape (n, 6) such
+                      [x^2   * dx]
+                      [2*x*y * dx]
+    X_i = int ln(r) * [y^2   * dx]  dt
+                      [x^2   * dy]
+                      [2*x*y * dy]
+                      [y^2   * dy]
+    """
+    pass
+
+
 def AreaProperties(vertices: Tuple[Tuple[float]]) -> Tuple[Tuple[float]]:
     """
     Receives n vertices, a matrix of shape (n, 3)
@@ -409,88 +384,70 @@ def AreaProperties(vertices: Tuple[Tuple[float]]) -> Tuple[Tuple[float]]:
     return matrix
 
 
-class WarpingFunction:
-    def __init__(self, all_vertices: Tuple[Tuple[Tuple[float]]]):
-        self.__all_vertices = []
-        for vertices in all_vertices:
-            vertices = np.array(vertices, dtype="float64")
-            self.__all_vertices.append(vertices)
-        if len(self.__all_vertices) != 1:
-            msg = "For now, only 1 group of vertices is allowed"
-            raise ValueError(msg)
-        self.__all_vertices = tuple(self.__all_vertices)
-        self.__solution = None
-        self.__center = None
+def WarpingValues(vertices: Tuple[Tuple[float]]) -> Tuple[float]:
+    """Finds the vector W that satisfies the laplace's equation
 
-    def __mount_matrix(self):
-        vertices = self.__all_vertices[0]
-        matrix = IntegralUVn(vertices)
-        matrix -= np.pi * np.eye(len(matrix))
-        return matrix
+    nabla^2 w = 0
+    <grad w, n> = <p, p'>/|p'|
+    w = sum_j phi_j * W_j
 
-    def __warping_vector(self):
-        vertices = self.__all_vertices[0]
-        vector = IntegralUnV(vertices)
-        return vector
+    (M-A)*W = F
 
-    def __torsion_vector(self):
-        vertices = self.__all_vertices[0]
-        vector = TorsionVector(vertices)
-        return vector
+    """
+    matrix = IntegralUVn(vertices)
+    matrix -= np.pi * np.eye(len(matrix))
+    vector = IntegralUnV(vertices)
+    matrix = np.pad(matrix, ((0, 1), (0, 1)), constant_values=1)
+    matrix[-1, -1] = 0
+    vector = np.pad(vector, (0, 1), constant_values=0)
+    warpvalues = np.linalg.solve(matrix, vector)[:-1]
+    return warpvalues
 
-    def torsion_contribuition(self):
-        vector = self.__torsion_vector()
-        return np.inner(vector, self.__solution)
 
-    def solve(self):
-        matrix = self.__mount_matrix()
-        vector = self.__warping_vector()
-        matrix = np.pad(matrix, ((0, 1), (0, 1)), constant_values=1)
-        matrix[-1, -1] = 0
-        vector = np.pad(vector, (0, 1), constant_values=0)
-        warpvals = np.linalg.solve(matrix, vector)[:-1]
-        # Now compute torsion center
-        vertices = self.__all_vertices[0]
-        amatrix, bvector = TorsionConstraintVector(vertices)
-        bvector += np.einsum("ij,j->i", amatrix, warpvals)
-        cmatrix = AreaProperties(vertices)
-        result = np.linalg.solve(cmatrix, bvector)
-        c0, x0, y0 = result[0], -result[2], result[1]
-        self.__center = (x0, y0)
-        self.__solution = warpvals
-        self.__solution = warpvals - c0
-        self.__solution += x0 * vertices[:, 1]
-        self.__solution -= y0 * vertices[:, 0]
+def ShearValues(vertices: Tuple[Tuple[float]]) -> Tuple[Tuple[float]]:
+    raise NotImplementedError
 
-    def eval_boundary(self, param: float) -> float:
-        raise NotImplementedError
 
-    def eval_interior(self, point: Tuple[float]) -> float:
-        raise NotImplementedError
-
-    def eval(self, points: Tuple[Tuple[float]]) -> float:
+class WarpingEvaluator:
+    def interior(
+        vertices: Tuple[Tuple[float]],
+        sources: Tuple[Tuple[float]],
+        warpvals: Tuple[float],
+    ) -> Tuple[float]:
         """
-        Evaluates the warping function at given point
+        Computes w(s), when s is a interior point by using the
+        equation
+
+        alpha(s)*w(s) = int w * dv/dn * ds - int v * dw/dn * ds
+
+        Rewrite it as
+
+        alpha(s)*w(s) = int w * (r x p')/<r, r> dt - int ln|r| * <p, p'> dt
+
+        When w is a linear combination
         """
-        raise NotImplementedError
-        points = np.array(points, dtype="float64")
-        values = np.zeros(len(points))
-        for i, point in enumerate(points):
-            param = projection(point)
-            projected_pt = curve(param)
-            if np.linalg.norm(projected_pt - point) < 1e-9:
-                values[i] = self.eval_boundary(param)
-            elif point in shape:
-                values[i] = self.eval_interior(point)
-        return values
+        vertices = tuple(tuple(map(np.float64, point)) for point in vertices)
+        vertices = np.array(vertices, dtype="float64")
+        vectors = np.roll(vertices, -1, axis=0) - vertices
+        nverts = vectors.shape[0]
+        nodes, weights = Integration.gauss(5)
+        avals = np.einsum("ij,ij->i", vertices, vectors)
+        bvals = np.einsum("ij,ij->i", vectors, vectors)
 
-    def __call__(self, points: Union[Tuple[float], Tuple[Tuple[float]]]):
-        points = np.array(points, dtype="float64")
-        if points.ndim == 2:
-            return self.eval(points)
-        return self.eval([points])[0]
-
-    def center(self):
-        if self.__center is None:
-            self.solve()
-        return self.__center
+        phi1 = nodes  # Increase
+        phi2 = 1 - nodes  # Decrease
+        result = np.zeros(len(sources))
+        for k0, vector in enumerate(vectors):
+            k1 = (k0 + 1) % nverts
+            wvals = warpvals[k0] * phi2 + warpvals[k1] * phi1
+            pinnerdp = avals[k0] + nodes * bvals[k0]
+            tempmat = np.tensordot(nodes, vector, axes=0)
+            for i, source in enumerate(sources):
+                radius = vertices[k0] - source + tempmat
+                rcrossdp = radius[:, 0] * vector[1] - radius[:, 1] * vector[0]
+                rinnerr = np.einsum("ij,ij->i", radius, radius)
+                funcvals = rcrossdp / rinnerr
+                lnradius = np.log(rinnerr) / 2
+                result[i] += np.einsum("i,i,i", weights, funcvals, wvals)
+                result[i] -= np.einsum("i,i,i", weights, lnradius, pinnerdp)
+        return result / (2 * np.pi)
