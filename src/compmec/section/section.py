@@ -69,7 +69,7 @@ class Section:
         return self.__area
 
     def first_moment(self) -> Tuple[float]:
-        """Gives the first moment of area
+        """Gives the first moments of area
 
         Qx = int y dx dy
         Qy = int x dx dy
@@ -89,13 +89,12 @@ class Section:
 
         """
         if self.__first is None:
-            nshapes = len(self.__shapes)
-            values = np.zeros((nshapes, 2), dtype="float64")
-            for i, shape in enumerate(self.__shapes):
-                values[i, 0] = IntegrateShape.polynomial(shape, 1, 0)
-                values[i, 1] = IntegrateShape.polynomial(shape, 0, 1)
-            self.__first = np.einsum("ij->j", values)
-        return self.__first
+            values = np.zeros(2, dtype="float64")
+            for shape in self.__shapes:
+                values[0] = IntegrateShape.polynomial(shape, 0, 1)
+                values[1] = IntegrateShape.polynomial(shape, 1, 0)
+            self.__first = values
+        return tuple(self.__first)
 
     def second_moment(self, center: Tuple[float] = (0, 0)) -> Tuple[Tuple[float]]:
         """Gives the second moment of inertia with respect to center
@@ -124,15 +123,18 @@ class Section:
 
         """
         if self.__second is None:
-            nshapes = len(self.__shapes)
-            values = np.zeros((nshapes, 2, 2), dtype="float64")
-            for i, shape in enumerate(self.__shapes):
-                values[i, 0, 0] += IntegrateShape.polynomial(shape, 2, 0)
-                values[i, 0, 1] += IntegrateShape.polynomial(shape, 1, 1)
-                values[i, 1, 1] += IntegrateShape.polynomial(shape, 0, 2)
-            values[:, 1, 0] = values[:, 0, 1]
-            self.__second = np.einsum("ijk->jk", values)
-        return self.__second - self.area() * np.tensordot(center, center, axes=0)
+            values = np.zeros(3, dtype="float64")
+            for shape in self.__shapes:
+                values[0] += IntegrateShape.polynomial(shape, 0, 2)
+                values[1] += IntegrateShape.polynomial(shape, 1, 1)
+                values[2] += IntegrateShape.polynomial(shape, 2, 0)
+            self.__second = values
+        area = self.area()
+        Ixx, Ixy, Iyy = self.__second
+        Ixx -= area * center[1] ** 2
+        Ixy -= area * center[0] * center[1]
+        Iyy -= area * center[0] ** 2
+        return Ixx, Ixy, Iyy
 
     def torsion_constant(self) -> float:
         """Gives the torsion constant J
@@ -193,9 +195,9 @@ class Section:
         ((2, 3), (6, 3), (2, 6))
 
         """
-        first = self.first_moment()
+        Qx, Qy = self.first_moment()
         area = self.area()
-        return first / area
+        return Qy / area, Qx / area
 
     def bending_center(self) -> Tuple[float]:
         """Gives the bendin center B

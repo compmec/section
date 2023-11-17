@@ -60,12 +60,15 @@ class TestSinglePolygon:
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
         section = Section([geometry], [material])
-        assert section.area() == side**2
-        first = section.first_momentum()
-        assert tuple(first) == (0, 0)
-        second = section.second_momentum()
-        good = ((side**4 / 12, 0), (0, side**4 / 12))
-        np.testing.assert_equal(second, good)
+        area = section.area()
+        Qx, Qy = section.first_moment()
+        Ixx, Ixy, Iyy = section.second_moment()
+        assert area == side**2
+        assert Qx == 0
+        assert Qy == 0
+        assert Ixx == side**4 / 12
+        assert Ixy == 0
+        assert Iyy == side**4 / 12
 
     @pytest.mark.order(3)
     @pytest.mark.timeout(1)
@@ -77,12 +80,15 @@ class TestSinglePolygon:
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
         section = Section([geometry], [material])
-        assert section.area() == width * height
-        first = section.first_momentum()
-        assert tuple(first) == (0, 0)
-        second = section.second_momentum()
-        good = ((height * width**3 / 12, 0), (0, width * height**3 / 12))
-        np.testing.assert_equal(second, good)
+        area = section.area()
+        Qx, Qy = section.first_moment()
+        Ixx, Ixy, Iyy = section.second_moment()
+        assert area == width * height
+        assert Qx == 0
+        assert Qy == 0
+        assert Ixx == width * height**3 / 12
+        assert Ixy == 0
+        assert Iyy == height * width**3 / 12
 
     @pytest.mark.order(3)
     @pytest.mark.timeout(1)
@@ -95,15 +101,15 @@ class TestSinglePolygon:
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
         section = Section([geometry], [material])
-        assert section.area() == side**2
-        first = section.first_momentum()
-        assert tuple(first) == (side**2 * center[0], side**2 * center[1])
-        second = section.second_momentum()
-        good = side**2 * np.tensordot(center, center, axes=0)
-        print(good)
-        good = good + ((side**4 / 12, 0), (0, side**4 / 12))
-        print(good)
-        np.testing.assert_equal(second, good)
+        area = section.area()
+        Qx, Qy = section.first_moment()
+        Ixx, Ixy, Iyy = section.second_moment()
+        assert area == side**2
+        assert Qx == area * center[1]
+        assert Qy == area * center[0]
+        assert Ixx == side**4 / 12 + area * center[1] ** 2
+        assert Ixy == area * center[0] * center[1]
+        assert Iyy == side**4 / 12 + area * center[0] ** 2
 
     @pytest.mark.order(3)
     @pytest.mark.timeout(1)
@@ -114,20 +120,24 @@ class TestSinglePolygon:
         ]
     )
     def test_shifted_rectangle(self):
-        side = 3
+        width, height = 3, 5
         center = (5, -7)
-        geometry = Primitive.square(side, center=center)
+        geometry = Primitive.square()
+        geometry.scale(width, height)
+        geometry.move(center)
         material = Isotropic()
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
         section = Section([geometry], [material])
-        assert section.area() == side**2
-        first = section.first_momentum()
-        assert tuple(first) == (side**2 * center[0], side**2 * center[1])
-        second = section.second_momentum()
-        good = side**2 * np.tensordot(center, center, axes=0)
-        good = good + ((side**4 / 12, 0), (0, side**4 / 12))
-        np.testing.assert_equal(second, good)
+        area = section.area()
+        Qx, Qy = section.first_moment()
+        Ixx, Ixy, Iyy = section.second_moment()
+        assert area == width * height
+        assert Qx == area * center[1]
+        assert Qy == area * center[0]
+        assert Ixx == width * height**3 / 12 + area * center[1] * center[1]
+        assert Ixy == area * center[0] * center[1]
+        assert Iyy == height * width**3 / 12 + area * center[0] * center[0]
 
     @pytest.mark.order(3)
     @pytest.mark.dependency(
