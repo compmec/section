@@ -5,7 +5,7 @@ from typing import Optional, Tuple
 import numpy as np
 from compmec.shape.shape import DefinedShape, IntegrateShape
 
-from .bem2d import TorsionVector, WarpingEvaluator, WarpingValues
+from . import bem2d
 from .material import Material
 
 
@@ -284,14 +284,14 @@ class Section:
     def monosymmetry_constants(self) -> Tuple[float]:
         raise NotImplementedError
 
-    def solve(self):
-        if self.__warping is None:
-            shape = self.__shapes[0]
-            curve = shape.jordans[0]
-            vertices = curve.vertices
-            vertices = tuple(tuple(map(np.float64, pt)) for pt in vertices)
-            warpvalues = WarpingValues(vertices)
-            self.__warping = WarpingField(self, warpvalues)
+    def solve(self, meshsize: float=None, degree: int=1):
+        shape = self.__shapes[0]
+        jordan = shape.jordans[0]
+        mesh = bem2d.CurveMesh(jordan)
+        vertices = jordan.vertices
+        vertices = tuple(tuple(map(np.float64, pt)) for pt in vertices)
+        warpvalues = WarpingValues(curve, basis, tsources, tmesh)
+        self.__warping = WarpingField(self, warpvalues)
 
     def warping(self) -> WarpingField:
         if self.__warping is None:
@@ -347,7 +347,7 @@ class WarpingField(FieldEvaluator):
         super().__init__(section)
         self.__ctrlpoints = np.array(warpvalues, dtype="float64")
 
-    def eval_boundary(self, param: float) -> float:
+    def eval_boundary(self, params: Tuple[float]) -> Tuple[float]:
         raise NotImplementedError
 
     def eval_interior(self, points: Tuple[Tuple[float]]) -> Tuple[float]:
@@ -400,39 +400,98 @@ class ChargedField(FieldEvaluator):
 
 
 class StrainField(ChargedField):
-    def eval_boundary(self, param: float):
+
+    def __eval_bend_moment(self, points: Tuple[Tuple[float]]) -> Tuple[float]:
+        """
+        Evaluates
+        """
+
+    def eval_boundary(self, params: Tuple[float]) -> Tuple[Tuple[float]]:
         """
         Returns the values of
         [exx, eyy, ezz, exz, eyz]
         The coordinate exy is always zero
         """
-        pass
+        nvals = len(params)
+        result = np.zeros((nvals, 5), dtype="float64")
+        if self.forces[2]:  # Axial force
+            pass
+        if self.moments[0] or self.moments[1]:  # Bending moments
+            pass
+        if self.forces[0] or self.forces[1]:  # Shear force
+            raise NotImplementedError
+        if self.moments[2]:  # Torsion force
+            raise NotImplementedError
+        return result
 
-    def eval_interior(self, point: Tuple[float]):
+    def eval_interior(self, points: Tuple[Tuple[float]]) -> Tuple[Tuple[float]]:
         """
         Returns the strain values of
         [exx, eyy, ezz, exz, eyz]
         The coordinate exy is always zero
         """
-        pass
+        nvals = len(points)
+        result = np.zeros((nvals, 5), dtype="float64")
+        if self.forces[2]:  # Axial force
+            pass
+        if self.moments[0] or self.moments[1]:  # Bending moments
+            pass
+        if self.forces[0] or self.forces[1]:  # Shear force
+            raise NotImplementedError
+        if self.moments[2]:  # Torsion force
+            raise NotImplementedError
+        return result
 
 
 class StressField(ChargedField):
-    def eval_boundary(self, param: float):
-        """
-        Returns the strain values of
-        [sxz, syz, szz]
-        The coordinate exy is always zero
-        """
-        value = 0
-        if self.forces[2] != 0:
-            area = self.section.area()
-            value += self.forces[2] / area
 
-    def eval_interior(self, point: Tuple[float]):
+    def __axial_stresses(self, points: Tuple[Tuple[float]]) -> Tuple[float]:
+        area = self.section.area()
+        szz = self.forces[2] / area
+        values = szz*np.ones(len(points), dtype="float64")
+        return values
+
+    def __bending_stresses(self, points: Tuple[Tuple[float]]) -> Tuple[float]:
+        values = np.zeros(len(points), dtype="float64")
+        return values
+
+    def eval_boundary(self,
+                      params: Tuple[float],
+                      material: Material) -> Tuple[Tuple[float]]:
         """
         Returns the strain values of
         [sxz, syz, szz]
         The coordinate exy is always zero
         """
-        pass
+        nvals = len(params)
+        result = np.zeros((nvals, 3), dtype="float64")
+        if self.forces[2]:  # Axial force
+            area = self.section.area()
+            result[:, 2] += 
+        if self.moments[0] or self.moments[1]:  # Bending moments
+            pass
+        if self.forces[0] or self.forces[1]:  # Shear force
+            raise NotImplementedError
+        if self.moments[2]:  # Torsion force
+            raise NotImplementedError
+
+    def eval_interior(self,
+                      points: Tuple[Tuple[float]],
+                      subshape: DefinedShape,
+                      material: Material) -> Tuple[Tuple[float]]:
+        """
+        Returns the strain values of
+        [sxz, syz, szz]
+        The coordinate exy is always zero
+        """
+        nvals = len(points)
+        result = np.zeros((nvals, 3), dtype="float64")
+        if self.forces[2]:  # Axial force
+            area = self.section.area()
+            result[:, 2] += self.forces[2] / area
+        if self.moments[0] or self.moments[1]:  # Bending moments
+            result[:, 2] += self.__b
+        if self.forces[0] or self.forces[1]:  # Shear force
+            raise NotImplementedError
+        if self.moments[2]:  # Torsion force
+            raise NotImplementedError

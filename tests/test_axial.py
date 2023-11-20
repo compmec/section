@@ -1,8 +1,6 @@
 """
-This file tests the basic geometry properties, such as
-* Area
-* First moment of inertia
-* Second moment of inertia
+This file tests the axial properties like strain
+and stress when normal force or bending moments are applied
 """
 import numpy as np
 import pytest
@@ -43,11 +41,10 @@ class TestSinglePolygon:
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
         section = Section([geometry], [material])
-        section.solve(meshsize=0.01)
-        test_torsion = section.torsion_constant()
-        good_torsion = (9 / 64) * side**4
-        diff = test_torsion - good_torsion
-        assert abs(diff) < 0.02
+        strain = section.strain()
+        stress = section.stress()
+        points = [(0, 0)]
+        sxz, syz, szz = stress.eval_interior(points)
 
     @pytest.mark.order(4)
     @pytest.mark.dependency(

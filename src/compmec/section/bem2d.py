@@ -10,6 +10,25 @@ from typing import Tuple, Union
 
 import numpy as np
 
+from compmec import nurbs, shape
+
+
+def CurveMesh(jordan: shape.JordanCurve, meshsize: float = None):
+    if not isinstance(jordan, shape.JordanCurve):
+        raise TypeError
+    lenghts = tuple(map(shape.IntegratePlanar.lenght, jordan.segments))
+    if meshsize is None:
+        meshsize = sum(lenghts) / 100
+    weights = []
+    for lenght in lenghts:
+        ndiv = int(np.ceil(lenght / meshsize))
+        weights.extend([lenght / ndiv] * ndiv)
+    weights = np.array(weights, dtype="float64")
+    knotvector = nurbs.GeneratorKnotVector.weight(1, weights)
+    knotvector.normalize()
+    print(knotvector)
+    return knotvector
+
 
 class Integration:
     """
@@ -202,68 +221,113 @@ class Integration:
         return nodes, weights
 
 
-def IntegralUVn(vertices):
-    """Computes the matrix M
+def IntegralUVn(curve, basis, tsources, tmesh):
+    """Computes the matrix [M] which
 
-    M_ij = int_{Gamma} phi_j * dv/dn * dGamma
-         = int phi_j * (r x p')/<r, r> dt
+    M_ij = int phi_j * (r x p')/<r, r> dt
 
-    phi_j are the basis function
-    r = sqrt(<p-s_i, p-s_i>)
+    Which represents the integral
 
+    int u * (dv/dn) ds
+
+    Parameters
+    ----------
+    curve: A jordan curve of degree 1, that contains a knotvector and
+        control points, which are the vertices
+    basis: A basis function of the given basis
+    tsources: The parameters which the source points are applied
+        tuple[float]
+    tmesh: The nodes separation to easier integrating
+        tuple[float]
+
+    The number of tsources must be equal to the number of dofs of basis
     """
-    nverts = len(vertices)
-    vectors = np.roll(vertices, -1, axis=0) - vertices
-    sources = 0.5 * (np.roll(vertices, -1, axis=0) + vertices)
-    matrix = np.zeros((nverts, nverts), dtype="float64")
-    nodes, weights = Integration.gauss(5)
-    phi1 = nodes  # Increase
-    phi2 = 1 - nodes  # Decrease
-    for i, source in enumerate(sources):
-        for j, vector in enumerate(vectors):
-            if j == i:
+    tknots = curve.knotvector.knots
+    tknots = np.array(tknots, dtype="float64")
+    uknots = sorted(set(tmesh) | set(tknots) | set(tsources))
+    uknots = np.array(uknots, dtype="float64")
+    tsources = np.array(tsources, dtype="float64")
+    sources = curve(tsources)
+    nbasis = basis.npts
+    nsources = len(tsources)
+    matrix = np.zeros((nsources, nbasis), dtype="float64")
+    nodes, weights = Integration.gauss(10)
+
+    if curve.degree != 1:
+        raise NotImplementedError
+    for k0, tk0 in enumerate(uknots[:-1]):
+        tk1 = uknots[k0 + 1]
+        vertex0 = curve(tk0)
+        vertex1 = curve(tk1)
+        vector = vertex1 - vertex0
+        tvals = tk0 + nodes * (tk1 - tk0)
+        phis = basis(tvals)
+        points = vertex0 + np.tensordot(nodes, vector, axes=0)
+        for i, (tsi, source) in enumerate(zip(tsources, sources)):
+            if tk0 == tsi or tsi == tk1:
                 continue
-            j1 = (j + 1) % nverts
-            vect0 = vertices[j] - source
-            numera = np.cross(vect0, vector)  # r x p'
-            radius = vect0 + np.tensordot(nodes, vector, axes=0)
-            radsqu = np.einsum("ij,ij->i", radius, radius)  # <r, r>
-            funcvals = numera / radsqu
-            # Increase
-            val = np.einsum("i,i,i", phi1, weights, funcvals)
-            matrix[i, j1] += val
-            # Decrease
-            val = np.einsum("i,i,i", phi2, weights, funcvals)
-            matrix[i, j] += val
+            radius = tuple(point - source for point in points)
+            radius = np.array(radius, dtype="float64")
+            rcrossdp = vector[1] * radius[:, 0] - vector[0] * radius[:, 1]  # r x p'
+            rinnerr = np.einsum("ij,ij->i", radius, radius)  # <r, r>
+            funcvals = rcrossdp / rinnerr
+            matrix[i] += np.einsum("i,i,ji->j", weights, funcvals, phis)
     return matrix
 
 
-def IntegralUnV(vertices):
+def IntegralUnV(curve, tsources):
+    """Computes the matrix [F] which
+
+    F_i = int ln|r| * <p, p'> dt
+
+    Which represents the integral
+
+    int (du/dn) * v ds
+
+    Parameters
+    ----------
+    curve: A jordan curve of degree 1, that contains a knotvector and
+        control points, which are the vertices
+    tsources: The parameters which the source points are applied
+
     """
-    Computes the force vector [F]
+    tknots = curve.knotvector.knots
+    tknots = sorted(set(tknots) | set(tsources))
+    tknots = np.array(tknots, dtype="float64")
+    if np.any(tsources < tknots[0]) or np.any(tknots[-1] < tsources):
+        raise ValueError
+    if len(set(tsources)) != len(tsources):
+        raise ValueError
 
-    F_i = int_{Gamma} du/dn * v * dGamma
-        = int ln|r| * <p, p'> dt
+    if curve.degree != 1:
+        raise NotImplementedError
+    nsources = len(tsources)
+    sources = curve(tsources)
+    result = np.zeros(nsources, dtype="float64")
+    nodes, weights = Integration.gauss(10)
+    for k0, tk0 in enumerate(tknots[:-1]):
+        tk1 = tknots[k0 + 1]
+        vertex0 = curve(tk0)
+        vertex1 = curve(tk1)
+        vector = vertex1 - vertex0
+        p0innerv = np.inner(vertex0, vector)
+        vinnerv = np.inner(vector, vector)
+        pinnerv = p0innerv + nodes * vinnerv
+        points = vertex0 + np.tensordot(nodes, vector, axes=0)
+        for i, (tsi, source) in enumerate(zip(tsources, sources)):
+            if tsi != tk0 and tsi != tk1:
+                radius = points - source
+                rinnerr = np.einsum("ij,ij->i", radius, radius)
+                lograds = np.log(rinnerr) / 2
+                result[i] += np.einsum("i,i,i", weights, lograds, pinnerv)
+            else:
+                result[i] += np.log(vinnerv) * (p0innerv + vinnerv / 2) / 2
+                result[i] -= p0innerv
+                if tsi == tk0:
+                    result[i] -= vinnerv / 4
+                else:
+                    result[i] -= 3 * vinnerv / 4
 
-    r = sqrt(<p-s_i, p-s_i>)
-
-    """
-    vectors = np.roll(vertices, -1, axis=0) - vertices
-    sources = 0.5 * (np.roll(vertices, -1, axis=0) + vertices)
-    avals = np.einsum("ij,ij->i", vertices, vectors)
-    bvals = np.einsum("ij,ij->i", vectors, vectors)
-    result = (avals + bvals / 2) * (0.5 * np.log(bvals) - 1 - np.log(2))
-    nodes, weights = Integration.gauss(5)
-    for i, source in enumerate(sources):
-        for j, vector in enumerate(vectors):
-            if j == i:
-                continue
-            points = vertices[j] + np.tensordot(nodes, vector, axes=0)
-            radius = points - source
-            lograds = np.log(np.einsum("ij,ij->i", radius, radius)) / 2  # ln(r)
-            funcvals = np.einsum("ij,j->i", points, vector)
-            val = np.einsum("i,i,i", lograds, weights, funcvals)
-            result[i] += val
     return result
 
 
