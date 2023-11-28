@@ -12,10 +12,9 @@ from compmec.section.bem2d import IntegralUnV, IntegralUVn, Integration
 
 @pytest.mark.order(4)
 @pytest.mark.dependency(
-    depends=["tests/test_material.py::test_end"],
+    depends=["tests/test_material.py::test_end", "tests/test_axial.py::test_end"],
     scope="session",
 )
-@pytest.mark.dependency()
 def test_begin():
     pass
 
