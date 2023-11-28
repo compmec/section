@@ -1,23 +1,21 @@
 from __future__ import annotations
 
-from typing import Optional, Tuple
+import json
+from importlib import resources
+from typing import Optional, Tuple, Union
 
+import jsonschema
 import numpy as np
-from compmec.shape.shape import DefinedShape, IntegrateShape
+from compmec.shape import JordanCurve, Point2D
+from compmec.shape.shape import DefinedShape, IntegrateShape, ShapeFromJordans
+
+from compmec import nurbs
 
 from . import bem2d
 from .material import Material
 
 
-class Section:
-    """
-    Section's class
-
-
-    """
-
-    AUTO_SOLVE = True
-
+class BaseSection:
     def __init__(self, shapes: Tuple[DefinedShape], materials: Tuple[Material]):
         for shape in shapes:
             if not isinstance(shape, DefinedShape):
@@ -29,12 +27,139 @@ class Section:
         self.__materials = tuple(materials)
         if len(self.__shapes) != 1 or len(self.__materials) != 1:
             raise ValueError
+
+    def __iter__(self) -> Tuple[DefinedShape, Material]:
+        for shape, material in zip(self.__shapes, self.__materials):
+            yield (shape, material)
+
+    def __getitem__(self, index) -> Tuple[DefinedShape, Material]:
+        index = int(index) % len(self.__shapes)
+        return (self.__shapes[index], self.__materials[index])
+
+    def external_jordans(self) -> Tuple[JordanCurve]:
+        pass
+
+    def jordans(self) -> Tuple[JordanCurve]:
+        pass
+
+
+class Section:
+    """
+    Section's class
+
+
+    """
+
+    AUTO_SOLVE = True
+
+    @classmethod
+    def __validate_json(cls, filepath: str):
+        schema_path = resources.files("compmec.section")
+        schema_path = schema_path.joinpath("schema/section.json")
+        with schema_path.open() as file:
+            schema = json.load(file)
+        with open(filepath, "r") as file:
+            data = json.load(file)
+        jsonschema.validate(data, schema)
+
+        node_labels = tuple(line[0] for line in data["nodes"])
+        if len(node_labels) != len(set(node_labels)):
+            msg = "There are nodes with same label number!"
+            raise ValueError(msg)
+        node_labels = set(node_labels)
+        curve_labels = tuple(info["label"] for info in data["curves"])
+        if len(curve_labels) != len(set(curve_labels)):
+            msg = "There are curves with same label number!"
+            raise ValueError(msg)
+        curve_labels = set(curve_labels)
+        for info in data["curves"]:
+            diff = set(info["ctrlpoints"]) - node_labels
+            if diff:
+                msg = f"The curve {info['label']} refer to ctrlpoints "
+                msg += f"{sorted(diff)} which don't exist in the header "
+                msg += f"of all node labels: {sorted(node_labels)}"
+                raise ValueError(msg)
+        for shape_name, labels in data["shapes"].items():
+            diff = set(labels) - curve_labels
+            if diff:
+                msg = f"The shape {shape_name} refer to curves "
+                msg += f"{sorted(diff)} which don't exist in the header "
+                msg += f"of all curve labels: {sorted(curve_labels)}"
+                raise ValueError(msg)
+        all_shape_names = set(data["shapes"].keys())
+        all_material_names = set(data["materials"].keys())
+        for sec_name, info in data["sections"].items():
+            shape_names = set(info["shapes"])
+            material_names = set(info["materials"])
+            diff = shape_names - all_shape_names
+            if diff:
+                msg = f"The section {sec_name} refer to shapes "
+                msg += f"{sorted(diff)} which don't exist in the header "
+                msg += f"of all curve labels: {sorted(all_shape_names)}"
+                raise ValueError(msg)
+            diff = material_names - all_material_names
+            if diff:
+                msg = f"The section {sec_name} refer to shapes "
+                msg += f"{sorted(diff)} which don't exist in the header "
+                msg += f"of all curve labels: {sorted(all_shape_names)}"
+                raise ValueError(msg)
+
+    @classmethod
+    def from_json(cls, filepath: str) -> Union[Section, Tuple[Section]]:
+        """
+        Creates instances of section reading the data from json file.
+        """
+        cls.__validate_json(filepath)
+        with open(filepath, "r") as file:
+            data = json.load(file)
+
+        nodes = {}
+        for line in data["nodes"]:
+            nodes[line[0]] = Point2D(line[1:])
+
+        all_jordans = {}
+        for info in data["curves"]:
+            curve_label = info["label"]
+            degree = info["degree"] if "degree" in info else None
+            knotvector = info["knotvector"]
+            knotvector = nurbs.KnotVector(knotvector, degree=degree)
+            curve = nurbs.Curve(knotvector)
+            points = tuple(nodes[lab] for lab in info["ctrlpoints"])
+            curve.ctrlpoints = points
+            if "weights" in info:
+                curve.weight = info["weights"]
+            jordan = JordanCurve.from_full_curve(curve)
+            all_jordans[curve_label] = jordan
+
+        all_shapes = {}
+        for name, curve_labels in data["shapes"].items():
+            jordans = tuple(all_jordans[lab] for lab in curve_labels)
+            shape = ShapeFromJordans(jordans)
+            all_shapes[name] = shape
+
+        all_materials = {}
+        for name, info in data["materials"].items():
+            material = Material.from_dict(info)
+            all_materials[name] = material
+
+        sections = {}
+        for name, info in data.items():
+            shapes = tuple(all_shapes[sh] for sh in info["shapes"])
+            materials = tuple(all_materials)
+            section = Section(shapes, materials)
+            sections[name] = section
+        return sections
+
+    def __init__(self, shapes: Tuple[DefinedShape], materials: Tuple[Material]):
         self.__area = None
         self.__first = None
         self.__second = None
         self.__warping = None
         self.__strain = StrainField(self)
         self.__stress = StressField(self)
+        self.__base = BaseSection(shapes, materials)
+        self.__shapes = shapes
+        self.__materials = materials
 
     def __iter__(self) -> Tuple[DefinedShape, Material]:
         for shape, material in zip(self.__shapes, self.__materials):
@@ -74,7 +199,7 @@ class Section:
         Qx = int y dx dy
         Qy = int x dx dy
 
-        :return: The first moment of inertia Qx, Qy
+        :return: The first moment of inertia (Qx, Qy)
         :rtype: tuple[float, float]
 
         Example use
@@ -164,7 +289,7 @@ class Section:
             vertices = curve.vertices
             vector = TorsionVector(vertices)
             second = self.second_moment()
-            polar = second[0, 0] + second[1, 1]
+            polar = second[0] + second[2]
             self.__torsion = polar - np.inner(vector, self.__warping)
         return self.__torsion
 
@@ -268,7 +393,7 @@ class Section:
         raise NotImplementedError
 
     def gyradius(self) -> Tuple[float]:
-        """Gives the gyradius, or radii of gyration
+        """Gives the gyradius (radii of gyration)
 
         R = (sqrt(Ixx/A), sqrt(Iyy/A))
 
@@ -284,7 +409,7 @@ class Section:
     def monosymmetry_constants(self) -> Tuple[float]:
         raise NotImplementedError
 
-    def solve(self, meshsize: float=None, degree: int=1):
+    def solve(self, meshsize: float = None, degree: int = 1):
         shape = self.__shapes[0]
         jordan = shape.jordans[0]
         mesh = bem2d.CurveMesh(jordan)
@@ -400,7 +525,6 @@ class ChargedField(FieldEvaluator):
 
 
 class StrainField(ChargedField):
-
     def __eval_bend_moment(self, points: Tuple[Tuple[float]]) -> Tuple[float]:
         """
         Evaluates
@@ -444,41 +568,38 @@ class StrainField(ChargedField):
 
 
 class StressField(ChargedField):
-
     def __axial_stresses(self, points: Tuple[Tuple[float]]) -> Tuple[float]:
         area = self.section.area()
         szz = self.forces[2] / area
-        values = szz*np.ones(len(points), dtype="float64")
+        values = szz * np.ones(len(points), dtype="float64")
         return values
 
     def __bending_stresses(self, points: Tuple[Tuple[float]]) -> Tuple[float]:
         values = np.zeros(len(points), dtype="float64")
         return values
 
-    def eval_boundary(self,
-                      params: Tuple[float],
-                      material: Material) -> Tuple[Tuple[float]]:
+    def eval_boundary(
+        self, params: Tuple[float], material: Material
+    ) -> Tuple[Tuple[float]]:
         """
         Returns the strain values of
-        [sxz, syz, szz]
-        The coordinate exy is always zero
+        [s_xz, s_yz, s_zz]
+        The coordinate s_xy is always zero
         """
         nvals = len(params)
         result = np.zeros((nvals, 3), dtype="float64")
         if self.forces[2]:  # Axial force
-            area = self.section.area()
-            result[:, 2] += 
+            result[:, 2] += self.__axial_stresses(points)
         if self.moments[0] or self.moments[1]:  # Bending moments
-            pass
+            result[:, 2] += self.__bending_stresses(points)
         if self.forces[0] or self.forces[1]:  # Shear force
             raise NotImplementedError
         if self.moments[2]:  # Torsion force
             raise NotImplementedError
 
-    def eval_interior(self,
-                      points: Tuple[Tuple[float]],
-                      subshape: DefinedShape,
-                      material: Material) -> Tuple[Tuple[float]]:
+    def eval_interior(
+        self, points: Tuple[Tuple[float]], subshape: DefinedShape, material: Material
+    ) -> Tuple[Tuple[float]]:
         """
         Returns the strain values of
         [sxz, syz, szz]

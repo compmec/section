@@ -1,10 +1,39 @@
 """
 This module contains the class 'Isotropic' to store and convert values
 """
+from __future__ import annotations
+
+import json
+from importlib import resources
+from typing import Dict, Tuple, Union
+
+import jsonschema
 
 
 class Material(object):
-    pass
+    @classmethod
+    def from_json(cls, filepath: str) -> Union[Material, Tuple[Material]]:
+        schema_path = resources.files("compmec.section")
+        schema_path = schema_path.joinpath("schema/material.json")
+        with schema_path.open() as file:
+            schema = json.load(file)
+        with open(filepath, "r") as file:
+            data = json.load(file)
+        jsonschema.validate(data, schema)
+
+        materials = {}
+        for name, info in data.items():
+            materials[name] = cls.from_dict(info)
+        return materials
+
+    @classmethod
+    def from_dict(cls, info: Dict) -> Material:
+        behav = info.pop("behaviour")
+        if behav == "Isotropic":
+            material = Isotropic()
+            for attr, value in info.items():
+                setattr(material, attr, value)
+        return material
 
 
 class Isotropic(Material):
@@ -19,6 +48,21 @@ class Isotropic(Material):
         self._young_modulus = None
         self._poissons_ratio = None
         self._density = None
+
+    def __str__(self) -> str:
+        values = [
+            self.young_modulus,
+            self.poissons_ratio,
+            self.bulk_modulus,
+            self.shear_modulus,
+            self.lame_parameter_1,
+            self.lame_parameter_2,
+            self.density,
+        ]
+        # values = tuple(".3f" % v for v in values)
+        msg = "Isotropic Material: (E, nu, K, G, L1, L2, rho) = (%s)"
+        msg %= ", ".join(map(str, values))
+        return msg
 
     @property
     def young_modulus(self):
@@ -87,7 +131,7 @@ class Isotropic(Material):
         Density (rho) is the mesure of mass/volum
         https://en.wikipedia.org/wiki/Density
         """
-        return self.shear_modulus
+        return self._density
 
     @young_modulus.setter
     def young_modulus(self, value: float):

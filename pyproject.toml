@@ -5,6 +5,7 @@ description = "Analysis of beams cross-section using the boundary element method
 authors = ["Carlos Adir <carlos.adir.leite@gmail.com>"]
 readme = "README.md"
 packages = [{ include = "compmec/section", from = "src" }]
+include = ["schema/material.json"]
 
 [tool.poetry.dependencies]
 numpy = "^1.0.0"
