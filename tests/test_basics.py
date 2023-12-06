@@ -140,7 +140,12 @@ class TestSinglePolygon:
 
     @pytest.mark.order(3)
     @pytest.mark.timeout(1)
-    @pytest.mark.dependency(depends=["TestSinglePolygon::test_begin", "TestSinglePolygon::test_centered_rectangle"])
+    @pytest.mark.dependency(
+        depends=[
+            "TestSinglePolygon::test_begin",
+            "TestSinglePolygon::test_centered_rectangle",
+        ]
+    )
     def test_centered_regular_polygon(self):
         radius = 1
         material = Isotropic()
@@ -152,22 +157,25 @@ class TestSinglePolygon:
             area = section.area()
             Qx, Qy = section.first_moment()
             Ixx, Ixy, Iyy = section.second_moment()
-            good = radius**2 * nsides * np.sin(2*np.pi/nsides)/2
+            good = radius**2 * nsides * np.sin(2 * np.pi / nsides) / 2
             assert abs(area - good) < 1e-9
             assert abs(Qx) < 1e-9
             assert abs(Qy) < 1e-9
-            inner = 4 * np.sin(2*np.pi/nsides) + np.sin(4*np.pi/nsides)
-            good = radius**4 * nsides * inner /48
+            inner = 4 * np.sin(2 * np.pi / nsides) + np.sin(4 * np.pi / nsides)
+            good = radius**4 * nsides * inner / 48
             assert abs(Ixx - good) < 1e-9
             assert abs(Ixy) < 1e-9
             assert abs(Iyy - good) < 1e-9
 
-    
     @pytest.mark.order(3)
     @pytest.mark.timeout(1)
-    @pytest.mark.dependency(depends=["TestSinglePolygon::test_begin",
-                                     "TestSinglePolygon::test_shifted_rectangle",
-                                     "TestSinglePolygon::test_centered_regular_polygon"])
+    @pytest.mark.dependency(
+        depends=[
+            "TestSinglePolygon::test_begin",
+            "TestSinglePolygon::test_shifted_rectangle",
+            "TestSinglePolygon::test_centered_regular_polygon",
+        ]
+    )
     def test_shifted_regular_polygon(self):
         radius = 3
         center = (5, -7)
@@ -180,17 +188,15 @@ class TestSinglePolygon:
             area = section.area()
             Qx, Qy = section.first_moment()
             Ixx, Ixy, Iyy = section.second_moment()
-            good = radius**2 * nsides * np.sin(2*np.pi/nsides)/2
+            good = radius**2 * nsides * np.sin(2 * np.pi / nsides) / 2
             assert abs(area - good) < 1e-9
             assert abs(Qx - area * center[1]) < 1e-9
             assert abs(Qy - area * center[0]) < 1e-9
-            inner = 4 * np.sin(2*np.pi/nsides) + np.sin(4*np.pi/nsides)
-            good = radius**4 * nsides * inner /48
-            assert abs(Ixx - (good + area * center[1]**2)) < 1e-9
+            inner = 4 * np.sin(2 * np.pi / nsides) + np.sin(4 * np.pi / nsides)
+            good = radius**4 * nsides * inner / 48
+            assert abs(Ixx - (good + area * center[1] ** 2)) < 1e-9
             assert abs(Ixy - area * center[0] * center[1]) < 1e-9
-            assert abs(Iyy - (good + area * center[0]**2)) < 1e-9
-
-
+            assert abs(Iyy - (good + area * center[0] ** 2)) < 1e-9
 
     @pytest.mark.order(3)
     @pytest.mark.dependency(
@@ -228,9 +234,9 @@ class TestCircle:
     @pytest.mark.order(3)
     @pytest.mark.timeout(1)
     @pytest.mark.dependency(depends=["TestCircle::test_begin"])
-    def test_centered_square(self):
-        side = 3
-        geometry = Primitive.square(side)
+    def test_centered(self):
+        radius = 3
+        geometry = Primitive.circle(radius)
         material = Isotropic()
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
@@ -238,40 +244,20 @@ class TestCircle:
         area = section.area()
         Qx, Qy = section.first_moment()
         Ixx, Ixy, Iyy = section.second_moment()
-        assert area == side**2
-        assert Qx == 0
-        assert Qy == 0
-        assert Ixx == side**4 / 12
-        assert Ixy == 0
-        assert Iyy == side**4 / 12
+        assert abs(area - np.pi * radius**2) < 1e-3 * radius**2
+        assert abs(Qx) < 1e-9
+        assert abs(Qy) < 1e-9
+        assert abs(Ixx - np.pi * radius**4 / 4) < 1e-3 * radius**4
+        assert abs(Ixy) < 1e-9
+        assert abs(Iyy - np.pi * radius**4 / 4) < 1e-3 * radius**4
 
     @pytest.mark.order(3)
     @pytest.mark.timeout(1)
-    @pytest.mark.dependency(depends=["TestCircle::test_centered_square"])
-    def test_centered_rectangle(self):
-        width, height = 3, 5
-        geometry = Primitive.square().scale(width, height)
-        material = Isotropic()
-        material.young_modulus = 210e3
-        material.poissons_ratio = 0.30
-        section = Section([geometry], [material])
-        area = section.area()
-        Qx, Qy = section.first_moment()
-        Ixx, Ixy, Iyy = section.second_moment()
-        assert area == width * height
-        assert Qx == 0
-        assert Qy == 0
-        assert Ixx == width * height**3 / 12
-        assert Ixy == 0
-        assert Iyy == height * width**3 / 12
-
-    @pytest.mark.order(3)
-    @pytest.mark.timeout(1)
-    @pytest.mark.dependency(depends=["TestCircle::test_centered_square"])
-    def test_shifted_square(self):
-        side = 3
+    @pytest.mark.dependency(depends=["TestCircle::test_centered"])
+    def test_shifted(self):
+        radius = 3
         center = (5, -7)
-        geometry = Primitive.square(side, center=center)
+        geometry = Primitive.circle(radius, center=center)
         material = Isotropic()
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
@@ -279,48 +265,23 @@ class TestCircle:
         area = section.area()
         Qx, Qy = section.first_moment()
         Ixx, Ixy, Iyy = section.second_moment()
-        assert area == side**2
-        assert Qx == area * center[1]
-        assert Qy == area * center[0]
-        assert Ixx == side**4 / 12 + area * center[1] ** 2
-        assert Ixy == area * center[0] * center[1]
-        assert Iyy == side**4 / 12 + area * center[0] ** 2
 
-    @pytest.mark.order(3)
-    @pytest.mark.timeout(1)
-    @pytest.mark.dependency(
-        depends=[
-            "TestCircle::test_shifted_square",
-            "TestCircle::test_centered_rectangle",
-        ]
-    )
-    def test_shifted_rectangle(self):
-        width, height = 3, 5
-        center = (5, -7)
-        geometry = Primitive.square()
-        geometry.scale(width, height)
-        geometry.move(center)
-        material = Isotropic()
-        material.young_modulus = 210e3
-        material.poissons_ratio = 0.30
-        section = Section([geometry], [material])
-        area = section.area()
-        Qx, Qy = section.first_moment()
-        Ixx, Ixy, Iyy = section.second_moment()
-        assert area == width * height
-        assert Qx == area * center[1]
-        assert Qy == area * center[0]
-        assert Ixx == width * height**3 / 12 + area * center[1] * center[1]
-        assert Ixy == area * center[0] * center[1]
-        assert Iyy == height * width**3 / 12 + area * center[0] * center[0]
+        assert abs(area - np.pi * radius**2) < 1e-3 * radius**2
+        assert abs(Qx - area * center[1]) < 1e-9
+        assert abs(Qy - area * center[0]) < 1e-9
+        good = area * center[1] ** 2 + np.pi * radius**4 / 4
+        assert abs(Ixx - good) < 1e-3 * radius**4
+        good = area * center[0] * center[1]
+        assert abs(Ixy - good) < 1e-9
+        good = area * center[0] ** 2 + np.pi * radius**4 / 4
+        assert abs(Iyy - good) < 1e-3 * radius**4
 
     @pytest.mark.order(3)
     @pytest.mark.dependency(
         depends=[
-            "TestCircle::test_centered_square",
-            "TestCircle::test_centered_rectangle",
-            "TestCircle::test_shifted_square",
-            "TestCircle::test_shifted_rectangle",
+            "TestCircle::test_begin",
+            "TestCircle::test_centered",
+            "TestCircle::test_shifted",
         ]
     )
     def test_end(self):

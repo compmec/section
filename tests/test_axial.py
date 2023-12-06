@@ -44,7 +44,6 @@ class TestSinglePolygon:
         strain, stress = field(points)
         assert np.all(np.abs(strain) < 1e-9)
         assert np.all(np.abs(stress) < 1e-9)
-        
 
     @pytest.mark.order(4)
     @pytest.mark.dependency(
