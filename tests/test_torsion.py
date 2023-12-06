@@ -22,7 +22,6 @@ from compmec.section.section import Section
     ],
     scope="session",
 )
-@pytest.mark.dependency()
 def test_begin():
     pass
 

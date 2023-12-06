@@ -16,12 +16,10 @@ from compmec.section.section import Section
 @pytest.mark.dependency(
     depends=[
         "tests/test_material.py::test_end",
-        "tests/test_bem2d.py::test_basics",
         "tests/test_bem2d.py::test_end",
     ],
     scope="session",
 )
-@pytest.mark.dependency()
 def test_begin():
     pass
 

@@ -15,12 +15,10 @@ from compmec.section.section import Section
 @pytest.mark.dependency(
     depends=[
         "tests/test_material.py::test_end",
-        "tests/test_bem2d.py::test_basics",
-        "tests/test_bem2d.py::test_end",
+        "tests/test_basics.py::test_end",
     ],
     scope="session",
 )
-@pytest.mark.dependency()
 def test_begin():
     pass
 
@@ -41,10 +39,12 @@ class TestSinglePolygon:
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
         section = Section([geometry], [material])
-        strain = section.strain()
-        stress = section.stress()
+        field = section.charged_field()
         points = [(0, 0)]
-        sxz, syz, szz = stress.eval_interior(points)
+        strain, stress = field(points)
+        assert np.all(np.abs(strain) < 1e-9)
+        assert np.all(np.abs(stress) < 1e-9)
+        
 
     @pytest.mark.order(4)
     @pytest.mark.dependency(
