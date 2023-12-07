@@ -39,10 +39,10 @@ Notation and utilities
 .. math::
     \mathbf{u} \otimes \mathbf{v} = \mathbf{u} \cdot \mathbf{v}^{T} = \begin{bmatrix}u_{x} \\ u_{y}\end{bmatrix} \begin{bmatrix}v_{x} & v_{y} \end{bmatrix} = \begin{bmatrix}u_{x}v_{x} & u_{x}v_{y} \\ u_{y}v_{x} & u_{y}v_{y}\end{bmatrix}
 
-5. The moduls of a vector is denoted by :math:`\|\mathbf{u}\|`
+5. The modulus of a vector is denoted by :math:`\|\mathbf{u}\|`
 
 .. math::
-    \|\mathbf{u}\| = \sqrt{\langle \mathbf{u}, \ \mathbf{u}\rangle}
+    \|\mathbf{u}\| = \sqrt{\langle \mathbf{u}, \ \mathbf{u}\rangle} = \sqrt{u_x^2 +u_y^2}
 
 6. A point in the plane is :math:`\mathbf{p}`
 
@@ -59,15 +59,15 @@ Notation and utilities
 .. math::
     \dfrac{d}{dt} \left(x(t), \ y(t)\right) = \dfrac{d}{dt} \mathbf{p}(t) = \mathbf{p}'(t) = \left(x'(t), \ y'(t)\right)
 
-9. The normal vector to a curve is :math:`\mathbf{n}` and it has lenght 1 by definition.
+9. The tangent vector is :math:`\mathbf{t}`, the normal vector is :math:`\mathbf{n}` and they have modulus 1 by definition
 
 .. math::
-    \|\mathbf{n}\| = 1
-
-10. The normal vector can be computed from :math:`\mathbf{p}(t)`
+    \mathbf{t} = \dfrac{\mathbf{p'}}{\|\mathbf{p}'\|} = \dfrac{\left(x', \ y'\right)}{\|\mathbf{p}'\|}
 
 .. math::
     \mathbf{n} = \dfrac{\left(y', \ -x'\right)}{\|\mathbf{p}'\|}
+
+
 
 11. The gradient of an scalar is a bidimensional vector
 
@@ -901,23 +901,30 @@ The tensors are
 The :ref:`warping_function` :math:`\omega` is used to compute them
 
 .. math::
-    \varepsilon_{xz}(x, \ y) = \dfrac{\mathrm{M}_{z}}{2\mu J}  \cdot \left(\dfrac{\partial \omega}{\partial x} - y\right)
-.. math::
-    \varepsilon_{yz}(x, \ y) = \dfrac{\mathrm{M}_{z}}{2\mu J} \cdot \left(\dfrac{\partial \omega}{\partial y} + x\right)
-
-.. math::
     \sigma_{xz}(x, \ y) = \dfrac{\mathrm{M}_{z}}{J} \cdot \left(\dfrac{\partial \omega}{\partial x} - y\right)
 .. math::
     \sigma_{yz}(x, \ y) = \dfrac{\mathrm{M}_{z}}{J} \cdot \left(\dfrac{\partial \omega}{\partial y} + x\right)
 
-Which :math:`\mu` is the second `Lamé Parameter <https://en.wikipedia.org/wiki/Lam%C3%A9_parameters>`_ and :math:`J` is the :ref:`torsion_constant`.
+.. math::
+    \varepsilon_{xz}(x, \ y) = \dfrac{1}{2\mu} \cdot \sigma_{xz}
+.. math::
+    \varepsilon_{yz}(x, \ y) = \dfrac{1}{2\mu} \cdot \sigma_{yz}
+
+Which :math:`J` is the :ref:`torsion_constant` and :math:`\mu` is the second `Lamé Parameter <https://en.wikipedia.org/wiki/Lam%C3%A9_parameters>`_.
 
 To compute the partial derivatives, two approaches are used:
 
-* For points on the boundary, :math:`\mathbf{s} \in \partial \Omega`
+* For a point :math:`\mathbf{p}` on the boundary
 
     .. math::
-        \nabla \omega = \dfrac{1}{\langle p', \ p' \rangle} \begin{bmatrix}y' & x' \\ -x' & y'\end{bmatrix} \begin{bmatrix}\langle p, \ p'\rangle \\ \|p'\|\dfrac{d\omega(t)}{dt} \end{bmatrix}
+        \nabla \omega & = \dfrac{\partial \omega}{\partial t} \cdot \mathbf{t} + \dfrac{\partial \omega}{\partial n} \cdot \mathbf{n} \\
+        & = \left\langle \mathbf{p}, \ \mathbf{t}\right\rangle \cdot \mathbf{n} + \mathbf{t} \cdot \sum_{j=0}^{n-1} \varphi_{j}'(t) \cdot W_{j}
+
+    The derivatives by themselves don't matter, but the evaluation of :math:`\sigma_{xz}` and :math:`\sigma_{yz}`, which are rewritten as 
+
+    .. math::
+        \begin{bmatrix}\sigma_{xz} \\ \sigma_{yz}\end{bmatrix} = \dfrac{\mathrm{M}_z}{J} \cdot \left[\left\langle\mathbf{p}, \ \mathbf{n}\right\rangle + \sum_{j=0}^{n-1}\varphi_{j}'(t) \cdot W_{j}\right] \cdot \mathbf{t}
+        
 
 * For interior points, :math:`\mathbf{p} \in \text{open}\left(\Omega\right)`
 
