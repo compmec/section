@@ -4,12 +4,11 @@ This file tests the basic geometry properties, such as
 * First moment of inertia
 * Second moment of inertia
 """
-import numpy as np
 import pytest
 from compmec.shape import Primitive
 
 from compmec.section.material import Isotropic
-from compmec.section.section import Section
+from compmec.section.section import SimpleSection
 
 
 @pytest.mark.order(3)
@@ -31,15 +30,27 @@ class TestBuild:
     @pytest.mark.order(3)
     @pytest.mark.timeout(1)
     @pytest.mark.dependency(depends=["TestBuild::test_begin"])
-    def test_simple(self):
-        geom = Primitive.square(3)
-        mat = Isotropic()
-        mat.young_modulus = 210e3
-        mat.poissons_ratio = 0.30
-        Section([geom], [mat])
+    def test_simple_square(self):
+        geometry = Primitive.square(3)
+        material = Isotropic()
+        material.young_modulus = 210e3
+        material.poissons_ratio = 0.30
+        SimpleSection(geometry, material)
 
     @pytest.mark.order(3)
-    @pytest.mark.dependency(depends=["TestBuild::test_simple"])
+    @pytest.mark.timeout(1)
+    @pytest.mark.dependency(depends=["TestBuild::test_begin"])
+    def test_hollow_square(self):
+        geometry = Primitive.square(3) - Primitive.square(1)
+        material = Isotropic()
+        material.young_modulus = 210e3
+        material.poissons_ratio = 0.30
+        SimpleSection(geometry, material)
+
+    @pytest.mark.order(3)
+    @pytest.mark.dependency(
+        depends=["TestBuild::test_simple_square", "TestBuild::test_hollow_square"]
+    )
     def test_end(self):
         pass
 
@@ -59,7 +70,7 @@ class TestSinglePolygon:
         material = Isotropic()
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
-        section = Section([geometry], [material])
+        section = SimpleSection(geometry, material)
         area = section.area()
         Qx, Qy = section.first_moment()
         Ixx, Ixy, Iyy = section.second_moment()
@@ -79,7 +90,7 @@ class TestSinglePolygon:
         material = Isotropic()
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
-        section = Section([geometry], [material])
+        section = SimpleSection(geometry, material)
         area = section.area()
         Qx, Qy = section.first_moment()
         Ixx, Ixy, Iyy = section.second_moment()
@@ -100,7 +111,7 @@ class TestSinglePolygon:
         material = Isotropic()
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
-        section = Section([geometry], [material])
+        section = SimpleSection(geometry, material)
         area = section.area()
         Qx, Qy = section.first_moment()
         Ixx, Ixy, Iyy = section.second_moment()
@@ -128,7 +139,7 @@ class TestSinglePolygon:
         material = Isotropic()
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
-        section = Section([geometry], [material])
+        section = SimpleSection(geometry, material)
         area = section.area()
         Qx, Qy = section.first_moment()
         Ixx, Ixy, Iyy = section.second_moment()
