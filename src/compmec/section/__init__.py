@@ -4,7 +4,7 @@ It uses mainly curves as boundary to compute the elements.
 """
 
 from .material import Isotropic, Material
-from .section import Section
+from .section import SimpleSection
 
 __version__ = "0.2.0"
 

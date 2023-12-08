@@ -1,173 +1,65 @@
 from __future__ import annotations
 
-import json
-from importlib import resources
-from typing import Optional, Tuple, Union
+from typing import Dict, Tuple
 
-import jsonschema
 import numpy as np
-from compmec.shape import JordanCurve, Point2D
-from compmec.shape.shape import DefinedShape, IntegrateShape, ShapeFromJordans
+from compmec.shape.shape import DefinedShape, IntegrateShape
 
 from compmec import nurbs
 
-from . import bem2d
 from .material import Material
 
 
-class BaseSection:
-    def __init__(self, shapes: Tuple[DefinedShape], materials: Tuple[Material]):
-        for shape in shapes:
-            if not isinstance(shape, DefinedShape):
-                raise TypeError
-        for material in materials:
-            if not isinstance(material, Material):
-                raise TypeError
-        self.__shapes = tuple(shapes)
-        self.__materials = tuple(materials)
-        if len(self.__shapes) != 1 or len(self.__materials) != 1:
-            raise ValueError
-
-    def __iter__(self) -> Tuple[DefinedShape, Material]:
-        for shape, material in zip(self.__shapes, self.__materials):
-            yield (shape, material)
-
-    def __getitem__(self, index) -> Tuple[DefinedShape, Material]:
-        index = int(index) % len(self.__shapes)
-        return (self.__shapes[index], self.__materials[index])
-
-    def external_jordans(self) -> Tuple[JordanCurve]:
-        pass
-
-    def jordans(self) -> Tuple[JordanCurve]:
-        pass
-
-
-class Section:
+class SimpleSection:
     """
-    Section's class
+    SimpleSection's class
 
+    Which is defined by only one DefinedShape and one material
 
+    That means, it's possible only to use homogeneous sections
+
+    For composite sections, use CompositeSection class
     """
 
     AUTO_SOLVE = True
 
     @classmethod
-    def __validate_json(cls, filepath: str):
-        schema_path = resources.files("compmec.section")
-        schema_path = schema_path.joinpath("schema/section.json")
-        with schema_path.open() as file:
-            schema = json.load(file)
-        with open(filepath, "r") as file:
-            data = json.load(file)
-        jsonschema.validate(data, schema)
-
-        node_labels = tuple(line[0] for line in data["nodes"])
-        if len(node_labels) != len(set(node_labels)):
-            msg = "There are nodes with same label number!"
-            raise ValueError(msg)
-        node_labels = set(node_labels)
-        curve_labels = tuple(info["label"] for info in data["curves"])
-        if len(curve_labels) != len(set(curve_labels)):
-            msg = "There are curves with same label number!"
-            raise ValueError(msg)
-        curve_labels = set(curve_labels)
-        for info in data["curves"]:
-            diff = set(info["ctrlpoints"]) - node_labels
-            if diff:
-                msg = f"The curve {info['label']} refer to ctrlpoints "
-                msg += f"{sorted(diff)} which don't exist in the header "
-                msg += f"of all node labels: {sorted(node_labels)}"
-                raise ValueError(msg)
-        for shape_name, labels in data["shapes"].items():
-            diff = set(labels) - curve_labels
-            if diff:
-                msg = f"The shape {shape_name} refer to curves "
-                msg += f"{sorted(diff)} which don't exist in the header "
-                msg += f"of all curve labels: {sorted(curve_labels)}"
-                raise ValueError(msg)
-        all_shape_names = set(data["shapes"].keys())
-        all_material_names = set(data["materials"].keys())
-        for sec_name, info in data["sections"].items():
-            shape_names = set(info["shapes"])
-            material_names = set(info["materials"])
-            diff = shape_names - all_shape_names
-            if diff:
-                msg = f"The section {sec_name} refer to shapes "
-                msg += f"{sorted(diff)} which don't exist in the header "
-                msg += f"of all curve labels: {sorted(all_shape_names)}"
-                raise ValueError(msg)
-            diff = material_names - all_material_names
-            if diff:
-                msg = f"The section {sec_name} refer to shapes "
-                msg += f"{sorted(diff)} which don't exist in the header "
-                msg += f"of all curve labels: {sorted(all_shape_names)}"
-                raise ValueError(msg)
+    def from_json(cls, filepath: str) -> Dict[str, SimpleSection]:
+        raise NotImplementedError
 
     @classmethod
-    def from_json(cls, filepath: str) -> Union[Section, Tuple[Section]]:
-        """
-        Creates instances of section reading the data from json file.
-        """
-        cls.__validate_json(filepath)
-        with open(filepath, "r") as file:
-            data = json.load(file)
+    def from_dict(cls, infos: Dict) -> SimpleSection:
+        raise NotImplementedError
 
-        nodes = {}
-        for line in data["nodes"]:
-            nodes[line[0]] = Point2D(line[1:])
+    def __init__(self, shape: DefinedShape, material: Material):
+        if not isinstance(shape, DefinedShape):
+            msg = f"shape is not a DefinedShape, but {type(shape)}"
+            raise TypeError(msg)
+        if not isinstance(material, Material):
+            msg = f"material is not a DefinedShape, but {type(material)}"
+            raise TypeError(msg)
 
-        all_jordans = {}
-        for info in data["curves"]:
-            curve_label = info["label"]
-            degree = info["degree"] if "degree" in info else None
-            knotvector = info["knotvector"]
-            knotvector = nurbs.KnotVector(knotvector, degree=degree)
-            curve = nurbs.Curve(knotvector)
-            points = tuple(nodes[lab] for lab in info["ctrlpoints"])
-            curve.ctrlpoints = points
-            if "weights" in info:
-                curve.weight = info["weights"]
-            jordan = JordanCurve.from_full_curve(curve)
-            all_jordans[curve_label] = jordan
-
-        all_shapes = {}
-        for name, curve_labels in data["shapes"].items():
-            jordans = tuple(all_jordans[lab] for lab in curve_labels)
-            shape = ShapeFromJordans(jordans)
-            all_shapes[name] = shape
-
-        all_materials = {}
-        for name, info in data["materials"].items():
-            material = Material.from_dict(info)
-            all_materials[name] = material
-
-        sections = {}
-        for name, info in data.items():
-            shapes = tuple(all_shapes[sh] for sh in info["shapes"])
-            materials = tuple(all_materials)
-            section = Section(shapes, materials)
-            sections[name] = section
-        return sections
-
-    def __init__(self, shapes: Tuple[DefinedShape], materials: Tuple[Material]):
         self.__area = None
         self.__first = None
         self.__second = None
         self.__warping = None
-        self.__strain = StrainField(self)
-        self.__stress = StressField(self)
-        self.__base = BaseSection(shapes, materials)
-        self.__shapes = shapes
-        self.__materials = materials
+        self.__charged_field = ChargedField(self)
+        self.__shape = shape
+        self.__material = material
 
-    def __iter__(self) -> Tuple[DefinedShape, Material]:
-        for shape, material in zip(self.__shapes, self.__materials):
-            yield (shape, material)
+    @property
+    def shape(self) -> DefinedShape:
+        """
+        Gives the shape instance
+        """
+        return self.__shape
 
-    def __getitem__(self, index) -> Tuple[DefinedShape, Material]:
-        index = int(index) % len(self.__shapes)
-        return (self.__shapes[index], self.__materials[index])
+    @property
+    def material(self) -> Material:
+        """
+        Gives the material instance
+        """
+        return self.__material
 
     def area(self) -> float:
         """Gives the cross-section area
@@ -189,8 +81,7 @@ class Section:
 
         """
         if self.__area is None:
-            areas = tuple(map(IntegrateShape.area, self.__shapes))
-            self.__area = sum(areas)
+            self.__area = IntegrateShape.area(self.shape)
         return self.__area
 
     def first_moment(self) -> Tuple[float]:
@@ -205,30 +96,28 @@ class Section:
         Example use
         -----------
 
-        >>> from compmec.shape import JordanCurve
+        >>> from compmec.shape import shapelib.JordanCurve
         >>> vertices = [(0, 0), (4, 0), (0, 3)]
-        >>> jordan = JordanCurve.from_vertices(vertices)
+        >>> jordan = shapelib.JordanCurve.from_vertices(vertices)
         >>> jordan.move((2, 3))
         Jordan Curve of degree 1 and vertices
         ((2, 3), (6, 3), (2, 6))
 
         """
         if self.__first is None:
-            values = np.zeros(2, dtype="float64")
-            for shape in self.__shapes:
-                values[0] = IntegrateShape.polynomial(shape, 0, 1)
-                values[1] = IntegrateShape.polynomial(shape, 1, 0)
-            self.__first = values
+            Qx = IntegrateShape.polynomial(self.shape, 0, 1)
+            Qy = IntegrateShape.polynomial(self.shape, 1, 0)
+            self.__first = (Qx, Qy)
         return tuple(self.__first)
 
-    def second_moment(self, center: Tuple[float] = (0, 0)) -> Tuple[Tuple[float]]:
-        """Gives the second moment of inertia with respect to center
+    def second_moment(self, center: Tuple[float] = (0, 0)) -> Tuple[float]:
+        """Gives the second moment of inertia with respect to ``center``
 
         Ixx = int (y-cy)^2 dx dy
         Ixy = int (x-cx)*(y-cy) dx dy
         Iyy = int (x-cx)^2 dx dy
 
-        If no center is given, it assumes the origin (0, 0) and
+        If no ``center`` is given, it assumes the origin (0, 0) and
         returns the global second moment of inertia
 
         :param center: The center to compute second moment, default (0, 0)
@@ -239,21 +128,19 @@ class Section:
         Example use
         -----------
 
-        >>> from compmec.shape import JordanCurve
+        >>> from compmec.shape import shapelib.JordanCurve
         >>> vertices = [(0, 0), (4, 0), (0, 3)]
-        >>> jordan = JordanCurve.from_vertices(vertices)
+        >>> jordan = shapelib.JordanCurve.from_vertices(vertices)
         >>> jordan.move((2, 3))
         Jordan Curve of degree 1 and vertices
         ((2, 3), (6, 3), (2, 6))
 
         """
         if self.__second is None:
-            values = np.zeros(3, dtype="float64")
-            for shape in self.__shapes:
-                values[0] += IntegrateShape.polynomial(shape, 0, 2)
-                values[1] += IntegrateShape.polynomial(shape, 1, 1)
-                values[2] += IntegrateShape.polynomial(shape, 2, 0)
-            self.__second = values
+            Ixx = IntegrateShape.polynomial(self.shape, 0, 2)
+            Ixy = IntegrateShape.polynomial(self.shape, 1, 1)
+            Iyy = IntegrateShape.polynomial(self.shape, 2, 0)
+            self.__second = (Ixx, Ixy, Iyy)
         area = self.area()
         Ixx, Ixy, Iyy = self.__second
         Ixx -= area * center[1] ** 2
@@ -274,9 +161,9 @@ class Section:
         Example use
         -----------
 
-        >>> from compmec.shape import JordanCurve
+        >>> from compmec.shape import shapelib.JordanCurve
         >>> vertices = [(0, 0), (4, 0), (0, 3)]
-        >>> jordan = JordanCurve.from_vertices(vertices)
+        >>> jordan = shapelib.JordanCurve.from_vertices(vertices)
         >>> jordan.move((2, 3))
         Jordan Curve of degree 1 and vertices
         ((2, 3), (6, 3), (2, 6))
@@ -284,13 +171,7 @@ class Section:
         """
         if self.__warping is None:
             self.solve()
-            shape = self.__shapes[0]
-            curve = shape.jordans[0]
-            vertices = curve.vertices
-            vector = TorsionVector(vertices)
-            second = self.second_moment()
-            polar = second[0] + second[2]
-            self.__torsion = polar - np.inner(vector, self.__warping)
+            raise NotImplementedError
         return self.__torsion
 
     def elastic_modulus(self) -> Tuple[Tuple[float]]:
@@ -306,15 +187,17 @@ class Section:
         x_gc = (1/A) * Qy
         y_gc = (1/A) * Qx
 
+        This center depends only on the geometry, not on the material
+
         :return: The value of geometric center G
         :rtype: tuple[float, float]
 
         Example use
         -----------
 
-        >>> from compmec.shape import JordanCurve
+        >>> from compmec.shape import shapelib.JordanCurve
         >>> vertices = [(0, 0), (4, 0), (0, 3)]
-        >>> jordan = JordanCurve.from_vertices(vertices)
+        >>> jordan = shapelib.JordanCurve.from_vertices(vertices)
         >>> jordan.move((2, 3))
         Jordan Curve of degree 1 and vertices
         ((2, 3), (6, 3), (2, 6))
@@ -337,9 +220,9 @@ class Section:
         Example use
         -----------
 
-        >>> from compmec.shape import JordanCurve
+        >>> from compmec.shape import shapelib.JordanCurve
         >>> vertices = [(0, 0), (4, 0), (0, 3)]
-        >>> jordan = JordanCurve.from_vertices(vertices)
+        >>> jordan = shapelib.JordanCurve.from_vertices(vertices)
         >>> jordan.move((2, 3))
         Jordan Curve of degree 1 and vertices
         ((2, 3), (6, 3), (2, 6))
@@ -356,9 +239,9 @@ class Section:
         Example use
         -----------
 
-        >>> from compmec.shape import JordanCurve
+        >>> from compmec.shape import shapelib.JordanCurve
         >>> vertices = [(0, 0), (4, 0), (0, 3)]
-        >>> jordan = JordanCurve.from_vertices(vertices)
+        >>> jordan = shapelib.JordanCurve.from_vertices(vertices)
         >>> jordan.move((2, 3))
         Jordan Curve of degree 1 and vertices
         ((2, 3), (6, 3), (2, 6))
@@ -379,9 +262,9 @@ class Section:
         Example use
         -----------
 
-        >>> from compmec.shape import JordanCurve
+        >>> from compmec.shape import shapelib.JordanCurve
         >>> vertices = [(0, 0), (4, 0), (0, 3)]
-        >>> jordan = JordanCurve.from_vertices(vertices)
+        >>> jordan = shapelib.JordanCurve.from_vertices(vertices)
         >>> jordan.move((2, 3))
         Jordan Curve of degree 1 and vertices
         ((2, 3), (6, 3), (2, 6))
@@ -399,8 +282,8 @@ class Section:
 
         """
         area = self.area()
-        second = self.second_moment()
-        return np.sqrt(np.diag(second) / area)
+        Ixx, _, Iyy = self.second_moment()
+        return np.sqrt(Iyy / area), np.sqrt(Ixx / area)
 
     def warping_constant(self) -> float:
         """Gives the warping constant"""
@@ -410,13 +293,7 @@ class Section:
         raise NotImplementedError
 
     def solve(self, meshsize: float = None, degree: int = 1):
-        shape = self.__shapes[0]
-        jordan = shape.jordans[0]
-        mesh = bem2d.CurveMesh(jordan)
-        vertices = jordan.vertices
-        vertices = tuple(tuple(map(np.float64, pt)) for pt in vertices)
-        warpvalues = WarpingValues(curve, basis, tsources, tmesh)
-        self.__warping = WarpingField(self, warpvalues)
+        raise NotImplementedError
 
     def warping(self) -> WarpingField:
         if self.__warping is None:
@@ -426,70 +303,38 @@ class Section:
             self.solve()
         return self.__warping
 
-    def strain(self) -> StrainField:
-        return self.__strain
-
-    def stress(self) -> StressField:
-        return self.__stress
+    def charged_field(self) -> ChargedField:
+        return self.__charged_field
 
 
-class FieldEvaluator(object):
-    def __init__(self, section: Section):
-        self.section = section
-
-    @property
-    def section(self) -> Section:
-        return self.__section
-
-    @section.setter
-    def section(self, section: Section):
-        if not isinstance(section, Section):
-            msg = f"section must be a Section instance, type is {type(section)}"
+class Field(object):
+    def __init__(self, section: SimpleSection):
+        if not isinstance(section, SimpleSection):
+            msg = f"section is not a SimpleSection, but {type(section)}"
             raise TypeError(msg)
         self.__section = section
 
-    def __call__(self, points: Tuple[Tuple[float]]) -> Tuple[float]:
-        values = []
-        shape, _ = self.section[0]
-        curve = shape.jordans[0]
-        for point in points:
-            param = projection(point, curve)
-            qoint = curve(param)
-            vector = point - qoint
-            dist2 = vector[0] ** 2 + vector[1] ** 2
-            if dist2 < 1e-9:
-                value = self.eval_boundary(param)
-            elif point in shape:
-                value = self.eval_interior(point)
-            else:
-                value = 0
-            values.append(value)
-        return np.array(values, dtype="float64")
+    @property
+    def section(self) -> SimpleSection:
+        return self.__section
 
 
-class WarpingField(FieldEvaluator):
-    def __init__(self, section: Section, warpvalues: Tuple[float]):
+class WarpingField(Field):
+    def __init__(self, section: SimpleSection):
         super().__init__(section)
-        self.__ctrlpoints = np.array(warpvalues, dtype="float64")
-
-    def eval_boundary(self, params: Tuple[float]) -> Tuple[float]:
-        raise NotImplementedError
-
-    def eval_interior(self, points: Tuple[Tuple[float]]) -> Tuple[float]:
-        shape, _ = self.section[0]
-        curve = shape.jordans[0]
-        vertices = curve.vertices
-        warpvals = self.ctrlpoints
-        values = WarpingEvaluator.interior(vertices, points, warpvals)
-        return values
+        self.__values = None
 
     @property
-    def ctrlpoints(self) -> Tuple[float]:
-        return self.__ctrlpoints
+    def values(self):
+        return self.__values
+
+    @values.setter
+    def values(self, vals: Tuple[Tuple[float]]):
+        self.__values = np.array(vals, dtype="float64")
 
 
-class ChargedField(FieldEvaluator):
-    def __init__(self, section: Section):
+class ChargedField(Field):
+    def __init__(self, section: SimpleSection):
         super().__init__(section)
         self.__charges = np.zeros(6, dtype="float64")
 
@@ -523,96 +368,113 @@ class ChargedField(FieldEvaluator):
             raise NotImplementedError(msg)
         self.__charges[3:] = moments
 
+    def eval(self, points: Tuple[Tuple[float]]) -> Tuple[Tuple[float]]:
+        """
+        Receives a matrix P (list of points) of shape (n, 2)
+        and returns a matrix M of shape (n, 8) that contains
+        the strain and stress
 
-class StrainField(ChargedField):
-    def __eval_bend_moment(self, points: Tuple[Tuple[float]]) -> Tuple[float]:
-        """
-        Evaluates
-        """
+        M_i = [s_zz, s_xz, s_yz, e_xx, e_yy, e_zz, e_xz, e_yz]
 
-    def eval_boundary(self, params: Tuple[float]) -> Tuple[Tuple[float]]:
         """
-        Returns the values of
-        [exx, eyy, ezz, exz, eyz]
-        The coordinate exy is always zero
-        """
-        nvals = len(params)
-        result = np.zeros((nvals, 5), dtype="float64")
-        if self.forces[2]:  # Axial force
-            pass
-        if self.moments[0] or self.moments[1]:  # Bending moments
-            pass
-        if self.forces[0] or self.forces[1]:  # Shear force
-            raise NotImplementedError
-        if self.moments[2]:  # Torsion force
-            raise NotImplementedError
-        return result
+        if not isinstance(points, np.ndarray):
+            points = np.array(points, dtype="float64")
+        values = np.zeros((len(points), 8), dtype="float64")
 
-    def eval_interior(self, points: Tuple[Tuple[float]]) -> Tuple[Tuple[float]]:
-        """
-        Returns the strain values of
-        [exx, eyy, ezz, exz, eyz]
-        The coordinate exy is always zero
-        """
-        nvals = len(points)
-        result = np.zeros((nvals, 5), dtype="float64")
-        if self.forces[2]:  # Axial force
-            pass
-        if self.moments[0] or self.moments[1]:  # Bending moments
-            pass
-        if self.forces[0] or self.forces[1]:  # Shear force
-            raise NotImplementedError
-        if self.moments[2]:  # Torsion force
-            raise NotImplementedError
-        return result
+        contains = self.section.shape.contains_point
+        mask = tuple(contains(point, True) for point in points)
+        mask = np.array(mask, dtype="bool")
+        print("mask = ")
+        print(mask)
 
-
-class StressField(ChargedField):
-    def __axial_stresses(self, points: Tuple[Tuple[float]]) -> Tuple[float]:
-        area = self.section.area()
-        szz = self.forces[2] / area
-        values = szz * np.ones(len(points), dtype="float64")
+        if np.any(mask):
+            values[mask, :3] = self.__eval_stresses(points[mask])
+        material = self.section.material
+        values[:, 5] = values[:, 0] / material.young_modulus  # e_zz
+        values[:, 3] = -material.poissons_ratio * values[:, 1]  # e_xx
+        values[:, 4] = values[:, 3]  # e_yy
+        values[:, 6] = 0.5 * values[:, 1] / material.shear_modulus  # e_xz
+        values[:, 7] = 0.5 * values[:, 2] / material.shear_modulus  # e_yz
         return values
 
-    def __bending_stresses(self, points: Tuple[Tuple[float]]) -> Tuple[float]:
+    def __eval_stresses(self, points: np.ndarray) -> np.ndarray:
+        """
+        Returns the strain values of
+        [szz, sxz, syz]
+
+        We suppose that all points are inside the section.
+        No verification are made here
+        """
+        stresses = np.zeros((len(points), 3), dtype="float64")
+        stresses[:, 0] = self.__axial_stresses(points)
+
+        contains = self.section.shape.contains_point
+        mask = tuple(contains(point, False) for point in points)
+        mask = np.array(mask, dtype="bool")
+
+        if np.any(mask):
+            inside_points = points[mask]
+            inside_shear_stresses = self.__inside_shear_stress(inside_points)
+            stresses[mask, 1:] = inside_shear_stresses
+
+        if not np.all(mask):
+            bound_points = points[~mask]
+            bound_shear_stresses = self.__boundary_shear_stress(bound_points)
+            stresses[~mask, 1:] = bound_shear_stresses
+
+        return stresses
+
+    def __axial_stresses(self, points: np.ndarray) -> Tuple[float]:
+        """
+        Computes the values of s_zz due to normal force and bending moments
+        """
         values = np.zeros(len(points), dtype="float64")
+
+        _, _, forcez = self.forces
+        momentx, momenty, _ = self.moments
+
+        if forcez:
+            values.fill(forcez / self.section.area())
+        if momentx or momenty:
+            center = self.section.bending_center()
+            Ixx, Ixy, Iyy = self.section.second_moment(center)
+            xvals, yvals = np.transpose(points)
+            xvals -= center[0]
+            yvals -= center[1]
+
+            values += (Iyy * momentx + Ixy * momenty) * yvals
+            values -= (Ixy * momentx + Ixx * momenty) * xvals
+            values /= Ixx * Iyy - Ixy**2
         return values
 
-    def eval_boundary(
-        self, params: Tuple[float], material: Material
-    ) -> Tuple[Tuple[float]]:
+    def __boundary_shear_stress(
+        self, params: Tuple[float], curve: nurbs.Curve
+    ) -> np.ndarray:
         """
-        Returns the strain values of
-        [s_xz, s_yz, s_zz]
-        The coordinate s_xy is always zero
-        """
-        nvals = len(params)
-        result = np.zeros((nvals, 3), dtype="float64")
-        if self.forces[2]:  # Axial force
-            result[:, 2] += self.__axial_stresses(points)
-        if self.moments[0] or self.moments[1]:  # Bending moments
-            result[:, 2] += self.__bending_stresses(points)
-        if self.forces[0] or self.forces[1]:  # Shear force
-            raise NotImplementedError
-        if self.moments[2]:  # Torsion force
-            raise NotImplementedError
+        Computes the values of (s_xz, s_yz), the shear stresses
 
-    def eval_interior(
-        self, points: Tuple[Tuple[float]], subshape: DefinedShape, material: Material
-    ) -> Tuple[Tuple[float]]:
+        It's caused by two phenomenums: torsion and shear loading
+
+
         """
-        Returns the strain values of
-        [sxz, syz, szz]
-        The coordinate exy is always zero
-        """
-        nvals = len(points)
-        result = np.zeros((nvals, 3), dtype="float64")
-        if self.forces[2]:  # Axial force
-            area = self.section.area()
-            result[:, 2] += self.forces[2] / area
-        if self.moments[0] or self.moments[1]:  # Bending moments
-            result[:, 2] += self.__b
+        values = np.zeros((len(params), 2), dtype="float64")
         if self.forces[0] or self.forces[1]:  # Shear force
             raise NotImplementedError
-        if self.moments[2]:  # Torsion force
+        if self.moments[2]:  # Torsion moment
             raise NotImplementedError
+        return values
+
+    def __inside_shear_stress(self, points: np.ndarray) -> np.ndarray:
+        """
+        Computes the values of (s_xz, s_yz), the shear stresses
+
+        It's caused by two phenomenums: torsion and shear loading
+
+        We suppose that all points are inside the shape
+        """
+        values = np.zeros(points.shape, dtype="float64")
+        if self.forces[0] or self.forces[1]:  # Shear force
+            raise NotImplementedError
+        if self.moments[2]:  # Torsion moment
+            raise NotImplementedError
+        return values
