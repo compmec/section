@@ -6,28 +6,52 @@ nabla^2_u = f(x, y)
 
 """
 import math
-from typing import Tuple, Union
+from typing import Tuple
 
 import numpy as np
 
-from compmec import nurbs, shape
+from compmec import nurbs
 
 
-def CurveMesh(jordan: shape.JordanCurve, meshsize: float = None):
-    if not isinstance(jordan, shape.JordanCurve):
-        raise TypeError
-    lenghts = tuple(map(shape.IntegratePlanar.lenght, jordan.segments))
-    if meshsize is None:
-        meshsize = sum(lenghts) / 100
-    weights = []
-    for lenght in lenghts:
-        ndiv = int(np.ceil(lenght / meshsize))
-        weights.extend([lenght / ndiv] * ndiv)
-    weights = np.array(weights, dtype="float64")
-    knotvector = nurbs.GeneratorKnotVector.weight(1, weights)
-    knotvector.normalize()
-    print(knotvector)
-    return knotvector
+def comb(a, b):
+    prod = 1
+    for i in range(min(b, a - b)):
+        prod *= a - i
+        prod /= i + 1
+    return prod
+
+
+def IntegratePolygon(
+    xverts: Tuple[float], yverts: Tuple[float], amax: int, bmax: int
+) -> Tuple[Tuple[float]]:
+    """
+    Computes integrals, returning a matrix II such
+
+    II_{a, b} = int_D x^a * y^b dx dy
+
+    for a = [0, ..., amax] and b = [0, ..., bmax]
+
+    and D being a polygonal domain given by the vertices
+    """
+    xvan = np.vander(xverts, amax + 1, True)
+    yvan = np.vander(yverts, bmax + 1, True)
+
+    cross = xverts * np.roll(yverts, shift=-1)
+    cross -= yverts * np.roll(xverts, shift=-1)
+
+    II = np.zeros((amax + 1, bmax + 1), dtype="float64")
+
+    for a in range(amax + 1):
+        for b in range(bmax + 1):
+            M = np.zeros((a + 1, b + 1), dtype="float64")
+            for i in range(a + 1):
+                for j in range(b + 1):
+                    M[i, j] = comb(i + j, i) * comb(a + b - i - j, b - j)
+            X = np.roll(xvan[:, : a + 1], shift=-1, axis=0) * xvan[:, a::-1]
+            Y = np.roll(yvan[:, : b + 1], shift=-1, axis=0) * yvan[:, b::-1]
+            II[a, b] = np.einsum("k,ki,ij,kj", cross, X, M, Y)
+            II[a, b] /= (a + b + 2) * (a + b + 1) * comb(a + b, a)
+    return II
 
 
 class Integration:
