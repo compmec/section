@@ -4,13 +4,11 @@ This file tests the basic geometry properties, such as
 * First moment of inertia
 * Second moment of inertia
 """
-import numpy as np
 import pytest
 from compmec.shape import Primitive
-from matplotlib import pyplot as plt
 
 from compmec.section.material import Isotropic
-from compmec.section.section import Section
+from compmec.section.section import SimpleSection
 
 
 @pytest.mark.order(4)
@@ -40,7 +38,7 @@ class TestSinglePolygon:
         material = Isotropic()
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
-        section = Section([geometry], [material])
+        section = SimpleSection(geometry, material)
         section.solve(meshsize=0.01)
         test_torsion = section.torsion_constant()
         good_torsion = (9 / 64) * side**4
