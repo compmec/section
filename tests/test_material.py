@@ -4,7 +4,10 @@ from compmec.section import material
 
 
 @pytest.mark.order(2)
-@pytest.mark.dependency()
+@pytest.mark.dependency(
+    depends=["tests/test_dataio.py::test_end"],
+    scope="session",
+)
 def test_begin():
     pass
 

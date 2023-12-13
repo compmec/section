@@ -16,7 +16,6 @@ from compmec.section.section import SimpleSection
     depends=["tests/test_material.py::test_end"],
     scope="session",
 )
-@pytest.mark.dependency()
 def test_begin():
     pass
 
