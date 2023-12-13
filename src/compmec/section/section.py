@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import OrderedDict
 from typing import Dict, Tuple
 
 import numpy as np
@@ -7,12 +8,90 @@ from compmec.shape.shape import DefinedShape, IntegrateShape
 
 from compmec import nurbs
 
+from . import dataio
 from .material import Material
 
 
-class SimpleSection:
+class BaseSection(object):
+    @classmethod
+    def from_json(cls, filepath: str) -> Dict[str, BaseSection]:
+        raise NotImplementedError
+
+    @classmethod
+    def from_dict(cls, infos: Dict) -> BaseSection:
+        raise NotImplementedError
+
+    def __init__(self, shapes: Tuple[DefinedShape], materials: Tuple[Material]):
+        for shape in shapes:
+            if not isinstance(shape, DefinedShape):
+                msg = f"shape is not a DefinedShape, but {type(shape)}"
+                raise TypeError(msg)
+        for material in materials:
+            if not isinstance(material, Material):
+                msg = f"material is not a DefinedShape, but {type(material)}"
+                raise TypeError(msg)
+        self.__shapes = tuple(shapes)
+        self.__materials = materials
+
+    def __iter__(self):
+        for pair in zip(self.__shapes, self.__materials):
+            yield pair
+
+    def __getitem__(self, key: int):
+        return self.__shapes[key], self.__materials[key]
+
+    def to_dict(self, name: str = "custom-section") -> Dict:
+        dicionary = OrderedDict()
+        nodesdict = {}
+        curves = {}
+        shapes = OrderedDict()
+        materials = OrderedDict()
+        sections = OrderedDict()
+        sections[name] = OrderedDict()
+        sections[name]["shapes"] = []
+        sections[name]["materials"] = []
+
+        for i, (shape, material) in enumerate(self):
+            matname = "material-%d" % i
+            shaname = "shape-%d" % i
+            sections[name]["shapes"].append(shaname)
+            sections[name]["materials"].append(matname)
+
+            materials[matname] = OrderedDict()
+            materials[matname]["young_modulus"] = material.young_modulus
+            materials[matname]["poissons_ratio"] = material.poissons_ratio
+
+            for jordan in shape.jordans:
+                curve = jordan.full_curve()
+                curvedict = OrderedDict()
+                curvedict["degree"] = curve.degree
+                curvedict["knotvector"] = tuple(map(float, curve.knotvector))
+                curvedict["ctrlpoints"] = []
+                for point in curvedict.ctrlpoints:
+                    curvedict["ctrlpoints"].append(id(point))
+                    nodesdict[id(point)] = tuple(map(float, point))
+                curves[id(curve)] = curvedict
+
+        nodes = []
+        for label in sorted(nodesdict.keys()):
+            x, y = nodesdict[label]
+            nodes.append((label, x, y))
+
+        dicionary["nodes"] = nodes
+        dicionary["curves"] = curves
+        dicionary["shapes"] = shapes
+        dicionary["materials"] = materials
+        dicionary["sections"] = sections
+        return dicionary
+
+    def to_json(self, filepath: str, name: str = "custom-section"):
+        dicionary = self.to_dict(name)
+        dataio.save_json(dicionary, filepath)
+
+
+class Section(BaseSection):
     """
-    SimpleSection's class
+    Section's class
 
     Which is defined by only one DefinedShape and one material
 
@@ -23,29 +102,16 @@ class SimpleSection:
 
     AUTO_SOLVE = True
 
-    @classmethod
-    def from_json(cls, filepath: str) -> Dict[str, SimpleSection]:
-        raise NotImplementedError
-
-    @classmethod
-    def from_dict(cls, infos: Dict) -> SimpleSection:
-        raise NotImplementedError
-
-    def __init__(self, shape: DefinedShape, material: Material):
-        if not isinstance(shape, DefinedShape):
-            msg = f"shape is not a DefinedShape, but {type(shape)}"
-            raise TypeError(msg)
-        if not isinstance(material, Material):
-            msg = f"material is not a DefinedShape, but {type(material)}"
-            raise TypeError(msg)
+    def __init__(self, shapes: Tuple[DefinedShape], materials: Tuple[Material]):
+        super().__init__(shapes, materials)
 
         self.__area = None
         self.__first = None
         self.__second = None
         self.__warping = None
         self.__charged_field = ChargedField(self)
-        self.__shape = shape
-        self.__material = material
+        self.__shapes = shapes
+        self.__materials = materials
 
     @property
     def shape(self) -> DefinedShape:
@@ -308,19 +374,19 @@ class SimpleSection:
 
 
 class Field(object):
-    def __init__(self, section: SimpleSection):
-        if not isinstance(section, SimpleSection):
-            msg = f"section is not a SimpleSection, but {type(section)}"
+    def __init__(self, section: Section):
+        if not isinstance(section, Section):
+            msg = f"section is not a Section, but {type(section)}"
             raise TypeError(msg)
         self.__section = section
 
     @property
-    def section(self) -> SimpleSection:
+    def section(self) -> Section:
         return self.__section
 
 
 class WarpingField(Field):
-    def __init__(self, section: SimpleSection):
+    def __init__(self, section: Section):
         super().__init__(section)
         self.__values = None
 
@@ -334,7 +400,7 @@ class WarpingField(Field):
 
 
 class ChargedField(Field):
-    def __init__(self, section: SimpleSection):
+    def __init__(self, section: Section):
         super().__init__(section)
         self.__charges = np.zeros(6, dtype="float64")
 
