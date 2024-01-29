@@ -8,7 +8,7 @@ import pytest
 from compmec.shape import Primitive
 
 from compmec.section.material import Isotropic
-from compmec.section.section import SimpleSection
+from compmec.section.section import Section
 
 
 @pytest.mark.order(4)
@@ -38,7 +38,7 @@ class TestSinglePolygon:
         material = Isotropic()
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
-        section = SimpleSection(geometry, material)
+        section = Section(geometry, material)
         section.solve(meshsize=0.01)
         test_torsion = section.torsion_constant()
         good_torsion = (9 / 64) * side**4

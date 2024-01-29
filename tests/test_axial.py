@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from compmec.shape import Primitive
 
-from compmec.section import SimpleSection
+from compmec.section import Section
 from compmec.section.material import Isotropic
 
 

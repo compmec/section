@@ -9,7 +9,7 @@ import pytest
 from compmec.shape import Primitive
 
 from compmec.section.material import Isotropic
-from compmec.section.section import SimpleSection
+from compmec.section.section import Section
 
 
 @pytest.mark.order(4)

@@ -3,22 +3,19 @@ import pytest
 from compmec.section import material
 
 
-@pytest.mark.order(2)
-@pytest.mark.dependency(
-    depends=["tests/test_dataio.py::test_end"],
-    scope="session",
-)
+@pytest.mark.order(1)
+@pytest.mark.dependency()
 def test_begin():
     pass
 
 
 class TestIsotropic:
-    @pytest.mark.order(2)
+    @pytest.mark.order(1)
     @pytest.mark.dependency(depends=["test_begin"])
     def test_begin(self):
         pass
 
-    @pytest.mark.order(2)
+    @pytest.mark.order(1)
     @pytest.mark.timeout(1)
     @pytest.mark.dependency(depends=["TestIsotropic::test_begin"])
     def test_main(self):
@@ -39,7 +36,7 @@ class TestIsotropic:
             assert abs(L - mat.lame_parameter_1) < 1e-9
             assert abs(G - mat.lame_parameter_2) < 1e-9
 
-    @pytest.mark.order(2)
+    @pytest.mark.order(1)
     @pytest.mark.timeout(1)
     @pytest.mark.dependency(depends=["TestIsotropic::test_main"])
     def test_fail_setting_young(self):
@@ -49,7 +46,7 @@ class TestIsotropic:
         with pytest.raises(ValueError):
             mat.young_modulus = -100
 
-    @pytest.mark.order(2)
+    @pytest.mark.order(1)
     @pytest.mark.timeout(1)
     @pytest.mark.dependency(depends=["TestIsotropic::test_main"])
     def test_fail_setting_poisson(self):
@@ -59,13 +56,13 @@ class TestIsotropic:
         with pytest.raises(ValueError):
             mat.poissons_ratio = 0.501
 
-    @pytest.mark.order(2)
+    @pytest.mark.order(1)
     @pytest.mark.dependency(depends=["TestIsotropic::test_main"])
     def test_end(self):
         pass
 
 
-@pytest.mark.order(2)
+@pytest.mark.order(1)
 @pytest.mark.dependency(depends=["TestIsotropic::test_end"])
 def test_end():
     pass
