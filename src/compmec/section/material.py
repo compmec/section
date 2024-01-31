@@ -3,24 +3,17 @@ This module contains the class 'Isotropic' to store and convert values
 """
 from __future__ import annotations
 
-import json
 from importlib import resources
-from typing import Dict, Tuple, Union
+from typing import Dict, Optional, Tuple, Union
 
+import dataio
 import jsonschema
 
 
 class Material(object):
     @classmethod
-    def from_json(cls, filepath: str) -> Union[Material, Tuple[Material]]:
-        schema_path = resources.files("compmec.section")
-        schema_path = schema_path.joinpath("schema/material.json")
-        with schema_path.open() as file:
-            schema = json.load(file)
-        with open(filepath, "r") as file:
-            data = json.load(file)
-        jsonschema.validate(data, schema)
-
+    def from_json(cls, filepath: str) -> Dict[str, Material]:
+        data = dataio.read_material_json(filepath)
         materials = {}
         for name, info in data.items():
             materials[name] = cls.from_dict(info)
@@ -28,12 +21,29 @@ class Material(object):
 
     @classmethod
     def from_dict(cls, info: Dict) -> Material:
-        behav = info.pop("behaviour")
-        if behav == "Isotropic":
-            material = Isotropic()
-            for attr, value in info.items():
-                setattr(material, attr, value)
+        material = Isotropic(info)
         return material
+
+    def to_dict(self) -> Dict:
+        """
+        Converts the current material to a dictionary
+        """
+        dicion = {}
+        for name in dir(self):
+            if name.startswith("__"):
+                continue
+            if name.endswith("__"):
+                continue
+            value = getattr(self, name)
+            if not callable(value):
+                dicion[name] = value
+        return dicion
+
+    def to_json(self, json_filepath: str, name: Optional[str] = "unknown"):
+        material_infos = self.to_dict()
+        materials_dictionary = {name: material_infos}
+        saving_dictionary = {"materials": materials_dictionary}
+        dataio.save_json(saving_dictionary, json_filepath)
 
 
 class Isotropic(Material):
@@ -44,10 +54,13 @@ class Isotropic(Material):
     https://en.wikipedia.org/wiki/Isotropy
     """
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         self._young_modulus = None
         self._poissons_ratio = None
         self._density = None
+        if kwargs is not None:
+            for attr, value in kwargs.items():
+                setattr(self, attr, value)
 
     def __str__(self) -> str:
         values = [
@@ -60,7 +73,8 @@ class Isotropic(Material):
             self.density,
         ]
         # values = tuple(".3f" % v for v in values)
-        msg = "Isotropic Material: (E, nu, K, G, L1, L2, rho) = (%s)"
+        msg = "Isotropic Material: "
+        msg += "(E, nu, K, G, L1, L2, rho) = (%s)"
         msg %= ", ".join(map(str, values))
         return msg
 

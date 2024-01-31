@@ -10,6 +10,8 @@ from typing import Dict, Optional
 
 import jsonschema
 
+from compmec import nurbs
+
 
 def read_json(filepath: str, schemapath: Optional[str] = None) -> Dict:
     """
@@ -22,22 +24,21 @@ def read_json(filepath: str, schemapath: Optional[str] = None) -> Dict:
 
     Parameters
     -----------
-
-    :param filepath: json filepath to be read from
-    :type filepath: str
-    :param schemapath: schema filepath to be checked
-    :type schemapath: str, optional
-    :return: The dictionary with all infos read from json
-    :rtype: dict
+    filepath: str
+        json filepath to be read from
+    schemapath: str, optional
+        schema filepath to be checked
+    return: dict
+        The dictionary with all infos read from json
 
     """
     if not isinstance(filepath, str):
         raise TypeError
-    if not isinstance(schemapath, str):
-        raise TypeError
     with open(filepath, "r") as file:
         data = json.load(file)
     if schemapath:
+        if not isinstance(schemapath, str):
+            raise TypeError
         with open(schemapath, "r") as file:
             schema = json.load(file)
         jsonschema.validate(data, schema)
@@ -51,12 +52,11 @@ def read_section_json(filepath: str) -> Dict:
     This file must be in accordance with the schema `section.json`
 
     Parameters
-    -----------
-
-    :param filepath: section json filepath to be read from
-    :type filepath: str
-    :return: The dictionary with all infos read from json
-    :rtype: dict
+    ----------
+    filepath: str
+        section json filepath to be read from
+    return: dict
+        The dictionary with all infos read from json
 
     """
     schema_name = "schema/section.json"
@@ -64,3 +64,64 @@ def read_section_json(filepath: str) -> Dict:
     schema_path = str(folder.joinpath(schema_name))
     data = read_json(filepath, schema_path)
     return data
+
+
+def read_material_json(filepath: str) -> Dict:
+    """
+    Reads a material json and returns the data inside it.
+
+    This file must be in accordance with the schema `material.json`
+
+    Parameters
+    ----------
+    filepath: str
+    return: dict
+    """
+    schema_name = "schema/material.json"
+    folder = resources.files("compmec.section")
+    schema_path = str(folder.joinpath(schema_name))
+    data = read_json(filepath, schema_path)
+    for key in data.keys():
+        if key != "materials":
+            data.pop(key)
+    return data
+
+
+def read_curve_json(filepath: str) -> Dict:
+    """
+    Reads a curve json and returns the data inside it.
+
+    This file must be in accordance with the schema `curve.json`
+
+    Parameters
+    ----------
+    filepath: str
+    return: dict
+    """
+    schema_name = "schema/curve.json"
+    folder = resources.files("compmec.section")
+    schema_path = str(folder.joinpath(schema_name))
+    data = read_json(filepath, schema_path)
+    for key in data.keys():
+        if key not in ["nodes", "curves"]:
+            data.pop(key)
+    return data
+
+
+def save_json(dictionary: Dict, json_filepath: str):
+    """
+    Saves the given dictionary in a json file.
+
+    For now this function overwrides all the file.
+    It would be nice to add the informations, keeping
+    the old values (if not conflitant)
+
+    Parameters
+    ----------
+    dictionary: Dict
+    json_filepath: str
+        The path to save the informations
+    """
+    json_object = json.dumps(dictionary, indent=4)
+    with open(json_filepath, "w") as file:
+        file.write(json_object)
