@@ -66,6 +66,7 @@
       "type": "object",
       "required": [
         "label",
+        "degree",
         "knotvector",
         "ctrlpoints"
       ],
