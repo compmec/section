@@ -20,7 +20,6 @@ def test_begin():
     pass
 
 
-
 class TestSinglePolygon:
     @pytest.mark.order(3)
     @pytest.mark.dependency(depends=["test_begin", "TestBuild::test_end"])
@@ -36,7 +35,7 @@ class TestSinglePolygon:
         material = Isotropic()
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
-        section = SimpleSection(geometry, material)
+        section = Section(geometry, material)
         area = section.area()
         Qx, Qy = section.first_moment()
         Ixx, Ixy, Iyy = section.second_moment()
@@ -56,7 +55,7 @@ class TestSinglePolygon:
         material = Isotropic()
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
-        section = SimpleSection(geometry, material)
+        section = Section(geometry, material)
         area = section.area()
         Qx, Qy = section.first_moment()
         Ixx, Ixy, Iyy = section.second_moment()
@@ -77,7 +76,7 @@ class TestSinglePolygon:
         material = Isotropic()
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
-        section = SimpleSection(geometry, material)
+        section = Section(geometry, material)
         area = section.area()
         Qx, Qy = section.first_moment()
         Ixx, Ixy, Iyy = section.second_moment()
@@ -105,7 +104,7 @@ class TestSinglePolygon:
         material = Isotropic()
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
-        section = SimpleSection(geometry, material)
+        section = Section(geometry, material)
         area = section.area()
         Qx, Qy = section.first_moment()
         Ixx, Ixy, Iyy = section.second_moment()
