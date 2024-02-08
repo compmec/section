@@ -31,6 +31,7 @@ The theory is divided in parts:
 5) :ref:`numerical_integration`
 6) :ref:`boundary_element_method`
 
+-----------------------------------------------------------------
 
 .. _geometric_properties:
 
@@ -64,6 +65,45 @@ Note that the index :math:`x` and :math:`y`
 are switched and they doesn't represent the
 internal function
 
+.. _global_second_moment_area:
+
+Second Moment of Area
+-----------------------------
+
+The second moment of inertia are
+
+.. math::
+    I_{yy} = \int_{\Omega} x^2 \ dx \ dy
+.. math::
+    I_{xy} = \int_{\Omega} xy \ dx \ dy
+.. math::
+    I_{xx} = \int_{\Omega} y^2 \ dx \ dy
+
+They are also known as **global second moment of inertia** 
+
+They can be arranged in a tensor form:
+
+.. math::
+    \mathbb{I}_{global} = \begin{bmatrix}I_{xx} & I_{xy} \\ I_{xy} & I_{yy}\end{bmatrix}
+
+.. _third_moment_area:
+
+Third Moment of Area
+--------------------
+
+The third moment of inertia is computed as:
+
+.. math::
+    I_{yyy} = \int_{\Omega} x^3 \ dx \ dy
+.. math::
+    I_{xyy} = \int_{\Omega} x^2y \ dx \ dy
+.. math::
+    I_{xxy} = \int_{\Omega} xy^2 \ dx \ dy
+.. math::
+    I_{xxx} = \int_{\Omega} y^3 \ dx \ dy
+
+They are used in :ref:`shear_center`
+
 .. _geometric_center:
 
 Geometric center
@@ -79,24 +119,6 @@ We denote the geometric centroid by :math:`\boldsymbol{G}`
 .. math::
     y_{gc} = \dfrac{Q_x}{A}
 
-.. _global_second_moment_area:
-
-Global Second Moment of Area
------------------------------
-
-The global second moment of inertia are
-
-.. math::
-    I_{yy} = \int_{\Omega} x^2 \ dx \ dy
-.. math::
-    I_{xy} = \int_{\Omega} xy \ dx \ dy
-.. math::
-    I_{xx} = \int_{\Omega} y^2 \ dx \ dy
-
-They can be arranged in a tensor form:
-
-.. math::
-    \mathbb{I}_{global} = \begin{bmatrix}I_{xx} & I_{xy} \\ I_{xy} & I_{yy}\end{bmatrix}
 
 .. _local_second_moment_area:
 
@@ -151,25 +173,6 @@ It's also computed as
 
 .. math::
     \phi = \arg\left(I_{\overline{xy}} + i \cdot \left(I_{\overline{xx}}-I_{11}\right)\right) = \text{arctan}\left(\dfrac{I_{\overline{xx}}-I_{11}}{I_{\overline{xy}}}\right)
-
-
-.. _third_moment_area:
-
-Third Moment of Area
---------------------
-
-The third moment of inertia is computed as:
-
-.. math::
-    I_{yyy} = \int_{\Omega} x^3 \ dx \ dy
-.. math::
-    I_{xyy} = \int_{\Omega} x^2y \ dx \ dy
-.. math::
-    I_{xxy} = \int_{\Omega} xy^2 \ dx \ dy
-.. math::
-    I_{xxx} = \int_{\Omega} y^3 \ dx \ dy
-
-They are used in :ref:`shear_center`
 
 
 .. _bending_center:
@@ -313,11 +316,9 @@ Functions
 
 From Saint-venant theory, the functions :math:`\Psi` and :math:`\Phi` are fundamental to compute shear properties.
 
-
 .. math::
     \begin{bmatrix} \nabla^2 \Psi \\ \nabla^2 \Phi \end{bmatrix} = 
     2\begin{bmatrix} -I_{\overline{xx}} & I_{\overline{xy}} \\ I_{\overline{xy}} & -I_{\overline{yy}} \end{bmatrix} \begin{bmatrix} x \\ y \end{bmatrix}
-
 
 And boundary conditions
 
@@ -346,6 +347,8 @@ Which values on the left are the :ref:`global_second_moment_area` and :ref:`thir
 .. math::
     \Delta = 2(1+\nu)(I_{xx}I_{yy}-I_{xy})
 
+TODO
+
 -----------------------------------------------------------------
 
 .. _stress_and_strain:
@@ -353,7 +356,6 @@ Which values on the left are the :ref:`global_second_moment_area` and :ref:`thir
 =================
 Stress and Strain
 =================
-
 
 Introduction
 ------------
@@ -520,6 +522,8 @@ Depending on the application of the shear force, it may causes torsion.
 
 TODO
 
+-----------------------------------------------------------------
+
 .. _numerical_integration:
 
 =====================
@@ -546,58 +550,6 @@ It's mesured with constants :math:`n`, :math:`c`, :math:`k` and :math:`m`, depen
 .. math::
     \left| \int_{0}^{1} f(x) \ dx - \sum_{i=0}^{n-1} w_i \cdot f(x_i) \right| \le \dfrac{c}{n^{k}} \cdot \max_{x \in \left[0, \ 1\right]} f^{(m)}(x)
 
-Here we present some possible quadratures with precision of 5 digits. 
-
-.. csv-table:: Closed Newton cotes nodes and weights
-   :header: "Number", "Node", "Weight"
-
-   1,           0,      1/2
-   2,           1,      1/2
-   "",              "",          ""
-   1,           0,      1/6
-   2,         1/2,      4/6
-   3,           1,      1/6
-   "",              "",          ""
-   1,           0,      1/8
-   2,         1/3,      3/8
-   3,         2/3,      3/8
-   4,           1,      1/8
-   "",              "",          ""
-   1,           0,      7/90
-   2,         1/4,      32/90
-   3,         2/4,      12/90
-   4,         3/4,      32/90
-   5,           1,      7/90
-
-.. csv-table:: Open Newton cotes nodes and weights
-   :header: "Number", "Node", "Weight"
-
-   1,         1/2,         1
-   "",              "",          ""
-   1,         1/3,       1/2
-   2,         2/3,       1/2
-   "",              "",          ""
-   1,         1/4,       2/3
-   2,         2/4,      -1/3
-   3,         3/4,       2/3
-   "",              "",          ""
-   1,         1/5,      11/24
-   2,         2/5,       1/24
-   3,         3/5,       1/24
-   4,         4/5,      11/24
-
-* Closed Newton Cotes: Equally spaced points in interval. Degree at most :math:`p-1` with :math:`p` evaluation points
-
-* Chebyshev: `Chebyshev nodes <https://en.wikipedia.org/wiki/Chebyshev_nodes>`_ in interval. Degree at most :math:`p-1` with :math:`p` evaluation points
-
-* `Gauss-Legendre Quadrature <https://en.wikipedia.org/wiki/Gauss%E2%80%93Legendre_quadrature>`_: 
-
-* `Gauss-Legendre Quadrature <https://en.wikipedia.org/wiki/Gauss%E2%80%93Legendre_quadrature>`_
-
-* Lobatto Quadrature: Can be used to adaptative quadrature
-
-* `Clenshaw–Curtis Quadrature <https://en.wikipedia.org/wiki/Clenshaw%E2%80%93Curtis_quadrature>`_
-
 .. _polynomial_integrals:
 
 Polynomial integrals
@@ -608,8 +560,7 @@ To compute area, momentums and inertias, it's needed to compute the integral
 .. math::
     I_{a,b} = \int_{\Omega} x^a \cdot y^b \ dx \ dy
 
-Which :math:`\Omega` is the defined region with closed boundary :math:`\Gamma`,
-:math:`a` and :math:`b` are natural numbers
+Which :math:`\Omega` is the defined region with closed boundary :math:`\Gamma`, :math:`a` and :math:`b` are natural numbers
 
 By using Green's thereom, we transform the integral
 
@@ -650,7 +601,10 @@ In that case, each segment is a straight line, so
 which is constant for an arbitrary segment :math:`i`. Hence
 
 .. math::
-    (a+b+2) \cdot I_{a, b} = \sum_{i=0}^{n-1} \left(x_{i}y_{i+1}-x_{i+1}y_{i}\right) \int_{\Gamma_i} x^a \cdot y^b \ dt
+    (a+b+2) \cdot I_{a, b} = \sum_{i=0}^{n-1} \left(x_{i}y_{i+1}-x_{i+1}y_{i}\right) I_{a, b, i}
+
+.. math::
+    I_{a, b}^{(i)} = \int_{\Gamma_i} x^a \cdot y^b \ dt
 
 The integral can be computed by expanding it and using the beta function:
 
@@ -660,7 +614,7 @@ The integral can be computed by expanding it and using the beta function:
 Leading to 
 
 .. math::
-    (a+b+2)(a+b+1)\binom{a+b}{a} I_{a,b} = \sum_{i=0}^{n-1} \left(x_{i}y_{i+1}-x_{i+1}y_{i}\right)\sum_{j=0}^{a}\sum_{k=0}^{b}\binom{j+k}{k}\binom{a+b-j-k}{b-k}x_{i}^{a-j}x_{i+1}^{j}y_{i}^{b-k}y_{i+1}^{k}
+    (a+b+1)\binom{a+b}{a} I_{a, b}^{(i)} = \sum_{j=0}^{a}\sum_{k=0}^{b}\binom{j+k}{k}\binom{a+b-j-k}{b-k}x_{i}^{a-j}x_{i+1}^{j}y_{i}^{b-k}y_{i+1}^{k}
 
 For special cases that :math:`a=0` or :math:`b=0`, we get
 
@@ -684,7 +638,7 @@ For special cases that :math:`a=0` or :math:`b=0`, we get
 Singular integrals
 ------------------
 
-Singular integrals are used when the integrating function is not defined in the entire interval due to a singularities.
+Singular integrals are used when the integrating function is not defined in the entire interval due to singularities.
 We decompose the integrating function in two functions:
 
 * The weight function :math:`g(x)`, such contains known singularities
@@ -695,7 +649,7 @@ Therefore, we compute
 .. math::
     \int_{0}^{1} f(x) \cdot g(x) \ dx \approx \sum_{i=0}^{n-1} w_i \cdot f(x_i)
 
-With `n` specific position nodes :math:`x_i` and weights :math:`w_i`,
+With :math:`n` specific position nodes :math:`x_i` and weights :math:`w_i`,
 computed depending on the fonction :math:`g(x)` and the position of the singularities.
 
 For our specific case,
@@ -733,34 +687,36 @@ Although it's well defined, in general the :math:`a` coefficients are unknown.
 A logarithm quadrature was created by `Stroud and Sladek <https://www.sciencedirect.com/science/article/abs/pii/S0045782597002399>`_ with given values in table bellow
 
 .. math::
-    \int_{0}^{1} f(x)\ln x \ dx \approx -\sum_{k=1}^{p} w_{k} \cdot f(\eta_{k})
+    \int_{0}^{1} f(x)\ln x \ dx \approx -\sum_{i=0}^{n-1} w_{i} \cdot f(x_{i})
 
-.. list-table:: Nodes and Weights for Logarithm Quadrature 
-   :widths: 20 40 40
-   :header-rows: 1
-   :align: center
+.. dropdown:: Nodes and Weights for Logarithm Quadrature 
 
-   * - :math:`p`
-     - :math:`\eta`
-     - :math:`w`
-   * - 2
-     - 0.112008806166976
-     - 0.718539319030384
-   * - 
-     - 0.602276908118738
-     - 0.281460680969615
-   * - 
-     - 
-     - 
-   * - 3
-     - 0.0638907930873254
-     - 0.513404552232363
-   * - 
-     - 0.368997063715618
-     - 0.391980041201487
-   * - 
-     - 0.766880303938941
-     - 0.0946154065661491
+    .. list-table:: 
+        :widths: 20 40 40
+        :header-rows: 1
+        :align: center
+
+        * - :math:`n`
+          - :math:`x_i`
+          - :math:`w_i`
+        * - 2
+          - 0.112008806166976
+          - 0.718539319030384
+        * - 
+          - 0.602276908118738
+          - 0.281460680969615
+        * - 
+          - 
+          - 
+        * - 3
+          - 0.0638907930873254
+          - 0.513404552232363
+        * - 
+          - 0.368997063715618
+          - 0.391980041201487
+        * - 
+          - 0.766880303938941
+          - 0.0946154065661491
     
 Odd singularity
 ^^^^^^^^^^^^^^^
@@ -788,8 +744,9 @@ This integral is well defined:
 
 It's possible to create a quadrature for it:
 
-TO DO
+TODO
 
+-----------------------------------------------------------------
 
 .. _boundary_element_method:
 
@@ -800,7 +757,10 @@ Boundary Element Method
 Introduction
 ------------
 
-The Boundary Element Method (BEM for short) is used to solve the laplace's equation
+The Boundary Element Method (BEM for short) is a method that solves a linear PDE by transforming the problem in a boundary problem.
+Once the problem is solved, all the informations on the boundary are known and then the interior informations are easy computed after that.
+
+In our case, BEM is used to solve the laplace's equation
 
 .. math:: 
     :label: eq_laplace
@@ -927,14 +887,7 @@ For the warping function
 Vector :math:`\mathbf{F}` for shear
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The vector :math:`\mathbf{F}` for shear are in fact 2 vectors.
-
-We compute the value of :math:`\mathbb{X}`, which is a :math:`(n \times 6)` matrix
-
-.. math::
-    \mathbb{X}_{i} = \int_{t_{min}}^{t_{max}} \ln r \cdot \begin{bmatrix}x^2 \cdot x' \\ 2xy \cdot x' \\ y^2 \cdot x' \\ x^2 \cdot y' \\ 2xy \cdot y' \\ y^2 \cdot y' \end{bmatrix}
-
-With this matrix, we compute the vector :math:`\mathbf{F}` and it's better explained in :ref:`shear_center`.
+TODO
 
 
 Evaluating matrices
@@ -1108,52 +1061,7 @@ With :math:`\mathbf{P}_k` begin the :math:`k`-vertex and
 Vector :math:`\mathbf{F}` for shear
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The evaluation of this integral is made by computing :math:`\mathbb{X}_i`
-
-.. math::
-    \mathbb{X}_{i} = \int_{t_{min}}^{t_{max}} \ln r \cdot \begin{bmatrix}x^2 \cdot x' \\ 2xy \cdot x' \\ y^2 \cdot x' \\ x^2 \cdot y' \\ 2xy \cdot y' \\ y^2 \cdot y' \end{bmatrix} \ dt
-
-
-* For :math:`t_i \notin \left[t_k, \ t_{k+1}\right]`, uses :ref:`regular_integrals` to compute
-
-* For :math:`t_i \in \left[t_k, \ t_{k+1}\right]` then
-
-    .. math::
-        \tau_i = \dfrac{t_i-t_k}{t_{k+1}-t_{k}}
-    .. math::
-        \mathbf{V}_k = \mathbf{P}_{k+1}-\mathbf{P}_{k}
-    .. math::
-        \mathbf{p}(t) = \mathbf{P}_{k}+\tau \cdot \mathbf{V}_{k}
-    .. math::
-        \mathbf{r}(t) = (\tau - \tau_i) \cdot \mathbf{V}_{k}
-    .. math::
-        \ln \|\mathbf{r}\| = \dfrac{1}{2}\ln \beta_k + \ln |\tau - \tau_i|
-
-    Breaking into components:
-
-    .. math::
-        x(t) = x_{k} + \tau \Delta x_{k}
-    .. math::
-        y(t) = y_{k} + \tau \Delta y_{k}
-
-    and let 
-
-    
-
-    The integrals become
-
-    .. math::
-        \mathbb{X}_{ik} = \dfrac{1}{2}\ln \beta_k \int_{0}^{1} \begin{bmatrix}\Delta x_{k} \cdot x^2 \\ \Delta x_{k} \cdot 2xy \\ \Delta x_{k} \cdot y^2 \\ \Delta y_{k} \cdot x^2 \\ \Delta y_{k} \cdot 2xy \\ \Delta y_{k} \cdot y^2\end{bmatrix} \ d\tau + \int_{0}^{1} \ln |\tau - \tau_i| \begin{bmatrix}\Delta x_{k} \cdot x^2 \\ \Delta x_{k} \cdot 2xy \\ \Delta x_{k} \cdot y^2 \\ \Delta y_{k} \cdot x^2 \\ \Delta y_{k} \cdot 2xy \\ \Delta y_{k} \cdot y^2\end{bmatrix} \ d\tau
-    
-    The left part is
-
-    .. math::
-        \mathbb{X}_{ik0} = \int_{0}^{1} \begin{bmatrix}x^2 \\ 2xy \\ y^2 \end{bmatrix} \ d\tau = \begin{bmatrix}x_{k}^2+x_kx_{k+1}+x_{k+1}^{2} \\ 2x_{k}y_{k} + x_{k}y_{k+1}+x_{k+1}y_{k}+2x_{k+1}y_{k+1} \\ y_{k}^2+y_ky_{k+1}+y_{k+1}^{2} \end{bmatrix}
-
-    The right part is used logarithm integration.
-    
-
-
+TODO
 
 
 
