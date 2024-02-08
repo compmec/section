@@ -526,6 +526,80 @@ TODO
 Numerical Integration
 =====================
 
+.. _regular_integrals:
+
+Regular integrals
+------------------
+
+The numerical integral are computated by using quadrature schemas, rewriting
+
+.. math::
+    \int_{0}^{1} f(x) \ dx = \sum_{i=0}^{n-1} w_i \cdot f(x_i)
+
+With specific position nodes :math:`x_i` and weights :math:`w_i`.
+:math:`n` is the number of integration points
+
+Depending of the nodes and weights, we get different approximations.
+Although the error is unknown, it's still possible to know how good the obtained value is.
+It's mesured with constants :math:`n`, :math:`c`, :math:`k` and :math:`m`, depending on the method
+
+.. math::
+    \left| \int_{0}^{1} f(x) \ dx - \sum_{i=0}^{n-1} w_i \cdot f(x_i) \right| \le \dfrac{c}{n^{k}} \cdot \max_{x \in \left[0, \ 1\right]} f^{(m)}(x)
+
+Here we present some possible quadratures with precision of 5 digits. 
+
+.. csv-table:: Closed Newton cotes nodes and weights
+   :header: "Number", "Node", "Weight"
+
+   1,           0,      1/2
+   2,           1,      1/2
+   "",              "",          ""
+   1,           0,      1/6
+   2,         1/2,      4/6
+   3,           1,      1/6
+   "",              "",          ""
+   1,           0,      1/8
+   2,         1/3,      3/8
+   3,         2/3,      3/8
+   4,           1,      1/8
+   "",              "",          ""
+   1,           0,      7/90
+   2,         1/4,      32/90
+   3,         2/4,      12/90
+   4,         3/4,      32/90
+   5,           1,      7/90
+
+.. csv-table:: Open Newton cotes nodes and weights
+   :header: "Number", "Node", "Weight"
+
+   1,         1/2,         1
+   "",              "",          ""
+   1,         1/3,       1/2
+   2,         2/3,       1/2
+   "",              "",          ""
+   1,         1/4,       2/3
+   2,         2/4,      -1/3
+   3,         3/4,       2/3
+   "",              "",          ""
+   1,         1/5,      11/24
+   2,         2/5,       1/24
+   3,         3/5,       1/24
+   4,         4/5,      11/24
+
+* Closed Newton Cotes: Equally spaced points in interval. Degree at most :math:`p-1` with :math:`p` evaluation points
+
+* Chebyshev: `Chebyshev nodes <https://en.wikipedia.org/wiki/Chebyshev_nodes>`_ in interval. Degree at most :math:`p-1` with :math:`p` evaluation points
+
+* `Gauss-Legendre Quadrature <https://en.wikipedia.org/wiki/Gauss%E2%80%93Legendre_quadrature>`_: 
+
+* `Gauss-Legendre Quadrature <https://en.wikipedia.org/wiki/Gauss%E2%80%93Legendre_quadrature>`_
+
+* Lobatto Quadrature: Can be used to adaptative quadrature
+
+* `Clenshaw–Curtis Quadrature <https://en.wikipedia.org/wiki/Clenshaw%E2%80%93Curtis_quadrature>`_
+
+.. _polynomial_integrals:
+
 Polynomial integrals
 --------------------
 
@@ -534,7 +608,8 @@ To compute area, momentums and inertias, it's needed to compute the integral
 .. math::
     I_{a,b} = \int_{\Omega} x^a \cdot y^b \ dx \ dy
 
-Which :math:`\Omega` is the defined region with closed boundary :math:`\Gamma`.
+Which :math:`\Omega` is the defined region with closed boundary :math:`\Gamma`,
+:math:`a` and :math:`b` are natural numbers
 
 By using Green's thereom, we transform the integral
 
@@ -554,83 +629,77 @@ Then
 .. math::
     I_{a, b} = \dfrac{\alpha - 1}{b+1} \int_{\Gamma} x^{a} \cdot y^{b+1} \ dx + \dfrac{\alpha}{a+1} \int_{\Gamma} x^{a+1} \cdot y^b \ dy
 
-This integral is computed in the boundary and the expression depends on :math:`\alpha`. 
+This integral is computed in the boundary and the expression depends on :math:`\alpha`.
 
-For polygonal domains, the expressions may be resumed
-
-
-.. dropdown:: Integrals :math:`I_{a,b}` for polygonal domains
-
-    Expanding the expression of :math:`I_{a,b}` we get
-
-    .. math::
-        (a+b+2)\cdot I_{a,b} & = \dfrac{\alpha}{a+1} \sum_{i=0}^{n-1}\left(\left(y_{i+1}-y_{i}\right)\sum_{j=0}^{a+1}\sum_{k=0}^{b}\dfrac{\binom{a+1}{j}\binom{b}{k}}{\binom{a+b+1}{j+k}}x_{i}^{a+1-j}x_{i+1}^{j}y_{i}^{b-k}y_{i+1}^{k}\right) \\ & + \dfrac{\alpha-1}{b+1}\sum_{i=0}^{n-1}\left(\left(x_{i+1}-x_{i}\right)\sum_{j=0}^{a}\sum_{k=0}^{b+1}\dfrac{\binom{a}{j}\binom{b+1}{k}}{\binom{a+b+1}{j+k}}x_{i}^{a-j}x_{i+1}^{j}y_{i}^{b+1-k}y_{i+1}^{k}\right)
-
-    By setting :math:`\alpha = 1`
-    
-    .. math::
-        I_{a,0} = \sum_{i=0}^{n-1} \dfrac{x_{i+1}^{a+2}-x_{i}^{a+2}}{x_{i+1}-x_{i}} \cdot \dfrac{y_{i+1}-y_{i}}{(a+1)(a+2)}
-    
-    And :math:`\alpha = 0`
-
-    .. math::
-        I_{0,b} = -\sum_{i=0}^{n-1} \dfrac{y_{i+1}^{b+2}-y_{i}^{b+2}}{y_{i+1}-y_{i}} \cdot \dfrac{x_{i+1}-x_{i}}{(b+1)(b+2)}
-
-    For any different value, the closed formulas are too complex. I don't have much time to find a :math:`\alpha` value such :math:`I_{a,b}` becomes a simpler expression. 
-
-    Bellow you find values for :math:`\alpha = \dfrac{1}{2}`.
-
-    .. math::
-        I_{0,0} = \dfrac{1}{2}\sum_{i=0}^{n-1} x_{i}y_{i+1}-y_{i}x_{i+1}
-
-    .. math::
-        I_{1,1} = \dfrac{1}{24} \sum_{i=0}^{n-1} \left(x_{i}y_{i+1}-y_{i}x_{i+1}\right)\left(2x_{i}y_{i}+x_{i+1}y_{i}+x_{i}y_{i+1}+2x_{i+1}y_{i+1}\right)
-
-    .. note::
-        It's possible to have :math:`x_{i+1} = x_{i}` or :math:`y_{i+1} = y_{i}` in some edge, which leads to divide by zero in :math:`I_{a,0}` and :math:`I_{0,b}`.
-        
-        In that case, we open the expression:
-
-        .. math::
-            \dfrac{x_{i+1}^{c+1}-x_{i}^{c+1}}{x_{i+1}-x_{i}} = \sum_{j=0}^{c} x_{i}^{c-j}x_{i+1}^{j}
-        .. math::
-            \dfrac{y_{i+1}^{c+1}-y_{i}^{c+1}}{y_{i+1}-y_{i}} = \sum_{j=0}^{c} y_{i}^{c-j}y_{i+1}^{j}
-
-
-
-
-.. _regular_integrals:
-
-Regular integrals
-------------------
-
-The numerical integral are computated by using quadrature schemas, rewriting
+In special, by taking :math:`\alpha = \dfrac{a+1}{a+b+2}`, it's transformed to
 
 .. math::
-    \int_{0}^{1} f(x) \ dx = \sum_{i=0}^{n-1} w_i \cdot f(x_i)
+    (a+b+2) \cdot I_{a, b} = \int_{\Gamma} x^a \cdot y^b \cdot \mathbf{p} \times \mathbf{p}' \ dt
 
-With specific position nodes :math:`x_i` and weights :math:`w_i`. 
+Computing it can be done by :ref:`regular_integrals`
 
-Here we present some possible quadratures
+Polygonal domains
+^^^^^^^^^^^^^^^^^
 
-* Closed Newton Cotes: Equally spaced points in interval. Degree at most :math:`p-1` with :math:`p` evaluation points
+For polygonal domains, :math:`I_{a, b}` can be simplified even more.
+In that case, each segment is a straight line, so
 
-* Chebyshev: `Chebyshev nodes <https://en.wikipedia.org/wiki/Chebyshev_nodes>`_ in interval. Degree at most :math:`p-1` with :math:`p` evaluation points
+.. math::
+    \mathbf{p}(t) \times \mathbf{p}'(t) = \mathbf{p}_{i} \times \mathbf{p}_{i+1}
 
-* `Gauss-Legendre Quadrature <https://en.wikipedia.org/wiki/Gauss%E2%80%93Legendre_quadrature>`_: 
+which is constant for an arbitrary segment :math:`i`. Hence
 
-* `Gauss-Legendre Quadrature <https://en.wikipedia.org/wiki/Gauss%E2%80%93Legendre_quadrature>`_
+.. math::
+    (a+b+2) \cdot I_{a, b} = \sum_{i=0}^{n-1} \left(x_{i}y_{i+1}-x_{i+1}y_{i}\right) \int_{\Gamma_i} x^a \cdot y^b \ dt
 
-* Lobatto Quadrature: Can be used to adaptative quadrature
+The integral can be computed by expanding it and using the beta function:
 
-* `Clenshaw–Curtis Quadrature <https://en.wikipedia.org/wiki/Clenshaw%E2%80%93Curtis_quadrature>`_
+.. math::
+    \int_{0}^{1} (1-t)^a \cdot t^b \ dt = \dfrac{1}{a+b+1} \cdot \dfrac{1}{\binom{a+b}{a}}
+
+Leading to 
+
+.. math::
+    (a+b+2)(a+b+1)\binom{a+b}{a} I_{a,b} = \sum_{i=0}^{n-1} \left(x_{i}y_{i+1}-x_{i+1}y_{i}\right)\sum_{j=0}^{a}\sum_{k=0}^{b}\binom{j+k}{k}\binom{a+b-j-k}{b-k}x_{i}^{a-j}x_{i+1}^{j}y_{i}^{b-k}y_{i+1}^{k}
+
+For special cases that :math:`a=0` or :math:`b=0`, we get
+
+.. math::
+    (a+2)(a+1)I_{a,0} = \sum_{i=0}^{n-1} \left(x_{i}y_{i+1}-x_{i+1}y_{i}\right)\dfrac{x_{i+1}^{a+1}-x_{i}^{a+1}}{x_{i+1}-x_{i}}
+
+.. math::
+    (b+2)(b+1)I_{0,b} = \sum_{i=0}^{n-1} \left(x_{i}y_{i+1}-x_{i+1}y_{i}\right)\dfrac{y_{i+1}^{b+1}-y_{i}^{b+1}}{y_{i+1}-y_{i}}
+
+.. note::
+    It's possible to have :math:`x_{i+1} = x_{i}` or :math:`y_{i+1} = y_{i}` in some segment, which leads to divide by zero in :math:`I_{a,0}` and :math:`I_{0,b}`.
+    
+    In that case, the expression is opened:
+
+    .. math::
+        \dfrac{z_{i+1}^{c+1}-z_{i}^{c+1}}{z_{i+1}-z_{i}} = \sum_{j=0}^{c} z_{i}^{c-j}z_{i+1}^{j}
+
 
 .. _singular_integrals:
 
 Singular integrals
 ------------------
 
-There are two types of singular integrals to compute:
+Singular integrals are used when the integrating function is not defined in the entire interval due to a singularities.
+We decompose the integrating function in two functions:
+
+* The weight function :math:`g(x)`, such contains known singularities
+* The integrable function :math:`f(x)`, which is a unknown function defined in all interval
+
+Therefore, we compute
+
+.. math::
+    \int_{0}^{1} f(x) \cdot g(x) \ dx \approx \sum_{i=0}^{n-1} w_i \cdot f(x_i)
+
+With `n` specific position nodes :math:`x_i` and weights :math:`w_i`,
+computed depending on the fonction :math:`g(x)` and the position of the singularities.
+
+For our specific case,
+there are only two types of singular integrals developed in :ref:`boundary_element_method`:
 
 .. math::
     \int_{0}^{1} f(x) \cdot \ln x \ dx
@@ -649,22 +718,22 @@ We are interested in computing the integral
 .. math::
     I = \int_{0}^{1} f(x) \ \cdot \ln x \ dx
 
-If the function :math:`f(x)` is described by using series
+Describing the function :math:`f(x)` by taylor series
 
 .. math::
     f(x) = \sum_{i=0}^{\infty} a_i \cdot x^{i}
 
-Then the integral is 
+The integral is well defined 
 
 .. math::
     I = - \sum_{i=0}^{\infty} \dfrac{a_i}{\left(1+i\right)^2}
 
-Which is well defined as long as :math:`f(x)` is a polynomial.
+Although it's well defined, in general the :math:`a` coefficients are unknown.
 
 A logarithm quadrature was created by `Stroud and Sladek <https://www.sciencedirect.com/science/article/abs/pii/S0045782597002399>`_ with given values in table bellow
 
 .. math::
-    \int_{0}^{1} f(x)\ln x \ dx = \sum_{k=1}^{p} w_{k} \cdot f(\eta_{k})
+    \int_{0}^{1} f(x)\ln x \ dx \approx -\sum_{k=1}^{p} w_{k} \cdot f(\eta_{k})
 
 .. list-table:: Nodes and Weights for Logarithm Quadrature 
    :widths: 20 40 40
@@ -692,7 +761,6 @@ A logarithm quadrature was created by `Stroud and Sladek <https://www.sciencedir
    * - 
      - 0.766880303938941
      - 0.0946154065661491
-
     
 Odd singularity
 ^^^^^^^^^^^^^^^
@@ -702,24 +770,21 @@ We are interested in computing the integral
 .. math::
     \int_{-1}^{1} \dfrac{1}{x} \cdot f(x) \ dx
 
-The given integral is computed as the Cauchy Principal Value
+The given integral is computed as the Cauchy Principal Value, which symbol is further ommited
 
 .. math::
     PV\int_{-1}^{1} \dfrac{f(x)}{x} \ dx = \lim_{\varepsilon \to 0^{+}} \int_{-1}^{-\varepsilon} \dfrac{f(x)}{x} \ dx + \int_{\varepsilon}^{1} \dfrac{f(x)}{x} \ dx 
 
-This integral is well defined if :math:`f(x)` is a polynomial:
+This integral is well defined:
 
 .. math::
-    PV\int_{-1}^{1} \dfrac{1}{x} \ dx = 0
+    \int_{-1}^{1} \dfrac{1}{x} \ dx = 0
 .. math::
-    PV\int_{-1}^{1} \dfrac{x}{x} \ dx = 2
+    \int_{-1}^{1} \dfrac{x}{x} \ dx = 2
 .. math::
-    PV\int_{-1}^{1} \dfrac{x^2}{x} \ dx = 0
-
-Expanding :math:`f(x)` by its coefficients, therefore
-
+    \int_{-1}^{1} \dfrac{x^2}{x} \ dx = 0
 .. math::
-    PV \int_{-1}^{1} \dfrac{1}{x} \cdot f(x) \ dx = \sum_{i=1}^{\infty} a_{i} \cdot \dfrac{1 + \left(-1\right)^{i+1}}{i} = \sum_{j=0}^{\infty} \dfrac{2}{2j+1} \cdot a_{2j+1}
+    \int_{-1}^{1} \dfrac{1}{x} \cdot f(x) \ dx = \sum_{j=0}^{\infty} \dfrac{2 \cdot a_{2j+1}}{2j+1}
 
 It's possible to create a quadrature for it:
 
@@ -735,14 +800,14 @@ Boundary Element Method
 Introduction
 ------------
 
-The Boundary Element Method (BEM for short) is used to find :math:`u` numerically
+The Boundary Element Method (BEM for short) is used to solve the laplace's equation
 
 .. math:: 
     :label: eq_laplace
 
     \nabla^2 u = 0
 
-The BEM transforms :eq:`eq_laplace` into a boundary version :eq:`eq_bem`
+BEM transforms :eq:`eq_laplace` into a boundary version :eq:`eq_bem`
 
 .. math::
     :label: eq_bem
@@ -756,27 +821,32 @@ Which :math:`\mathbf{s}` is the source point of the Green function :math:`v` and
 
     v(\mathbf{p}, \ \mathbf{s}) = \ln r = \ln \|\mathbf{r}\| = \ln \|\mathbf{p} - \mathbf{s}\|
 
-Since all the PDEs used in this package have only Neumann's boundary conditions, the values of :math:`\dfrac{\partial u}{\partial n}` are known and the objective is finding all the values of :math:`u` at the boundary.
+Since all the PDEs used in this package have only Neumann's boundary conditions,
+all values of :math:`\dfrac{\partial u}{\partial n}` are known and the objective is finding all the values of :math:`u` at the boundary.
 
-Once :math:`u` and :math:`\dfrac{\partial u}{\partial n}` are known at the boundary, it's possible to compute :math:`u(x, y)` and its derivatives at any point inside by using :eq:`eq_bem`.
+Once :math:`u` and :math:`\dfrac{\partial u}{\partial n}` are known at the boundary,
+it's possible to compute :math:`u(x, y)` and its derivatives at any point inside by using :eq:`eq_bem`.
 
 
-Discretize solution
--------------------
+Solution at the boundary
+------------------------
 
-Parametrize the curve :math:`\Gamma` by :math:`\mathbf{p}(t)`, fix the source point :math:`\mathbf{s}_i = \mathbf{p}(t_i)` at the boundary, and set :math:`u` as a linear combination of :math:`n` basis functions :math:`\varphi` and weights :math:`\mathbf{U}`
+Parametrize the curve :math:`\Gamma` by :math:`\mathbf{p}(t)`
 
 .. math::
     :label: eq_curve_param
 
-    \mathbf{p}(t) = \sum_{j=0}^{m-1} \phi_{j}(t) \cdot P_{j} = \langle \mathbf{\phi}(t), \ \mathbf{P}\rangle
+    \mathbf{p}(t) = \sum_{j=0}^{m-1} \phi_{j}(t) \cdot \mathbf{P}_{j} = \langle \mathbf{\phi}(t), \ \mathbf{P}\rangle
+
+Set :math:`u(t)` as a linear combination of :math:`n` basis functions :math:`\varphi(t)` and weights :math:`\mathbf{U}`.
 
 .. math::
     :label: eq_discret_func
 
     u(t) = \sum_{j=0}^{n-1} \varphi_j(t) \cdot U_j = \langle \mathbf{\varphi}(t), \ \mathbf{U}\rangle
 
-Expanding :eq:`eq_bem` and using :eq:`eq_discret_func`, :eq:`eq_matrix_formula` is obtained
+Fix the source point :math:`\mathbf{s}_i = \mathbf{p}(t_i)` at the boundary and
+expand :eq:`eq_bem` by using :eq:`eq_discret_func` to get :eq:`eq_matrix_formula`
 
 .. math::
     :label: eq_matrix_formula
@@ -794,15 +864,16 @@ With the auxiliar values which depends only on the geometry, the source point an
 .. math::
     F_{i} = \int_{\Gamma} \dfrac{\partial u}{\partial n} \cdot v_i \ d\Gamma
 
-Applying for :math:`n` different source points :math:`\mathbf{s}_i` at boundary, we get the matrices :math:`\mathbb{A}`, :math:`\mathbb{M}` and :math:`\mathbf{F}` such
+Applying for :math:`n` different source points :math:`\mathbf{s}_i` at boundary,
+we get the matrices :math:`\mathbb{A}`, :math:`\mathbb{M}` and :math:`\mathbf{F}` such
 
 .. math::
     :label: eq_linear_system
 
-    \left(\mathbb{M}-\mathbb{A}\right) \cdot \mathbf{U} = \mathbb{K} \cdot \mathbf{U} = \mathbf{F}
+    \left(\mathbb{M}-\mathbb{A}\right) \cdot \mathbf{U} = \mathbf{F}
 
-Finding the values of :math:`\mathbf{U}` means solving the linear system :eq:`eq_linear_system`
-
+Finding the values of :math:`\mathbf{U}` means solving the linear system :eq:`eq_linear_system`.
+The objective then is computing these matrices to solve :eq:`eq_linear_system`.
 
 Matrix :math:`\mathbb{A}`
 ^^^^^^^^^^^^^^^^^^^^^^^^^
