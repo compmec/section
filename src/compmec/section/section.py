@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Union
 
 import numpy as np
 from compmec.shape.shape import DefinedShape, IntegrateShape
@@ -21,17 +21,27 @@ class BaseSection(object):
     def from_dict(cls, infos: Dict) -> BaseSection:
         raise NotImplementedError
 
-    def __init__(self, shapes: Tuple[DefinedShape], materials: Tuple[Material]):
-        for shape in shapes:
-            if not isinstance(shape, DefinedShape):
-                msg = f"shape is not a DefinedShape, but {type(shape)}"
-                raise TypeError(msg)
-        for material in materials:
-            if not isinstance(material, Material):
-                msg = f"material is not a DefinedShape, but {type(material)}"
-                raise TypeError(msg)
+    def __init__(
+        self,
+        shapes: Union[DefinedShape, Tuple[DefinedShape]],
+        materials: Union[Material, Tuple[Material]],
+    ):
+        if isinstance(shapes, DefinedShape):
+            shapes = [shapes]
+        else:
+            for shape in shapes:
+                if not isinstance(shape, DefinedShape):
+                    msg = "shape is not a DefinedShape, but %s"
+                    raise TypeError(msg % type(shape))
+        if isinstance(materials, Material):
+            materials = [materials]
+        else:
+            for material in materials:
+                if not isinstance(material, Material):
+                    msg = "material is not a DefinedShape, but %s"
+                    raise TypeError(msg % type(material))
         self.__shapes = tuple(shapes)
-        self.__materials = materials
+        self.__materials = tuple(materials)
 
     def __iter__(self):
         for pair in zip(self.__shapes, self.__materials):
