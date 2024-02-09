@@ -6,7 +6,7 @@ from __future__ import annotations
 from importlib import resources
 from typing import Dict, Optional, Tuple, Union
 
-import dataio
+from . import dataio
 import jsonschema
 
 
