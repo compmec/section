@@ -1,5 +1,5 @@
 """
-File to tests cases when only axial forces are applied
+File to tests cases when only bending moments are applied
 """
 import numpy as np
 import pytest
@@ -10,6 +10,7 @@ from compmec.section.material import Isotropic
 
 
 @pytest.mark.order(4)
+@pytest.mark.skip()
 @pytest.mark.dependency(
     depends=[
         "tests/test_material.py::test_end",

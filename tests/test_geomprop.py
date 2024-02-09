@@ -22,7 +22,7 @@ def test_begin():
 
 class TestSinglePolygon:
     @pytest.mark.order(3)
-    @pytest.mark.dependency(depends=["test_begin", "TestBuild::test_end"])
+    @pytest.mark.dependency(depends=["test_begin"])
     def test_begin(self):
         pass
 
@@ -32,9 +32,7 @@ class TestSinglePolygon:
     def test_centered_square(self):
         side = 3
         geometry = Primitive.square(side)
-        material = Isotropic()
-        material.young_modulus = 210e3
-        material.poissons_ratio = 0.30
+        material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
         section = Section(geometry, material)
         area = section.area()
         Qx, Qy = section.first_moment()
@@ -52,9 +50,7 @@ class TestSinglePolygon:
     def test_centered_rectangle(self):
         width, height = 3, 5
         geometry = Primitive.square().scale(width, height)
-        material = Isotropic()
-        material.young_modulus = 210e3
-        material.poissons_ratio = 0.30
+        material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
         section = Section(geometry, material)
         area = section.area()
         Qx, Qy = section.first_moment()
@@ -73,9 +69,7 @@ class TestSinglePolygon:
         side = 3
         center = (5, -7)
         geometry = Primitive.square(side, center=center)
-        material = Isotropic()
-        material.young_modulus = 210e3
-        material.poissons_ratio = 0.30
+        material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
         section = Section(geometry, material)
         area = section.area()
         Qx, Qy = section.first_moment()
@@ -101,9 +95,7 @@ class TestSinglePolygon:
         geometry = Primitive.square()
         geometry.scale(width, height)
         geometry.move(center)
-        material = Isotropic()
-        material.young_modulus = 210e3
-        material.poissons_ratio = 0.30
+        material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
         section = Section(geometry, material)
         area = section.area()
         Qx, Qy = section.first_moment()

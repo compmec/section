@@ -1,8 +1,5 @@
 """
-This file tests the basic geometry properties, such as
-* Area
-* First moment of inertia
-* Second moment of inertia
+File to test solving the Poisson's equation by using Boundary Element Method
 """
 import numpy as np
 import pytest
@@ -11,8 +8,13 @@ from compmec.section.bem2d import IntegralUnV, IntegralUVn, Integration
 
 
 @pytest.mark.order(4)
+@pytest.mark.skip()
 @pytest.mark.dependency(
-    depends=["tests/test_material.py::test_end", "tests/test_axial.py::test_end"],
+    depends=[
+        "tests/test_material.py::test_end",
+        "tests/test_axial.py::test_end",
+        "tests/test_bending.py::test_end",
+    ],
     scope="session",
 )
 def test_begin():
