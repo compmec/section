@@ -10,8 +10,6 @@ from typing import Tuple
 
 import numpy as np
 
-from compmec import nurbs
-
 
 def comb(a, b):
     prod = 1

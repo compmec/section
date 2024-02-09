@@ -3,11 +3,9 @@ This module contains the class 'Isotropic' to store and convert values
 """
 from __future__ import annotations
 
-from importlib import resources
-from typing import Dict, Optional, Tuple, Union
+from typing import Dict, Optional
 
 from . import dataio
-import jsonschema
 
 
 class Material(object):

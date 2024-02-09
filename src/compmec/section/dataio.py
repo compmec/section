@@ -10,8 +10,6 @@ from typing import Dict, Optional
 
 import jsonschema
 
-from compmec import nurbs
-
 
 def read_json(filepath: str, schemapath: Optional[str] = None) -> Dict:
     """
