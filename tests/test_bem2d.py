@@ -7,7 +7,7 @@ import pytest
 from compmec.section.bem2d import IntegralUnV, IntegralUVn, Integration
 
 
-@pytest.mark.order(4)
+@pytest.mark.order(6)
 @pytest.mark.skip()
 @pytest.mark.dependency(
     depends=[
@@ -28,12 +28,12 @@ class TestIntegrals:
     The
     """
 
-    @pytest.mark.order(4)
+    @pytest.mark.order(6)
     @pytest.mark.dependency(depends=["test_begin"])
     def test_begin(self):
         pass
 
-    @pytest.mark.order(4)
+    @pytest.mark.order(6)
     @pytest.mark.timeout(10)
     @pytest.mark.dependency(depends=["TestIntegrals::test_begin"])
     def test_closed_newton(self):
@@ -70,7 +70,7 @@ class TestIntegrals:
                 diff = abs(test_integral - good_integral)
                 assert diff < 1e-15
 
-    @pytest.mark.order(4)
+    @pytest.mark.order(6)
     @pytest.mark.timeout(10)
     @pytest.mark.dependency(depends=["TestIntegrals::test_begin"])
     def test_chebyshev(self):
@@ -106,7 +106,7 @@ class TestIntegrals:
                 diff = abs(test_integral - good_integral)
                 assert diff < 1e-15
 
-    @pytest.mark.order(4)
+    @pytest.mark.order(6)
     @pytest.mark.timeout(10)
     @pytest.mark.dependency(depends=["TestIntegrals::test_begin"])
     def test_gauss(self):
@@ -142,7 +142,7 @@ class TestIntegrals:
                 diff = abs(test_integral - good_integral)
                 assert diff < 1e-9
 
-    @pytest.mark.order(4)
+    @pytest.mark.order(6)
     @pytest.mark.timeout(10)
     @pytest.mark.dependency(depends=["TestIntegrals::test_begin"])
     def test_singular_logarithm(self):
@@ -178,7 +178,7 @@ class TestIntegrals:
                 diff = abs(test_integral - good_integral)
                 assert diff < 1e-15
 
-    @pytest.mark.order(4)
+    @pytest.mark.order(6)
     @pytest.mark.dependency(
         depends=[
             "TestIntegrals::test_closed_newton",
@@ -203,12 +203,12 @@ class TestMatrixPolygonal:
 
     """
 
-    @pytest.mark.order(4)
+    @pytest.mark.order(6)
     @pytest.mark.dependency(depends=["test_begin", "TestIntegrals::test_end"])
     def test_begin(self):
         pass
 
-    @pytest.mark.order(4)
+    @pytest.mark.order(6)
     @pytest.mark.skip(reason="Source points must be at vertices")
     @pytest.mark.timeout(10)
     @pytest.mark.dependency(depends=["TestMatrixPolygonal::test_begin"])
@@ -222,7 +222,7 @@ class TestMatrixPolygonal:
         test_matrix = IntegralUVn(vertices)
         np.testing.assert_almost_equal(test_matrix, good_matrix)
 
-    @pytest.mark.order(4)
+    @pytest.mark.order(6)
     @pytest.mark.skip(reason="Source points must be at vertices")
     @pytest.mark.timeout(10)
     @pytest.mark.dependency(depends=["TestMatrixPolygonal::test_begin"])
@@ -238,7 +238,7 @@ class TestMatrixPolygonal:
         test_matrix = IntegralUVn(vertices)
         np.testing.assert_almost_equal(test_matrix, good_matrix)
 
-    @pytest.mark.order(4)
+    @pytest.mark.order(6)
     @pytest.mark.timeout(10)
     @pytest.mark.dependency(depends=["TestMatrixPolygonal::test_begin"])
     def test_equilateral_triangle_middle(self):
@@ -246,7 +246,7 @@ class TestMatrixPolygonal:
         xvals, yvals = np.cos(theta), np.sin(theta)
         vertices = np.transpose([xvals, yvals])
 
-    @pytest.mark.order(4)
+    @pytest.mark.order(6)
     @pytest.mark.timeout(10)
     @pytest.mark.dependency(depends=["TestMatrixPolygonal::test_begin"])
     def test_square_middle(self):
@@ -254,7 +254,7 @@ class TestMatrixPolygonal:
         xvals, yvals = np.cos(theta), np.sin(theta)
         vertices = np.transpose([xvals, yvals])
 
-    @pytest.mark.order(4)
+    @pytest.mark.order(6)
     @pytest.mark.dependency(
         depends=[
             "TestMatrixPolygonal::test_begin",
@@ -272,12 +272,12 @@ class TestWarpingVector:
 
     """
 
-    @pytest.mark.order(4)
+    @pytest.mark.order(6)
     @pytest.mark.dependency(depends=["test_begin", "TestIntegrals::test_end"])
     def test_begin(self):
         pass
 
-    @pytest.mark.order(4)
+    @pytest.mark.order(6)
     @pytest.mark.timeout(10)
     @pytest.mark.dependency(depends=["TestWarpingVector::test_begin"])
     def test_equilateral_triangle(self):
@@ -289,7 +289,7 @@ class TestWarpingVector:
         test_vector = IntegralUnV(vertices)
         np.testing.assert_almost_equal(test_vector, good_vector)
 
-    @pytest.mark.order(4)
+    @pytest.mark.order(6)
     @pytest.mark.timeout(10)
     @pytest.mark.dependency(depends=["TestWarpingVector::test_begin"])
     def test_square(self):
@@ -301,7 +301,7 @@ class TestWarpingVector:
         test_vector = IntegralUnV(vertices)
         np.testing.assert_almost_equal(test_vector, good_vector)
 
-    @pytest.mark.order(4)
+    @pytest.mark.order(6)
     @pytest.mark.dependency(
         depends=[
             "TestWarpingVector::test_begin",
@@ -313,7 +313,7 @@ class TestWarpingVector:
         pass
 
 
-@pytest.mark.order(4)
+@pytest.mark.order(6)
 @pytest.mark.dependency(
     depends=[
         "TestIntegrals::test_end",

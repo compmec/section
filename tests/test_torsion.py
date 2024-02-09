@@ -11,7 +11,7 @@ from compmec.section.material import Isotropic
 from compmec.section.section import Section
 
 
-@pytest.mark.order(4)
+@pytest.mark.order(8)
 @pytest.mark.dependency(
     depends=[
         "tests/test_material.py::test_end",
@@ -24,12 +24,12 @@ def test_begin():
 
 
 class TestSinglePolygon:
-    @pytest.mark.order(4)
+    @pytest.mark.order(8)
     @pytest.mark.dependency(depends=["test_begin"])
     def test_begin(self):
         pass
 
-    @pytest.mark.order(4)
+    @pytest.mark.order(8)
     @pytest.mark.timeout(10)
     @pytest.mark.dependency(depends=["TestSinglePolygon::test_begin"])
     def test_centered_square(self):
@@ -45,7 +45,7 @@ class TestSinglePolygon:
         diff = test_torsion - good_torsion
         assert abs(diff) < 0.02
 
-    @pytest.mark.order(4)
+    @pytest.mark.order(8)
     @pytest.mark.dependency(
         depends=[
             "TestSinglePolygon::test_centered_square",
@@ -55,7 +55,7 @@ class TestSinglePolygon:
         pass
 
 
-@pytest.mark.order(4)
+@pytest.mark.order(8)
 @pytest.mark.dependency(depends=["TestSinglePolygon::test_end"])
 def test_end():
     pass

@@ -12,7 +12,7 @@ from compmec.section.material import Isotropic
 from compmec.section.section import Section
 
 
-@pytest.mark.order(4)
+@pytest.mark.order(8)
 @pytest.mark.dependency(
     depends=[
         "tests/test_material.py::test_end",
@@ -25,12 +25,12 @@ def test_begin():
 
 
 class TestSinglePolygon:
-    @pytest.mark.order(4)
+    @pytest.mark.order(8)
     @pytest.mark.dependency(depends=["test_begin"])
     def test_begin(self):
         pass
 
-    @pytest.mark.order(4)
+    @pytest.mark.order(8)
     @pytest.mark.skip(reason="Needs implementation")
     @pytest.mark.timeout(1)
     @pytest.mark.dependency(depends=["TestSinglePolygon::test_begin"])
@@ -44,7 +44,7 @@ class TestSinglePolygon:
         center = section.shear_center()
         assert center == (0, 0)
 
-    @pytest.mark.order(4)
+    @pytest.mark.order(8)
     @pytest.mark.dependency(
         depends=[
             "TestSinglePolygon::test_centered_square",
@@ -54,7 +54,7 @@ class TestSinglePolygon:
         pass
 
 
-@pytest.mark.order(4)
+@pytest.mark.order(8)
 @pytest.mark.dependency(depends=["TestSinglePolygon::test_end"])
 def test_end():
     pass
