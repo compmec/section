@@ -40,7 +40,7 @@ class TestSinglePolygon:
         material = Isotropic()
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
-        section = SimpleSection(geometry, material)
+        section = Section(geometry, material)
         center = section.shear_center()
         assert center == (0, 0)
 

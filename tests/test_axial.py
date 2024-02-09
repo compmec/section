@@ -14,7 +14,7 @@ from compmec.section.material import Isotropic
 @pytest.mark.dependency(
     depends=[
         "tests/test_material.py::test_end",
-        "tests/test_basics.py::test_end",
+        "tests/test_geomprop.py::test_end",
     ],
     scope="session",
 )
@@ -37,7 +37,7 @@ class TestSinglePolygon:
         material = Isotropic()
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
-        section = SimpleSection(geometry, material)
+        section = Section(geometry, material)
         field = section.charged_field()
         points = [(0, 0)]
         values = field.eval(points)
@@ -69,7 +69,7 @@ class TestHollowPolygon:
         material = Isotropic()
         material.young_modulus = 210e3
         material.poissons_ratio = 0.30
-        section = SimpleSection(geometry, material)
+        section = Section(geometry, material)
         field = section.charged_field()
         points = [(0, 0)]
         values = field.eval(points)
