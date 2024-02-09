@@ -40,15 +40,27 @@ class BaseSection(object):
                 if not isinstance(material, Material):
                     msg = "material is not a DefinedShape, but %s"
                     raise TypeError(msg % type(material))
+        if len(shapes) != len(materials):
+            msg = "len of shapes (%d) != (%d) len of materials"
+            msg %= len(shapes), len(materials)
+            raise ValueError(msg)
         self.__shapes = tuple(shapes)
         self.__materials = tuple(materials)
 
     def __iter__(self):
-        for pair in zip(self.__shapes, self.__materials):
+        for pair in zip(self.shapes, self.materials):
             yield pair
 
     def __getitem__(self, key: int):
-        return self.__shapes[key], self.__materials[key]
+        return self.shapes[key], self.materials[key]
+
+    @property
+    def shapes(self):
+        return self.__shapes
+
+    @property
+    def materials(self):
+        return self.__materials
 
     def to_dict(self, name: str = "custom-section") -> Dict:
         dicionary = OrderedDict()
@@ -114,28 +126,10 @@ class Section(BaseSection):
 
     def __init__(self, shapes: Tuple[DefinedShape], materials: Tuple[Material]):
         super().__init__(shapes, materials)
-
         self.__area = None
         self.__first = None
         self.__second = None
-        self.__warping = None
         self.__charged_field = ChargedField(self)
-        self.__shapes = shapes
-        self.__materials = materials
-
-    @property
-    def shape(self) -> DefinedShape:
-        """
-        Gives the shape instance
-        """
-        return self.__shape
-
-    @property
-    def material(self) -> Material:
-        """
-        Gives the material instance
-        """
-        return self.__material
 
     def area(self) -> float:
         """Gives the cross-section area
@@ -157,7 +151,7 @@ class Section(BaseSection):
 
         """
         if self.__area is None:
-            self.__area = IntegrateShape.area(self.shape)
+            self.__area = sum(map(IntegrateShape.area, self.shapes))
         return self.__area
 
     def first_moment(self) -> Tuple[float]:
@@ -181,8 +175,8 @@ class Section(BaseSection):
 
         """
         if self.__first is None:
-            Qx = IntegrateShape.polynomial(self.shape, 0, 1)
-            Qy = IntegrateShape.polynomial(self.shape, 1, 0)
+            Qx = sum(IntegrateShape.polynomial(shape, 0, 1) for shape in self.shapes)
+            Qy = sum(IntegrateShape.polynomial(shape, 1, 0) for shape in self.shapes)
             self.__first = (Qx, Qy)
         return tuple(self.__first)
 
@@ -213,9 +207,9 @@ class Section(BaseSection):
 
         """
         if self.__second is None:
-            Ixx = IntegrateShape.polynomial(self.shape, 0, 2)
-            Ixy = IntegrateShape.polynomial(self.shape, 1, 1)
-            Iyy = IntegrateShape.polynomial(self.shape, 2, 0)
+            Ixx = sum(IntegrateShape.polynomial(shape, 0, 2) for shape in self.shapes)
+            Ixy = sum(IntegrateShape.polynomial(shape, 1, 1) for shape in self.shapes)
+            Iyy = sum(IntegrateShape.polynomial(shape, 2, 0) for shape in self.shapes)
             self.__second = (Ixx, Ixy, Iyy)
         area = self.area()
         Ixx, Ixy, Iyy = self.__second
@@ -237,18 +231,12 @@ class Section(BaseSection):
         Example use
         -----------
 
-        >>> from compmec.shape import shapelib.JordanCurve
-        >>> vertices = [(0, 0), (4, 0), (0, 3)]
-        >>> jordan = shapelib.JordanCurve.from_vertices(vertices)
-        >>> jordan.move((2, 3))
-        Jordan Curve of degree 1 and vertices
-        ((2, 3), (6, 3), (2, 6))
+        >>> section = Section(shapes, materials)
+        >>> section.torsion_constant()
+        1.
 
         """
-        if self.__warping is None:
-            self.solve()
-            raise NotImplementedError
-        return self.__torsion
+        raise NotImplementedError
 
     def elastic_modulus(self) -> Tuple[Tuple[float]]:
         raise NotImplementedError
@@ -263,7 +251,8 @@ class Section(BaseSection):
         x_gc = (1/A) * Qy
         y_gc = (1/A) * Qx
 
-        This center depends only on the geometry, not on the material
+        This center depends only on the geometry,
+        not on the material
 
         :return: The value of geometric center G
         :rtype: tuple[float, float]
@@ -271,12 +260,9 @@ class Section(BaseSection):
         Example use
         -----------
 
-        >>> from compmec.shape import shapelib.JordanCurve
-        >>> vertices = [(0, 0), (4, 0), (0, 3)]
-        >>> jordan = shapelib.JordanCurve.from_vertices(vertices)
-        >>> jordan.move((2, 3))
-        Jordan Curve of degree 1 and vertices
-        ((2, 3), (6, 3), (2, 6))
+        >>> section = Section(shapes, materials)
+        >>> section.geometric_center()
+        (0., 0.)
 
         """
         Qx, Qy = self.first_moment()
@@ -296,12 +282,9 @@ class Section(BaseSection):
         Example use
         -----------
 
-        >>> from compmec.shape import shapelib.JordanCurve
-        >>> vertices = [(0, 0), (4, 0), (0, 3)]
-        >>> jordan = shapelib.JordanCurve.from_vertices(vertices)
-        >>> jordan.move((2, 3))
-        Jordan Curve of degree 1 and vertices
-        ((2, 3), (6, 3), (2, 6))
+        >>> section = Section(shapes, materials)
+        >>> section.bending_center()
+        (0., 0.)
 
         """
         return self.geometric_center()
@@ -315,12 +298,9 @@ class Section(BaseSection):
         Example use
         -----------
 
-        >>> from compmec.shape import shapelib.JordanCurve
-        >>> vertices = [(0, 0), (4, 0), (0, 3)]
-        >>> jordan = shapelib.JordanCurve.from_vertices(vertices)
-        >>> jordan.move((2, 3))
-        Jordan Curve of degree 1 and vertices
-        ((2, 3), (6, 3), (2, 6))
+        >>> section = Section(shapes, materials)
+        >>> section.torsion_center()
+        (0., 0.)
 
         """
         raise NotImplementedError
@@ -338,12 +318,9 @@ class Section(BaseSection):
         Example use
         -----------
 
-        >>> from compmec.shape import shapelib.JordanCurve
-        >>> vertices = [(0, 0), (4, 0), (0, 3)]
-        >>> jordan = shapelib.JordanCurve.from_vertices(vertices)
-        >>> jordan.move((2, 3))
-        Jordan Curve of degree 1 and vertices
-        ((2, 3), (6, 3), (2, 6))
+        >>> section = Section(shapes, materials)
+        >>> section.shear_center()
+        (0., 0.)
 
         """
         raise NotImplementedError
@@ -455,17 +432,17 @@ class ChargedField(Field):
         """
         if not isinstance(points, np.ndarray):
             points = np.array(points, dtype="float64")
+        if len(self.section.shapes) != 1:
+            raise NotImplementedError
         values = np.zeros((len(points), 8), dtype="float64")
 
-        contains = self.section.shape.contains_point
+        contains = self.section.shapes[0].contains_point
         mask = tuple(contains(point, True) for point in points)
         mask = np.array(mask, dtype="bool")
-        print("mask = ")
-        print(mask)
 
         if np.any(mask):
             values[mask, :3] = self.__eval_stresses(points[mask])
-        material = self.section.material
+        material = self.section.materials[0]
         values[:, 5] = values[:, 0] / material.young_modulus  # e_zz
         values[:, 3] = -material.poissons_ratio * values[:, 1]  # e_xx
         values[:, 4] = values[:, 3]  # e_yy
@@ -481,10 +458,11 @@ class ChargedField(Field):
         We suppose that all points are inside the section.
         No verification are made here
         """
+        assert len(self.section.shapes) == 1  # For now
         stresses = np.zeros((len(points), 3), dtype="float64")
         stresses[:, 0] = self.__axial_stresses(points)
 
-        contains = self.section.shape.contains_point
+        contains = self.section.shapes[0].contains_point
         mask = tuple(contains(point, False) for point in points)
         mask = np.array(mask, dtype="bool")
 
