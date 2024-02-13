@@ -79,7 +79,7 @@ def read_material_json(filepath: str) -> Dict:
     folder = resources.files("compmec.section")
     schema_path = str(folder.joinpath(schema_name))
     data = read_json(filepath, schema_path)
-    for key in data.keys():
+    for key in tuple(data.keys()):
         if key != "materials":
             data.pop(key)
     return data
@@ -100,7 +100,7 @@ def read_curve_json(filepath: str) -> Dict:
     folder = resources.files("compmec.section")
     schema_path = str(folder.joinpath(schema_name))
     data = read_json(filepath, schema_path)
-    for key in data.keys():
+    for key in tuple(data.keys()):
         if key not in ["nodes", "curves"]:
             data.pop(key)
     return data

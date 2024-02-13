@@ -12,6 +12,7 @@ class Material(object):
     @classmethod
     def from_json(cls, filepath: str) -> Dict[str, Material]:
         data = dataio.read_material_json(filepath)
+        data = data["materials"]
         materials = {}
         for name, info in data.items():
             materials[name] = cls.from_dict(info)
@@ -19,7 +20,7 @@ class Material(object):
 
     @classmethod
     def from_dict(cls, info: Dict) -> Material:
-        material = Isotropic(info)
+        material = Isotropic(**info)
         return material
 
     def to_dict(self) -> Dict:

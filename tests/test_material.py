@@ -1,7 +1,7 @@
 import pytest
 
 from compmec.section import material
-
+import os
 
 @pytest.mark.order(1)
 @pytest.mark.dependency()
@@ -62,7 +62,30 @@ class TestIsotropic:
         pass
 
 
+class TestFromJson:
+    @pytest.mark.order(1)
+    @pytest.mark.dependency(depends=["TestIsotropic::test_end"])
+    def test_begin(self):
+        pass
+
+    @pytest.mark.order(1)
+    @pytest.mark.timeout(1)
+    @pytest.mark.dependency(depends=["TestFromJson::test_begin"])
+    def test_main(self):
+        folder = os.getcwd()
+        json_filepath = "tests/json/steel_square.json"
+        mats = material.Isotropic.from_json(json_filepath)
+        steel = mats["steel"]
+        assert steel.young_modulus == 210e+3
+        assert steel.poissons_ratio == 0.3
+
+    @pytest.mark.order(1)
+    @pytest.mark.dependency(depends=["TestFromJson::test_main"])
+    def test_end(self):
+        pass
+
+
 @pytest.mark.order(1)
-@pytest.mark.dependency(depends=["TestIsotropic::test_end"])
+@pytest.mark.dependency(depends=["TestIsotropic::test_end", "TestFromJson::test_end"])
 def test_end():
     pass
