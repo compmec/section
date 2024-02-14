@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from compmec.section import material
+from compmec.section.material import Isotropic
 
 
 @pytest.mark.order(1)
@@ -28,7 +28,7 @@ class TestIsotropic:
             K = E * G / (3 * (3 * G - E))
             L = K - 2 * G / 3
 
-            mat = material.Isotropic()
+            mat = Isotropic()
             mat.young_modulus = E
             mat.poissons_ratio = nu
             assert abs(E - mat.young_modulus) < 1e-9
@@ -42,7 +42,7 @@ class TestIsotropic:
     @pytest.mark.timeout(1)
     @pytest.mark.dependency(depends=["TestIsotropic::test_main"])
     def test_fail_setting_young(self):
-        mat = material.Isotropic()
+        mat = Isotropic()
         with pytest.raises(ValueError):
             mat.young_modulus = 0
         with pytest.raises(ValueError):
@@ -52,7 +52,7 @@ class TestIsotropic:
     @pytest.mark.timeout(1)
     @pytest.mark.dependency(depends=["TestIsotropic::test_main"])
     def test_fail_setting_poisson(self):
-        mat = material.Isotropic()
+        mat = Isotropic()
         with pytest.raises(ValueError):
             mat.poissons_ratio = 0.495
         with pytest.raises(ValueError):
@@ -75,7 +75,7 @@ class TestToFromJson:
     @pytest.mark.dependency(depends=["TestToFromJson::test_begin"])
     def test_main(self):
         json_filepath = "tests/json/steel_square.json"
-        mats = material.Isotropic.from_json(json_filepath)
+        mats = Isotropic.from_json(json_filepath)
         steel = mats["steel"]
         assert steel.young_modulus == 210e3
         assert steel.poissons_ratio == 0.3
