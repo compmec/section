@@ -74,11 +74,17 @@ class TestToFromJson:
     @pytest.mark.timeout(1)
     @pytest.mark.dependency(depends=["TestToFromJson::test_begin"])
     def test_main(self):
-        json_filepath = "tests/json/steel_square.json"
-        mats = Isotropic.from_json(json_filepath)
-        steel = mats["steel"]
+        json_filepath = "tests/json/test_mat_steel.json"
+
+        steel = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
+        steel.to_json(json_filepath, name="steel")
+        del steel
+
+        materials = Isotropic.from_json(json_filepath)
+        steel = materials["steel"]
         assert steel.young_modulus == 210e3
         assert steel.poissons_ratio == 0.3
+        os.remove(json_filepath)
 
     @pytest.mark.order(1)
     @pytest.mark.dependency(depends=["TestToFromJson::test_main"])
