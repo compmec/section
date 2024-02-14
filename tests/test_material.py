@@ -64,7 +64,7 @@ class TestIsotropic:
         pass
 
 
-class TestFromJson:
+class TestToFromJson:
     @pytest.mark.order(1)
     @pytest.mark.dependency(depends=["TestIsotropic::test_end"])
     def test_begin(self):
@@ -72,7 +72,7 @@ class TestFromJson:
 
     @pytest.mark.order(1)
     @pytest.mark.timeout(1)
-    @pytest.mark.dependency(depends=["TestFromJson::test_begin"])
+    @pytest.mark.dependency(depends=["TestToFromJson::test_begin"])
     def test_main(self):
         json_filepath = "tests/json/steel_square.json"
         mats = material.Isotropic.from_json(json_filepath)
@@ -81,12 +81,12 @@ class TestFromJson:
         assert steel.poissons_ratio == 0.3
 
     @pytest.mark.order(1)
-    @pytest.mark.dependency(depends=["TestFromJson::test_main"])
+    @pytest.mark.dependency(depends=["TestToFromJson::test_main"])
     def test_end(self):
         pass
 
 
 @pytest.mark.order(1)
-@pytest.mark.dependency(depends=["TestIsotropic::test_end", "TestFromJson::test_end"])
+@pytest.mark.dependency(depends=["TestIsotropic::test_end", "TestToFromJson::test_end"])
 def test_end():
     pass
