@@ -54,9 +54,9 @@ class Isotropic(Material):
     """
 
     def __init__(self, **kwargs):
-        self._young_modulus = None
-        self._poissons_ratio = None
-        self._density = None
+        self.__young_modulus = None
+        self.__poissons_ratio = None
+        self.__density = None
         if kwargs is not None:
             for attr, value in kwargs.items():
                 setattr(self, attr, value)
@@ -85,7 +85,7 @@ class Isotropic(Material):
         when the force is applied lengthwise
         https://en.wikipedia.org/wiki/Young%27s_modulus
         """
-        return self._young_modulus
+        return self.__young_modulus
 
     @property
     def poissons_ratio(self):
@@ -95,7 +95,7 @@ class Isotropic(Material):
         in directions perpendicular to the specific direction of loading
         https://en.wikipedia.org/wiki/Poisson%27s_ratio
         """
-        return self._poissons_ratio
+        return self.__poissons_ratio
 
     @property
     def bulk_modulus(self):
@@ -144,13 +144,13 @@ class Isotropic(Material):
         Density (rho) is the mesure of mass/volum
         https://en.wikipedia.org/wiki/Density
         """
-        return self._density
+        return self.__density
 
     @young_modulus.setter
     def young_modulus(self, value: float):
         if value <= 0:
             raise ValueError
-        self._young_modulus = value
+        self.__young_modulus = value
 
     @poissons_ratio.setter
     def poissons_ratio(self, value: float):
@@ -160,9 +160,9 @@ class Isotropic(Material):
             raise ValueError("Material is incompressible")
         else:
             raise ValueError("Cannot have poisson >= 0.50 ")
-        self._poissons_ratio = value
+        self.__poissons_ratio = value
 
     @density.setter
     def density(self, value: float):
         assert value > 0
-        self._density = value
+        self.__density = value
