@@ -120,7 +120,43 @@ class TestSinglePolygon:
         pass
 
 
+class TestToFromJson:
+    @pytest.mark.order(3)
+    @pytest.mark.dependency(depends=["test_begin", "TestSinglePolygon::test_end"])
+    def test_begin(self):
+        pass
+
+    @pytest.mark.order(3)
+    @pytest.mark.timeout(1)
+    @pytest.mark.dependency(depends=["TestToFromJson::test_begin"])
+    def test_read_square(self):
+        json_filepath = "tests/json/test_square_section.json"
+        sections = Section.from_json(json_filepath)
+        square_sect = sections["square-sect"]
+        area = square_sect.area()
+        Qx, Qy = square_sect.first_moment()
+        Ixx, Ixy, Iyy = square_sect.second_moment()
+        assert area == 9
+        assert Qx == 0
+        assert Qy == 0
+        assert Ixx == 6.75
+        assert Ixy == 0
+        assert Iyy == 6.75
+
+    @pytest.mark.order(3)
+    @pytest.mark.dependency(
+        depends=[
+            "TestToFromJson::test_begin",
+            "TestToFromJson::test_read_square",
+        ]
+    )
+    def test_end(self):
+        pass
+
+
 @pytest.mark.order(3)
-@pytest.mark.dependency(depends=["TestSinglePolygon::test_end"])
+@pytest.mark.dependency(
+    depends=["TestSinglePolygon::test_end", "TestToFromJson::test_end"]
+)
 def test_end():
     pass
