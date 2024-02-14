@@ -58,8 +58,13 @@ class Isotropic(Material):
         self.__poissons_ratio = None
         self.__density = None
         if kwargs is not None:
-            for attr, value in kwargs.items():
-                setattr(self, attr, value)
+            if "young_modulus" in kwargs:
+                self.young_modulus = kwargs["young_modulus"]
+            if "poissons_ratio" in kwargs:
+                self.poissons_ratio = kwargs["poissons_ratio"]
+            if "density" in kwargs:
+                if kwargs["density"] is not None:
+                    self.density = kwargs["density"]
 
     def __str__(self) -> str:
         values = [
