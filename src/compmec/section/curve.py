@@ -9,6 +9,10 @@ from abc import ABC, abstractmethod
 from collections import OrderedDict
 from typing import Dict, Optional, Tuple
 
+import numpy as np
+
+from compmec import nurbs
+
 
 class Curve(ABC):
     """
@@ -35,13 +39,13 @@ class Curve(ABC):
         elif label in Curve.instances:
             msg = f"Cannot create curve '{label}'! There's already one!"
             raise ValueError(msg)
-        instance = super().__new__()
+        instance = super().__new__(cls)
         instance.label = label
         Curve.instances[label] = instance
         return instance
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def from_dict(cls, dictionary: Dict) -> Curve:
         """
         Gives a curve instance based on the given parameters
@@ -120,3 +124,68 @@ class Curve(ABC):
         :rtype: Tuple[Tuple[float]]
         """
         raise NotImplementedError
+
+
+class NurbsCurve(Curve):
+    """
+    Nurbs Curve instance, a child of "Curve" that serves as interface
+    and uses the functions/methods from compmec-nurbs package
+    """
+
+    @classmethod
+    def from_dict(cls, dictionary: Dict) -> NurbsCurve:
+        degree = dictionary["degree"] if "degree" in dictionary else None
+        knotvector = nurbs.KnotVector(dictionary["knotvector"], degree)
+        nurbs_curve = nurbs.Curve(knotvector)
+        ctrlpoints = tuple(dictionary["ctrlpoints"])
+        nurbs_curve.ctrlpoints = np.array(ctrlpoints, dtype="float64")
+        if "weights" in dictionary:
+            nurbs_curve.weights = dictionary["weights"]
+        return cls(nurbs_curve)
+
+    def to_dict(self) -> Dict:
+        dictionary = OrderedDict()
+        dictionary["degree"] = self.internal.degree
+        dictionary["knotvector"] = self.internal.knotvector
+        dictionary["ctrlpoints"] = self.internal.ctrlpoints
+        weights = self.internal.weights
+        if weights is not None:
+            dictionary["weights"] = weights
+        return dictionary
+
+    def __new__(cls, nurbs_curve: nurbs.Curve, label: Optional[int] = None):
+        if not isinstance(nurbs_curve, nurbs.Curve):
+            msg = "Invalid internal curve"
+            raise TypeError(msg)
+        instance = super().__new__(cls, label)
+        instance.internal = nurbs_curve
+        return instance
+
+    def eval(self, parameters: Tuple[float]) -> Tuple[Tuple[float]]:
+        return self.internal.eval(parameters)
+
+    @property
+    def knots(self) -> Tuple[float]:
+        return self.internal.knotvector.knots
+
+    @property
+    def limits(self) -> Tuple[float]:
+        return self.internal.knotvector.limits
+
+    @property
+    def internal(self) -> nurbs.Curve:
+        """
+        Gives the internal nurbs.Curve object
+
+        :getter: Returns the curve's label
+        :setter: Sets the new curve instance
+        :type: compmec.nurbs.Curve
+        """
+        return self.__internal
+
+    @internal.setter
+    def internal(self, new_curve: nurbs.Curve):
+        if not isinstance(new_curve, nurbs.Curve):
+            msg = "Invalid internal curve"
+            raise TypeError(msg)
+        self.__internal = new_curve
