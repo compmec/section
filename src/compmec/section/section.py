@@ -109,7 +109,7 @@ class BaseSection:
         dataio.save_json(dicionary, filepath)
 
 
-class Section(BaseSection):
+class GeometricSection(BaseSection):
     """
     Section's class
 
@@ -126,7 +126,8 @@ class Section(BaseSection):
         super().__init__(shapes, materials)
 
     def area(self) -> float:
-        """Gives the cross-section area
+        """
+        Gives the cross-section area
 
         A = int 1 dx dy
 
@@ -135,13 +136,8 @@ class Section(BaseSection):
 
         Example use
         -----------
-
-        >>> from compmec.shape import JordanCurve
-        >>> vertices = [(0, 0), (4, 0), (0, 3)]
-        >>> jordan = JordanCurve.from_vertices(vertices)
-        >>> jordan.move((2, 3))
-        Jordan Curve of degree 1 and vertices
-        ((2, 3), (6, 3), (2, 6))
+        >>> section.area()
+        1.0
 
         """
         if self.__area is None:
@@ -160,12 +156,8 @@ class Section(BaseSection):
         Example use
         -----------
 
-        >>> from compmec.shape import shapelib.JordanCurve
-        >>> vertices = [(0, 0), (4, 0), (0, 3)]
-        >>> jordan = shapelib.JordanCurve.from_vertices(vertices)
-        >>> jordan.move((2, 3))
-        Jordan Curve of degree 1 and vertices
-        ((2, 3), (6, 3), (2, 6))
+        >>> section.first_moment()
+        (0., 0.)
 
         """
         if self.__first is None:
@@ -196,12 +188,8 @@ class Section(BaseSection):
         Example use
         -----------
 
-        >>> from compmec.shape import shapelib.JordanCurve
-        >>> vertices = [(0, 0), (4, 0), (0, 3)]
-        >>> jordan = shapelib.JordanCurve.from_vertices(vertices)
-        >>> jordan.move((2, 3))
-        Jordan Curve of degree 1 and vertices
-        ((2, 3), (6, 3), (2, 6))
+        >>> section.second_moment()
+        (1., 0, 1.)
 
         """
         if self.__second is None:
@@ -221,32 +209,6 @@ class Section(BaseSection):
         Ixy -= area * center[0] * center[1]
         Iyy -= area * center[0] ** 2
         return Ixx, Ixy, Iyy
-
-    def torsion_constant(self) -> float:
-        """Gives the torsion constant J
-
-        J = Ixx + Iyy - Jw
-
-        Careful: This function solves a linear system
-
-        :return: The value of torsion constant J
-        :rtype: float
-
-        Example use
-        -----------
-
-        >>> section = Section(shapes, materials)
-        >>> section.torsion_constant()
-        1.
-
-        """
-        raise NotImplementedError
-
-    def elastic_modulus(self) -> Tuple[Tuple[float]]:
-        raise NotImplementedError
-
-    def plastic_modulus(self) -> Tuple[float]:
-        raise NotImplementedError
 
     def geometric_center(self) -> Tuple[float]:
         """Gives the geometric center G
@@ -293,6 +255,43 @@ class Section(BaseSection):
         """
         return self.geometric_center()
 
+    def gyradius(self) -> Tuple[float]:
+        """Gives the gyradius (radii of gyration)
+
+        R = (sqrt(Ixx/A), sqrt(Iyy/A))
+
+        """
+        area = self.area()
+        Ixx, _, Iyy = self.second_moment()
+        return np.sqrt(Iyy / area), np.sqrt(Ixx / area)
+
+
+class Section(GeometricSection):
+    """
+    General Section class, that allows computing the
+    geometric properties, torsion and shear
+    """
+
+    def torsion_constant(self) -> float:
+        """Gives the torsion constant J
+
+        J = Ixx + Iyy - Jw
+
+        Careful: This function solves a linear system
+
+        :return: The value of torsion constant J
+        :rtype: float
+
+        Example use
+        -----------
+
+        >>> section = Section(shapes, materials)
+        >>> section.torsion_constant()
+        1.
+
+        """
+        raise NotImplementedError
+
     def torsion_center(self) -> Tuple[float]:
         """Gives the torsion center T
 
@@ -328,16 +327,3 @@ class Section(BaseSection):
 
         """
         raise NotImplementedError
-
-    def plastic_center(self) -> Tuple[float]:
-        raise NotImplementedError
-
-    def gyradius(self) -> Tuple[float]:
-        """Gives the gyradius (radii of gyration)
-
-        R = (sqrt(Ixx/A), sqrt(Iyy/A))
-
-        """
-        area = self.area()
-        Ixx, _, Iyy = self.second_moment()
-        return np.sqrt(Iyy / area), np.sqrt(Ixx / area)
