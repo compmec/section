@@ -5,6 +5,7 @@ This module contains the class 'Isotropic' to store and convert values
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections import OrderedDict
 from typing import Dict
 
 
@@ -12,6 +13,8 @@ class Material(ABC):
     """
     Material abstract class, the parent of other more specific materials
     """
+
+    instances = OrderedDict()
 
     @abstractmethod
     def to_dict(self) -> Dict:
@@ -27,6 +30,36 @@ class Material(ABC):
         Converts the dictionary in a material instance
         """
         raise NotImplementedError
+
+    @property
+    def name(self) -> str:
+        """
+        Gives the material name
+
+        :getter: Returns the material's name
+        :setter: Attribuates a new name for material
+        :type: str
+
+        """
+        return self.__name
+
+    @name.setter
+    def name(self, new_name: str):
+        try:
+            cur_name = self.name
+        except AttributeError:
+            self.__name = new_name
+            return
+        if cur_name == new_name:
+            return
+        if new_name in self.instances:
+            msg = f"Cannot set the name '{new_name}' for the material "
+            msg += f"'{cur_name}' cause there's already a material with "
+            msg += "the same name!\n"
+            msg += f"Cur: '{self.instances[new_name]}'\n"
+            msg += f"New: '{self}'"
+            raise ValueError(msg)
+        self.instances[new_name] = self.instances.pop(cur_name)
 
 
 class Isotropic(Material):
