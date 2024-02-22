@@ -30,7 +30,7 @@ class Material(ABC):
         elif name in Material.instances:
             msg = f"Cannot create material '{name}'! There's already one!"
             raise ValueError(msg)
-        instance = super().__new__()
+        instance = super().__new__(cls)
         instance.name = name
         Material.instances[name] = instance
         return instance
@@ -89,18 +89,25 @@ class Isotropic(Material):
     https://en.wikipedia.org/wiki/Isotropy
     """
 
-    def __init__(self, **kwargs):
-        self.__young_modulus = None
-        self.__poissons_ratio = None
-        self.__density = None
-        if kwargs is not None:
-            if "young_modulus" in kwargs:
-                self.young_modulus = kwargs["young_modulus"]
-            if "poissons_ratio" in kwargs:
-                self.poissons_ratio = kwargs["poissons_ratio"]
-            if "density" in kwargs:
-                if kwargs["density"] is not None:
-                    self.density = kwargs["density"]
+    @staticmethod
+    def __verify_young_modulus(young_modulus):
+        if young_modulus <= 0:
+            raise ValueError
+
+    @staticmethod
+    def __verify_poissons_ratio(poissons_ratio):
+        if poissons_ratio < 0.49:
+            pass
+        elif poissons_ratio < 0.50:
+            raise ValueError("Material is incompressible")
+        else:
+            raise ValueError("Cannot have poisson >= 0.50 ")
+
+    def __init__(self, young_modulus: float, poissons_ratio: float):
+        Isotropic.__verify_young_modulus(young_modulus)
+        Isotropic.__verify_poissons_ratio(poissons_ratio)
+        self.__young_modulus = young_modulus
+        self.__poissons_ratio = poissons_ratio
 
     def __str__(self) -> str:
         values = [
@@ -110,11 +117,10 @@ class Isotropic(Material):
             self.shear_modulus,
             self.lame_parameter_1,
             self.lame_parameter_2,
-            self.density,
         ]
         # values = tuple(".3f" % v for v in values)
         msg = "Isotropic Material: "
-        msg += "(E, nu, K, G, L1, L2, rho) = (%s)"
+        msg += "(E, nu, K, G, L1, L2) = (%s)"
         msg %= ", ".join(map(str, values))
         return msg
 
@@ -178,32 +184,3 @@ class Isotropic(Material):
         https://en.wikipedia.org/wiki/Lam%C3%A9_parameters
         """
         return self.shear_modulus
-
-    @property
-    def density(self):
-        """
-        Density (rho) is the mesure of mass/volum
-        https://en.wikipedia.org/wiki/Density
-        """
-        return self.__density
-
-    @young_modulus.setter
-    def young_modulus(self, value: float):
-        if value <= 0:
-            raise ValueError
-        self.__young_modulus = value
-
-    @poissons_ratio.setter
-    def poissons_ratio(self, value: float):
-        if value < 0.49:
-            pass
-        elif value < 0.50:
-            raise ValueError("Material is incompressible")
-        else:
-            raise ValueError("Cannot have poisson >= 0.50 ")
-        self.__poissons_ratio = value
-
-    @density.setter
-    def density(self, value: float):
-        assert value > 0
-        self.__density = value
