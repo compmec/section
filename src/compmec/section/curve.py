@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections import OrderedDict
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 
 class Curve(ABC):
@@ -84,3 +84,39 @@ class Curve(ABC):
             msg += f"New: '{self}'"
             raise ValueError(msg)
         self.instances[new_label] = self.instances.pop(cur_label)
+
+    @property
+    @abstractmethod
+    def limits(self) -> Tuple[float]:
+        """
+        Gives the curve's parametric interval
+
+        :getter: Returns the pair [a, b] in which curve is parametric defined
+        :type: Tuple[float]
+
+        """
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def knots(self) -> Tuple[float]:
+        """
+        Gives the curve's knots, in which the parametric interval is divided
+
+        :getter: Returns the knots that divides the curve's interval
+        :type: Tuple[float]
+
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def eval(self, parameters: Tuple[float]) -> Tuple[Tuple[float]]:
+        """
+        Evaluates the curves at given parameters.
+
+        :param parameters: A vector-like of lenght n
+        :type parameters: Tuple[float]
+        :return: A matrix of shape (n, 2)
+        :rtype: Tuple[Tuple[float]]
+        """
+        raise NotImplementedError
