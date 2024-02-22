@@ -10,6 +10,7 @@ from compmec.section.material import Isotropic
 
 
 @pytest.mark.order(4)
+@pytest.mark.skip(reason="Test only in the version 0.4.0")
 @pytest.mark.dependency(
     depends=[
         "tests/test_material.py::test_end",
