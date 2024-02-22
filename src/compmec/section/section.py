@@ -1,129 +1,82 @@
+"""
+This file contains the principal class of this packaged, called "Section"
+It uses all the other files to compute geometric properties, torsional
+constant, torsion and shear center and others.
+
+
+"""
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import Dict, Tuple, Union
+from typing import Tuple
 
 import numpy as np
-from compmec.shape.shape import DefinedShape, IntegrateShape
 
-from . import dataio
 from .material import Material
 
 
 class BaseSection:
-    @classmethod
-    def from_json(cls, filepath: str) -> Dict[str, BaseSection]:
-        raise NotImplementedError
+    """
+    BaseSection class that is the base for others section classes
 
-    @classmethod
-    def from_dict(cls, infos: Dict) -> BaseSection:
-        raise NotImplementedError
+    Basicaly this class is responsible to construct the initial section,
+    verifying if the inputs are correct, and generate getter only properties
+    such as 'curves', 'geomlabels' and 'materials'.
+    """
+
+    instances = OrderedDict()
 
     def __init__(
         self,
-        shapes: Union[DefinedShape, Tuple[DefinedShape]],
-        materials: Union[Material, Tuple[Material]],
+        geomlabels: Tuple[Tuple[int]],
+        materials: Tuple[str],
     ):
-        if isinstance(shapes, DefinedShape):
-            shapes = [shapes]
-        else:
-            for shape in shapes:
-                if not isinstance(shape, DefinedShape):
-                    msg = "shape is not a DefinedShape, but %s"
-                    raise TypeError(msg % type(shape))
-        if isinstance(materials, Material):
-            materials = [materials]
-        else:
-            for material in materials:
-                if not isinstance(material, Material):
-                    msg = "material is not a DefinedShape, but %s"
-                    raise TypeError(msg % type(material))
-        if len(shapes) != len(materials):
-            msg = "len of shapes (%d) != (%d) len of materials"
-            msg %= len(shapes), len(materials)
-            raise ValueError(msg)
-        self.__shapes = tuple(shapes)
+        self.__geomlabels = tuple(
+            tuple(map(int, labels)) for labels in geomlabels
+        )
         self.__materials = tuple(materials)
 
-    def __iter__(self):
-        for pair in zip(self.shapes, self.materials):
-            yield pair
+    @property
+    def geomlabels(self) -> Tuple[Tuple[int]]:
+        """
+        Geometric curves labels that defines shapes
 
-    def __getitem__(self, key: int):
-        return self.shapes[key], self.materials[key]
+        :getter: Returns the curve labels
+        :type: Tuple[Tuple[int]]
+        """
+        return self.__geomlabels
 
     @property
-    def shapes(self):
-        return self.__shapes
+    def materials(self) -> Tuple[Material]:
+        """
+        Used materials for every shape
 
-    @property
-    def materials(self):
+        :getter: Returns the used materials, in the shapes' order
+        :type: Tuple[Tuple[int]]
+        """
         return self.__materials
-
-    def to_dict(self, name: str = "custom-section") -> Dict:
-        dicionary = OrderedDict()
-        nodesdict = {}
-        curves = {}
-        shapes = OrderedDict()
-        materials = OrderedDict()
-        sections = OrderedDict()
-        sections[name] = OrderedDict()
-        sections[name]["shapes"] = []
-        sections[name]["materials"] = []
-
-        for i, (shape, material) in enumerate(self):
-            matname = "material-%d" % i
-            shaname = "shape-%d" % i
-            sections[name]["shapes"].append(shaname)
-            sections[name]["materials"].append(matname)
-
-            materials[matname] = OrderedDict()
-            materials[matname]["young_modulus"] = material.young_modulus
-            materials[matname]["poissons_ratio"] = material.poissons_ratio
-
-            for jordan in shape.jordans:
-                curve = jordan.full_curve()
-                curvedict = OrderedDict()
-                curvedict["degree"] = curve.degree
-                curvedict["knotvector"] = tuple(map(float, curve.knotvector))
-                curvedict["ctrlpoints"] = []
-                for point in curvedict.ctrlpoints:
-                    curvedict["ctrlpoints"].append(id(point))
-                    nodesdict[id(point)] = tuple(map(float, point))
-                curves[id(curve)] = curvedict
-
-        nodes = []
-        for label in sorted(nodesdict.keys()):
-            x, y = nodesdict[label]
-            nodes.append((label, x, y))
-
-        dicionary["nodes"] = nodes
-        dicionary["curves"] = curves
-        dicionary["shapes"] = shapes
-        dicionary["materials"] = materials
-        dicionary["sections"] = sections
-        return dicionary
-
-    def to_json(self, filepath: str, name: str = "custom-section"):
-        dicionary = self.to_dict(name)
-        dataio.save_json(dicionary, filepath)
 
 
 class GeometricSection(BaseSection):
     """
-    Section's class
+    GeometricSection's class
 
-    Which is defined by only one DefinedShape and one material
-
-    That means, it's possible only to use homogeneous sections
-
-    For composite sections, use CompositeSection class
     """
 
     def __init__(
-        self, shapes: Tuple[DefinedShape], materials: Tuple[Material]
+        self,
+        shapes: Tuple[Tuple[int]],
+        materials: Tuple[Material],
     ):
         super().__init__(shapes, materials)
+        self.__geomintegs = None
+
+    def __compute_geomintegs(self):
+        """
+        Compute the geometric integrals over the domain
+        creating the object __geomintegs
+        """
+        raise NotImplementedError
 
     def area(self) -> float:
         """
@@ -136,13 +89,14 @@ class GeometricSection(BaseSection):
 
         Example use
         -----------
+
         >>> section.area()
         1.0
 
         """
-        if self.__area is None:
-            self.__area = sum(map(IntegrateShape.area, self.shapes))
-        return self.__area
+        if self.__geomintegs is None:
+            self.__compute_geomintegs()
+        return self.__geomintegs[0]
 
     def first_moment(self) -> Tuple[float]:
         """Gives the first moments of area
@@ -160,15 +114,10 @@ class GeometricSection(BaseSection):
         (0., 0.)
 
         """
-        if self.__first is None:
-            Qx = sum(
-                IntegrateShape.polynomial(shape, 0, 1) for shape in self.shapes
-            )
-            Qy = sum(
-                IntegrateShape.polynomial(shape, 1, 0) for shape in self.shapes
-            )
-            self.__first = (Qx, Qy)
-        return tuple(self.__first)
+        if self.__geomintegs is None:
+            self.__compute_geomintegs()
+        iqx, iqy = self.__geomintegs[1]
+        return iqx, iqy
 
     def second_moment(self, center: Tuple[float] = (0, 0)) -> Tuple[float]:
         """Gives the second moment of inertia with respect to ``center``
@@ -189,26 +138,49 @@ class GeometricSection(BaseSection):
         -----------
 
         >>> section.second_moment()
-        (1., 0, 1.)
+        (1., 0., 1.)
 
         """
-        if self.__second is None:
-            Ixx = sum(
-                IntegrateShape.polynomial(shape, 0, 2) for shape in self.shapes
-            )
-            Ixy = sum(
-                IntegrateShape.polynomial(shape, 1, 1) for shape in self.shapes
-            )
-            Iyy = sum(
-                IntegrateShape.polynomial(shape, 2, 0) for shape in self.shapes
-            )
-            self.__second = (Ixx, Ixy, Iyy)
+        if self.__geomintegs is None:
+            self.__compute_geomintegs()
         area = self.area()
-        Ixx, Ixy, Iyy = self.__second
-        Ixx -= area * center[1] ** 2
-        Ixy -= area * center[0] * center[1]
-        Iyy -= area * center[0] ** 2
-        return Ixx, Ixy, Iyy
+        ixx, ixy, iyy = self.__geomintegs[2]
+        ixx -= area * center[1] ** 2
+        ixy -= area * center[0] * center[1]
+        iyy -= area * center[0] ** 2
+        return ixx, ixy, iyy
+
+    def third_moment(self, center: Tuple[float] = (0, 0)) -> Tuple[float]:
+        """Gives the third moment of inertia with respect to ``center``
+
+        Ixxx = int (y-cy)^3 dx dy
+        Ixxy = int (x-cx)*(y-cy)^2 dx dy
+        Ixyy = int (x-cx)^2*(y-cy) dx dy
+        Iyyy = int (x-cx)^3 dx dy
+
+        If no ``center`` is given, it assumes the origin (0, 0)
+
+        :param center: The center to compute second moment, default (0, 0)
+        :type center: tuple[float, float]
+        :return: The values of Ixxx, Ixxy, Ixyy, Iyyy
+        :rtype: tuple[float, float, float, float]
+
+        Example use
+        -----------
+
+        >>> section.second_moment()
+        (0., 0., 0., 0.)
+
+        """
+        if self.__geomintegs is None:
+            self.__compute_geomintegs()
+        area = self.area()
+        ixxx, ixxy, ixyy, iyyy = self.__geomintegs[3]
+        ixxx -= area * center[1] ** 3
+        ixxy -= area * center[0] * center[1] ** 2
+        ixyy -= area * center[0] ** 2 * center[1]
+        iyyy -= area * center[0] ** 3
+        return ixxx, ixxy, ixyy, iyyy
 
     def geometric_center(self) -> Tuple[float]:
         """Gives the geometric center G
@@ -231,9 +203,9 @@ class GeometricSection(BaseSection):
         (0., 0.)
 
         """
-        Qx, Qy = self.first_moment()
+        iqx, iqy = self.first_moment()
         area = self.area()
-        return Qy / area, Qx / area
+        return iqx / area, iqy / area
 
     def bending_center(self) -> Tuple[float]:
         """Gives the bendin center B
@@ -262,15 +234,31 @@ class GeometricSection(BaseSection):
 
         """
         area = self.area()
-        Ixx, _, Iyy = self.second_moment()
-        return np.sqrt(Iyy / area), np.sqrt(Ixx / area)
+        ixx, _, iyy = self.second_moment()
+        return np.sqrt(iyy / area), np.sqrt(ixx / area)
 
 
 class Section(GeometricSection):
     """
-    General Section class, that allows computing the
-    geometric properties, torsion and shear
+    Section's class
+
     """
+
+    def torsion_center(self) -> Tuple[float]:
+        """Gives the torsion center T
+
+        :return: The value of torsion center T
+        :rtype: tuple[float, float]
+
+        Example use
+        -----------
+
+        >>> section = Section(shapes, materials)
+        >>> section.torsion_center()
+        (0., 0.)
+
+        """
+        raise NotImplementedError
 
     def torsion_constant(self) -> float:
         """Gives the torsion constant J
@@ -292,22 +280,6 @@ class Section(GeometricSection):
         """
         raise NotImplementedError
 
-    def torsion_center(self) -> Tuple[float]:
-        """Gives the torsion center T
-
-        :return: The value of torsion center T
-        :rtype: tuple[float, float]
-
-        Example use
-        -----------
-
-        >>> section = Section(shapes, materials)
-        >>> section.torsion_center()
-        (0., 0.)
-
-        """
-        raise NotImplementedError
-
     def shear_center(self) -> Tuple[float]:
         """Gives the shear center S
 
@@ -321,7 +293,6 @@ class Section(GeometricSection):
         Example use
         -----------
 
-        >>> section = Section(shapes, materials)
         >>> section.shear_center()
         (0., 0.)
 
