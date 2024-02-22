@@ -1,48 +1,32 @@
 """
 This module contains the class 'Isotropic' to store and convert values
 """
+
 from __future__ import annotations
 
-from typing import Dict, Optional
+from abc import ABC, abstractmethod
+from typing import Dict
 
-from . import dataio
 
+class Material(ABC):
+    """
+    Material abstract class, the parent of other more specific materials
+    """
 
-class Material(object):
-    @classmethod
-    def from_json(cls, filepath: str) -> Dict[str, Material]:
-        data = dataio.read_material_json(filepath)
-        data = data["materials"]
-        materials = {}
-        for name, info in data.items():
-            materials[name] = cls.from_dict(info)
-        return materials
-
-    @classmethod
-    def from_dict(cls, info: Dict) -> Material:
-        material = Isotropic(**info)
-        return material
-
+    @abstractmethod
     def to_dict(self) -> Dict:
         """
-        Converts the current material to a dictionary
+        Converts the material to a dictionary
         """
-        dicion = {}
-        for name in dir(self):
-            if name.startswith("__"):
-                continue
-            if name.endswith("__"):
-                continue
-            value = getattr(self, name)
-            if not callable(value):
-                dicion[name] = value
-        return dicion
+        raise NotImplementedError
 
-    def to_json(self, json_filepath: str, name: Optional[str] = "unknown"):
-        material_infos = self.to_dict()
-        materials_dictionary = {name: material_infos}
-        saving_dictionary = {"materials": materials_dictionary}
-        dataio.save_json(saving_dictionary, json_filepath)
+    @classmethod
+    @abstractmethod
+    def from_dict(cls, dictionary: Dict) -> Material:
+        """
+        Converts the dictionary in a material instance
+        """
+        raise NotImplementedError
 
 
 class Isotropic(Material):
