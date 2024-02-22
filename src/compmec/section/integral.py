@@ -1,5 +1,6 @@
 """
-This file contains integration methods used in BEM
+This file contains integration methods to be used to compute geometric
+properties and matrices M and F in BEM
 
 The most useful are:
 
@@ -17,6 +18,7 @@ from typing import Tuple
 import numpy as np
 
 
+# pylint: disable=invalid-name
 def comb(a, b):
     """
     Computes the binomial coeffient of a, b:
@@ -44,7 +46,8 @@ def comb(a, b):
     return prod
 
 
-def IntegratePolygon(
+# pylint: disable=invalid-name
+def integrate_polygon(
     xverts: Tuple[float], yverts: Tuple[float], amax: int = 3, bmax: int = 3
 ) -> Tuple[Tuple[float]]:
     """
@@ -76,8 +79,7 @@ def IntegratePolygon(
     cross = xverts * np.roll(yverts, shift=-1)
     cross -= yverts * np.roll(xverts, shift=-1)
 
-    II = np.zeros((amax + 1, bmax + 1), dtype="float64")
-
+    geomprops = np.zeros((amax + 1, bmax + 1), dtype="float64")
     for a in range(amax + 1):
         for b in range(bmax + 1):
             M = np.zeros((a + 1, b + 1), dtype="float64")
@@ -86,9 +88,9 @@ def IntegratePolygon(
                     M[i, j] = comb(i + j, i) * comb(a + b - i - j, b - j)
             X = np.roll(xvan[:, : a + 1], shift=-1, axis=0) * xvan[:, a::-1]
             Y = np.roll(yvan[:, : b + 1], shift=-1, axis=0) * yvan[:, b::-1]
-            II[a, b] = np.einsum("k,ki,ij,kj", cross, X, M, Y)
-            II[a, b] /= (a + b + 2) * (a + b + 1) * comb(a + b, a)
-    return II
+            geomprops[a, b] = np.einsum("k,ki,ij,kj", cross, X, M, Y)
+            geomprops[a, b] /= (a + b + 2) * (a + b + 1) * comb(a + b, a)
+    return geomprops
 
 
 class Integration:
@@ -114,10 +116,10 @@ class Integration:
         """Return nodes and weights to integrate:
 
         .. math::
-            I = \\int_{0}^{1} f(x) \\cdot ln(x) dx
+            I = int_{0}^{1} f(x) * ln(x) dx
 
         .. math::
-            I = \\sum_{i} f(x_i) \cdot w_i
+            I = sum_{i} f(x_i) * w_i
 
         Values extracted from BEM book
         """
@@ -216,7 +218,9 @@ class Integration:
                 "1.e32f4be730620p-9",
             ),
         )
-        all_nodes = tuple(tuple(map(np.float64.fromhex, nodes)) for nodes in all_nodes)
+        all_nodes = tuple(
+            tuple(map(np.float64.fromhex, nodes)) for nodes in all_nodes
+        )
         all_weights = tuple(
             tuple(map(np.float64.fromhex, weights)) for weights in all_weights
         )
