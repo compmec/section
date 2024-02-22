@@ -112,6 +112,7 @@ class Integration:
     >>> I = sum(wi * f(xi) for xi, wi in zip(nodes, weights))
     """
 
+    @staticmethod
     def log(npts: int) -> Tuple[Tuple[float]]:
         """Return nodes and weights to integrate:
 
@@ -230,6 +231,7 @@ class Integration:
         weights = -np.array(all_weights[npts - 1], dtype="float64")
         return nodes, weights
 
+    @staticmethod
     def gauss(npts: int) -> Tuple[Tuple[float]]:
         """
         Returns nodes and weights to perform gaussian integration
@@ -248,6 +250,7 @@ class Integration:
         nodes, weights = np.polynomial.legendre.leggauss(npts)
         return (1 + nodes) / 2, weights / 2
 
+    @staticmethod
     def closed(npts: int) -> Tuple[Tuple[float]]:
         """Closed newton cotes formula
 
@@ -275,6 +278,7 @@ class Integration:
         weights = np.array(weights[npts - 2], dtype="float64")
         return nodes, weights
 
+    @staticmethod
     def chebyshev(npts: int) -> Tuple[Tuple[float]]:
         """Chebyshev integration
 
