@@ -27,3 +27,6 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.scriv]
 version = "literal: src/compmec/section/__init__.py: __version__"
+
+[tool.black]
+line-length = 79
