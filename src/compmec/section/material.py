@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections import OrderedDict
-from typing import Dict
+from typing import Dict, Optional
 
 
 class Material(ABC):
@@ -15,6 +15,25 @@ class Material(ABC):
     """
 
     instances = OrderedDict()
+
+    @staticmethod
+    def __next_available_name() -> str:
+        index = 1
+        while True:
+            name = f"custom-material-{index}"
+            if name not in Material.instances:
+                return name
+
+    def __new__(cls, name: Optional[str] = None) -> Material:
+        if name is None:
+            name = Material.__next_available_name()
+        elif name in Material.instances:
+            msg = f"Cannot create material '{name}'! There's already one!"
+            raise ValueError(msg)
+        instance = super().__new__()
+        instance.name = name
+        Material.instances[name] = instance
+        return instance
 
     @abstractmethod
     def to_dict(self) -> Dict:
