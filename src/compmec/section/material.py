@@ -23,6 +23,7 @@ class Material(ABC):
             name = f"custom-material-{index}"
             if name not in Material.instances:
                 return name
+            index += 1
 
     def __init__(self, name: Optional[str] = None):
         if name is None:
