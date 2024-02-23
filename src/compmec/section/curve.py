@@ -10,6 +10,8 @@ from collections import OrderedDict
 from typing import Dict, Optional, Tuple
 
 import numpy as np
+from compmec.shape import JordanCurve
+from compmec.shape.shape import DefinedShape
 
 from compmec import nurbs
 
@@ -133,6 +135,35 @@ class NurbsCurve(Curve):
     """
 
     @classmethod
+    def from_jordan(cls, jordan: JordanCurve) -> NurbsCurve:
+        """
+        Converts a jordan curve into a NurbsCurve instance
+
+        :param jordan: A jordan curve from compmec-shape packaged
+        :type jordan: compmec.shape.JordanCurve
+        :return: A NurbsCurve instance
+        :rtype: NurbsCurve
+        """
+        bezier_curves = []
+        for i, segment in enumerate(jordan.segments):
+            knotvector = nurbs.GeneratorKnotVector.bezier(segment.degree)
+            knotvector.shift(i)
+            new_bezier = nurbs.Curve(knotvector)
+            new_bezier.ctrlpoints = segment.ctrlpoints
+            bezier_curves.append(new_bezier)
+
+        curve = bezier_curves[0]
+        for i in range(1, len(bezier_curves)):
+            bezier = bezier_curves[i]
+            curve |= bezier
+        ctrlpoints = tuple(
+            np.array(tuple(point), dtype="float64")
+            for point in curve.ctrlpoints
+        )
+        curve.ctrlpoints = ctrlpoints
+        return cls(curve)
+
+    @classmethod
     def from_dict(cls, dictionary: Dict) -> NurbsCurve:
         degree = dictionary["degree"] if "degree" in dictionary else None
         knotvector = nurbs.KnotVector(dictionary["knotvector"], degree)
@@ -189,3 +220,28 @@ class NurbsCurve(Curve):
             msg = "Invalid internal curve"
             raise TypeError(msg)
         self.__internal = new_curve
+
+
+def shapes_to_curves(shapes: Tuple[DefinedShape]) -> Tuple[Tuple[int]]:
+    """
+    Transform shapes instances into the pair (curves, geom_labels)
+    curves contains all the parametric curves used to define the shapes
+    geom_labels relates which curves are used to describe each shape
+
+    :param shapes: The group of shapes used in section
+    :type shapes: Tuple[DefinedShape]
+    :return: The pair (curves, geom_labels)
+    :rtype: Tuple[Tuple[int]]
+    """
+    geom_labels = []
+    for shape in shapes:
+        assert isinstance(shape, DefinedShape)
+        new_geom_labels = []
+        for jordan in shape.jordans:
+            signal = 1 if float(jordan) > 0 else -1
+            if signal < 0:
+                jordan = ~jordan
+            curve = NurbsCurve.from_jordan(jordan)
+            new_geom_labels.append(signal * curve.label)
+        geom_labels.append(new_geom_labels)
+    return geom_labels

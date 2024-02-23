@@ -8,11 +8,12 @@ constant, torsion and shear center and others.
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import Tuple
+from typing import Tuple, Union
 
 import numpy as np
+from compmec.shape.shape import DefinedShape
 
-from .curve import Curve
+from .curve import Curve, shapes_to_curves
 from .material import Material
 
 
@@ -71,6 +72,29 @@ class BaseSection:
         :type: Tuple[Material]
         """
         return tuple(Material.instances[name] for name in self.mater_names)
+
+    @classmethod
+    def from_shapes(
+        cls,
+        shapes: Union[DefinedShape, Tuple[DefinedShape]],
+        materials=Union[Material, Tuple[Material]],
+    ) -> BaseSection:
+        """
+        Creates an Section instance based on given shapes and materials
+        It's used along the compmec-shape packaged
+
+        :param name: The section's name, defaults to "custom-section"
+        :type name: str, optional
+        :return: The dictionary ready to be saved in JSON file
+        :rtype: Dict[str, Any]
+        """
+        if isinstance(shapes, DefinedShape):
+            shapes = [shapes]
+        if isinstance(materials, Material):
+            materials = [materials]
+        geom_labels = shapes_to_curves(shapes)
+        mater_names = tuple(material.name for material in materials)
+        return cls(geom_labels, mater_names)
 
 
 class GeometricSection(BaseSection):
