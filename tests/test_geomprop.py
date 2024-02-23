@@ -33,7 +33,7 @@ class TestSinglePolygon:
         side = 3
         geometry = Primitive.square(side)
         material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
-        section = Section(geometry, material)
+        section = Section.from_shapes(geometry, material)
         area = section.area()
         Qx, Qy = section.first_moment()
         Ixx, Ixy, Iyy = section.second_moment()
@@ -46,12 +46,14 @@ class TestSinglePolygon:
 
     @pytest.mark.order(3)
     @pytest.mark.timeout(1)
-    @pytest.mark.dependency(depends=["TestSinglePolygon::test_centered_square"])
+    @pytest.mark.dependency(
+        depends=["TestSinglePolygon::test_centered_square"]
+    )
     def test_centered_rectangle(self):
         width, height = 3, 5
         geometry = Primitive.square().scale(width, height)
         material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
-        section = Section(geometry, material)
+        section = Section.from_shapes(geometry, material)
         area = section.area()
         Qx, Qy = section.first_moment()
         Ixx, Ixy, Iyy = section.second_moment()
@@ -64,13 +66,15 @@ class TestSinglePolygon:
 
     @pytest.mark.order(3)
     @pytest.mark.timeout(1)
-    @pytest.mark.dependency(depends=["TestSinglePolygon::test_centered_square"])
+    @pytest.mark.dependency(
+        depends=["TestSinglePolygon::test_centered_square"]
+    )
     def test_shifted_square(self):
         side = 3
         center = (5, -7)
         geometry = Primitive.square(side, center=center)
         material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
-        section = Section(geometry, material)
+        section = Section.from_shapes(geometry, material)
         area = section.area()
         Qx, Qy = section.first_moment()
         Ixx, Ixy, Iyy = section.second_moment()
@@ -96,7 +100,7 @@ class TestSinglePolygon:
         geometry.scale(width, height)
         geometry.move(center)
         material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
-        section = Section(geometry, material)
+        section = Section.from_shapes(geometry, material)
         area = section.area()
         Qx, Qy = section.first_moment()
         Ixx, Ixy, Iyy = section.second_moment()
@@ -122,7 +126,9 @@ class TestSinglePolygon:
 
 class TestToFromJson:
     @pytest.mark.order(3)
-    @pytest.mark.dependency(depends=["test_begin", "TestSinglePolygon::test_end"])
+    @pytest.mark.dependency(
+        depends=["test_begin", "TestSinglePolygon::test_end"]
+    )
     def test_begin(self):
         pass
 

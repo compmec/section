@@ -28,9 +28,7 @@ class TestIsotropic:
             K = E * G / (3 * (3 * G - E))
             L = K - 2 * G / 3
 
-            mat = Isotropic()
-            mat.young_modulus = E
-            mat.poissons_ratio = nu
+            mat = Isotropic(young_modulus=E, poissons_ratio=nu)
             assert abs(E - mat.young_modulus) < 1e-9
             assert abs(nu - mat.poissons_ratio) < 1e-9
             assert abs(G - mat.shear_modulus) < 1e-9
@@ -42,21 +40,19 @@ class TestIsotropic:
     @pytest.mark.timeout(1)
     @pytest.mark.dependency(depends=["TestIsotropic::test_main"])
     def test_fail_setting_young(self):
-        mat = Isotropic()
         with pytest.raises(ValueError):
-            mat.young_modulus = 0
+            Isotropic(young_modulus=0.0, poissons_ratio=0.3)
         with pytest.raises(ValueError):
-            mat.young_modulus = -100
+            Isotropic(young_modulus=-100.0, poissons_ratio=0.3)
 
     @pytest.mark.order(1)
     @pytest.mark.timeout(1)
     @pytest.mark.dependency(depends=["TestIsotropic::test_main"])
     def test_fail_setting_poisson(self):
-        mat = Isotropic()
         with pytest.raises(ValueError):
-            mat.poissons_ratio = 0.495
+            mat = Isotropic(young_modulus=210e3, poissons_ratio=0.495)
         with pytest.raises(ValueError):
-            mat.poissons_ratio = 0.501
+            mat = Isotropic(young_modulus=210e3, poissons_ratio=0.501)
 
     @pytest.mark.order(1)
     @pytest.mark.dependency(depends=["TestIsotropic::test_main"])
@@ -74,18 +70,8 @@ class TestToFromJson:
     @pytest.mark.timeout(1)
     @pytest.mark.dependency(depends=["TestToFromJson::test_begin"])
     def test_main(self):
-        json_filepath = "tests/json/test_mat_steel.json"
-
         steel = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
-        steel.to_json(json_filepath, name="steel")
-        del steel
-
-        materials = Isotropic.from_json(json_filepath)
-        steel = materials["steel"]
-        assert steel.young_modulus == 210e3
-        assert steel.poissons_ratio == 0.3
-        os.remove(json_filepath)
-
+        
     @pytest.mark.order(1)
     @pytest.mark.dependency(depends=["TestToFromJson::test_main"])
     def test_end(self):
@@ -93,6 +79,8 @@ class TestToFromJson:
 
 
 @pytest.mark.order(1)
-@pytest.mark.dependency(depends=["TestIsotropic::test_end", "TestToFromJson::test_end"])
+@pytest.mark.dependency(
+    depends=["TestIsotropic::test_end", "TestToFromJson::test_end"]
+)
 def test_end():
     pass

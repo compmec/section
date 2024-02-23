@@ -3,6 +3,7 @@ import pytest
 import numpy as np
 from compmec.section.integral import Integration
 
+
 class TestIntegrals:
     """
     Verifies the values of the matrix [UVn]
@@ -150,7 +151,9 @@ class TestIntegrals:
             fvalues = np.zeros(len(nodes))
             for degree in range(nptsinteg):
                 coefs = np.random.uniform(-1, 1, degree + 1)
-                good_integral = -sum(ci / ((1 + i) ** 2) for i, ci in enumerate(coefs))
+                good_integral = -sum(
+                    ci / ((1 + i) ** 2) for i, ci in enumerate(coefs)
+                )
                 fvalues.fill(0)
                 for i, node in enumerate(nodes):
                     for ck in coefs[::-1]:  # Horner's method
