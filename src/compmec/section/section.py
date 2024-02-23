@@ -12,6 +12,7 @@ from typing import Tuple
 
 import numpy as np
 
+from .curve import Curve
 from .material import Material
 
 
@@ -28,23 +29,38 @@ class BaseSection:
 
     def __init__(
         self,
-        geomlabels: Tuple[Tuple[int]],
-        materials: Tuple[str],
+        geom_labels: Tuple[Tuple[int]],
+        mater_names: Tuple[str],
     ):
-        self.__geomlabels = tuple(
-            tuple(map(int, labels)) for labels in geomlabels
+        for labels in geom_labels:
+            for label in labels:
+                assert abs(label) in Curve.instances
+        for mat_name in mater_names:
+            assert mat_name in Material.instances
+        self.__geom_labels = tuple(
+            tuple(map(int, labels)) for labels in geom_labels
         )
-        self.__materials = tuple(materials)
+        self.__mater_names = tuple(mater_names)
 
     @property
-    def geomlabels(self) -> Tuple[Tuple[int]]:
+    def geom_labels(self) -> Tuple[Tuple[int]]:
         """
         Geometric curves labels that defines shapes
 
         :getter: Returns the curve labels
         :type: Tuple[Tuple[int]]
         """
-        return self.__geomlabels
+        return self.__geom_labels
+
+    @property
+    def mater_names(self) -> Tuple[str]:
+        """
+        Material names in each shape
+
+        :getter: Returns the material names
+        :type: Tuple[str]
+        """
+        return self.__mater_names
 
     @property
     def materials(self) -> Tuple[Material]:
@@ -52,9 +68,9 @@ class BaseSection:
         Used materials for every shape
 
         :getter: Returns the used materials, in the shapes' order
-        :type: Tuple[Tuple[int]]
+        :type: Tuple[Material]
         """
-        return self.__materials
+        return tuple(Material.instances[name] for name in self.mater_names)
 
 
 class GeometricSection(BaseSection):
