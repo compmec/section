@@ -14,6 +14,7 @@ import numpy as np
 from compmec.shape.shape import DefinedShape
 
 from .curve import Curve, shapes_to_curves
+from .integral import integrate_polygon
 from .material import Material
 
 
@@ -116,7 +117,32 @@ class GeometricSection(BaseSection):
         Compute the geometric integrals over the domain
         creating the object __geomintegs
         """
-        raise NotImplementedError
+        integrals = {}
+        all_labels = {val for labels in self.geom_labels for val in labels}
+        for label in all_labels:
+            curve = Curve.instances[label]
+            vertices = curve.eval(curve.knots)
+            vertices = np.array(vertices, dtype="float64")
+            xverts, yverts = np.transpose(vertices)
+            integrals[label] = integrate_polygon(xverts, yverts)
+
+        integral = np.zeros((4, 4), dtype="float64")
+        for labels in self.geom_labels:
+            for label in labels:
+                signal = 1 if label > 0 else -1
+                integral += signal * integrals[abs(label)]
+
+        geomintegs = [integral[0, 0]]
+        geomintegs += [integral[0, 1], integral[1, 0]]
+        geomintegs += [integral[0, 2], integral[1, 1], integral[2, 0]]
+        geomintegs += [
+            integral[0, 3],
+            integral[1, 2],
+            integral[2, 1],
+            integral[3, 0],
+        ]
+        geomintegs = tuple(map(float, geomintegs))
+        self.__geomintegs = geomintegs
 
     def area(self) -> float:
         """
@@ -156,7 +182,7 @@ class GeometricSection(BaseSection):
         """
         if self.__geomintegs is None:
             self.__compute_geomintegs()
-        iqx, iqy = self.__geomintegs[1]
+        iqx, iqy = self.__geomintegs[1:3]
         return iqx, iqy
 
     def second_moment(self, center: Tuple[float] = (0, 0)) -> Tuple[float]:
@@ -184,7 +210,7 @@ class GeometricSection(BaseSection):
         if self.__geomintegs is None:
             self.__compute_geomintegs()
         area = self.area()
-        ixx, ixy, iyy = self.__geomintegs[2]
+        ixx, ixy, iyy = self.__geomintegs[3:6]
         ixx -= area * center[1] ** 2
         ixy -= area * center[0] * center[1]
         iyy -= area * center[0] ** 2
@@ -215,7 +241,7 @@ class GeometricSection(BaseSection):
         if self.__geomintegs is None:
             self.__compute_geomintegs()
         area = self.area()
-        ixxx, ixxy, ixyy, iyyy = self.__geomintegs[3]
+        ixxx, ixxy, ixyy, iyyy = self.__geomintegs[6:10]
         ixxx -= area * center[1] ** 3
         ixxy -= area * center[0] * center[1] ** 2
         ixyy -= area * center[0] ** 2 * center[1]
