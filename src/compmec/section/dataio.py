@@ -5,8 +5,9 @@ Mainly the the two types of files are : JSON and VTK/VTU
 """
 
 import json
+from collections import OrderedDict
 from importlib import resources
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 import jsonschema
 
@@ -32,12 +33,12 @@ def read_json(filepath: str, schemapath: Optional[str] = None) -> Dict:
     """
     if not isinstance(filepath, str):
         raise TypeError
-    with open(filepath, "r") as file:
+    with open(filepath, "r", encoding="ascii") as file:
         data = json.load(file)
     if schemapath:
         if not isinstance(schemapath, str):
             raise TypeError
-        with open(schemapath, "r") as file:
+        with open(schemapath, "r", encoding="ascii") as file:
             schema = json.load(file)
         jsonschema.validate(data, schema)
     return data
@@ -61,7 +62,7 @@ def read_section_json(filepath: str) -> Dict:
     folder = resources.files("compmec.section")
     schema_path = str(folder.joinpath(schema_name))
     data = read_json(filepath, schema_path)
-    return data
+    return data["section"]
 
 
 def read_material_json(filepath: str) -> Dict:
@@ -79,13 +80,10 @@ def read_material_json(filepath: str) -> Dict:
     folder = resources.files("compmec.section")
     schema_path = str(folder.joinpath(schema_name))
     data = read_json(filepath, schema_path)
-    for key in tuple(data.keys()):
-        if key != "materials":
-            data.pop(key)
-    return data
+    return data["materials"]
 
 
-def read_curve_json(filepath: str) -> Dict:
+def read_curve_json(filepath: str) -> Tuple[Dict]:
     """
     Reads a curve json and returns the data inside it.
 
@@ -100,10 +98,10 @@ def read_curve_json(filepath: str) -> Dict:
     folder = resources.files("compmec.section")
     schema_path = str(folder.joinpath(schema_name))
     data = read_json(filepath, schema_path)
-    for key in tuple(data.keys()):
-        if key not in ["nodes", "curves"]:
-            data.pop(key)
-    return data
+    curves = OrderedDict()
+    for label, infos in data["curves"].items():
+        curves[int(label)] = infos
+    return data["nodes"], curves
 
 
 def save_json(dictionary: Dict, json_filepath: str):
@@ -121,5 +119,5 @@ def save_json(dictionary: Dict, json_filepath: str):
         The path to save the informations
     """
     json_object = json.dumps(dictionary, indent=4)
-    with open(json_filepath, "w") as file:
+    with open(json_filepath, "w", encoding="ascii") as file:
         file.write(json_object)
