@@ -24,16 +24,14 @@ class Material(ABC):
             if name not in Material.instances:
                 return name
 
-    def __new__(cls, name: Optional[str] = None) -> Material:
+    def __init__(self, name: Optional[str] = None):
         if name is None:
             name = Material.__next_available_name()
         elif name in Material.instances:
             msg = f"Cannot create material '{name}'! There's already one!"
             raise ValueError(msg)
-        instance = super().__new__(cls)
-        instance.name = name
-        Material.instances[name] = instance
-        return instance
+        self.__name = name
+        self.__class__.instances[name] = self
 
     @abstractmethod
     def to_dict(self) -> Dict:
@@ -64,21 +62,16 @@ class Material(ABC):
 
     @name.setter
     def name(self, new_name: str):
-        try:
-            cur_name = self.name
-        except AttributeError:
-            self.__name = new_name
-            return
-        if cur_name == new_name:
+        if self.name == new_name:
             return
         if new_name in self.instances:
             msg = f"Cannot set the name '{new_name}' for the material "
-            msg += f"'{cur_name}' cause there's already a material with "
+            msg += f"'{self.name}' cause there's already a material with "
             msg += "the same name!\n"
             msg += f"Cur: '{self.instances[new_name]}'\n"
             msg += f"New: '{self}'"
             raise ValueError(msg)
-        self.instances[new_name] = self.instances.pop(cur_name)
+        self.instances[new_name] = self.instances.pop(self.name)
 
 
 class Isotropic(Material):
@@ -103,9 +96,29 @@ class Isotropic(Material):
         else:
             raise ValueError("Cannot have poisson >= 0.50 ")
 
-    def __init__(self, young_modulus: float, poissons_ratio: float):
+    @classmethod
+    def from_dict(cls, dictionary: Dict) -> Isotropic:
+        return cls(
+            young_modulus=dictionary["young_modulus"],
+            poissons_ratio=dictionary["poissons_ratio"],
+        )
+
+    def to_dict(self) -> Dict:
+        dictionary = OrderedDict()
+        dictionary["young_modulus"] = self.young_modulus
+        dictionary["poissons_ratio"] = self.poissons_ratio
+        return dictionary
+
+    def __init__(
+        self,
+        *,
+        young_modulus: float,
+        poissons_ratio: float,
+        name: Optional[str] = None,
+    ):
         Isotropic.__verify_young_modulus(young_modulus)
         Isotropic.__verify_poissons_ratio(poissons_ratio)
+        super().__init__(name)
         self.__young_modulus = young_modulus
         self.__poissons_ratio = poissons_ratio
 
