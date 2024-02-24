@@ -8,7 +8,7 @@ constant, torsion and shear center and others.
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import Dict, Tuple, Union
+from typing import Dict, Optional, Tuple, Union
 
 import numpy as np
 from compmec.shape.shape import DefinedShape
@@ -29,20 +29,56 @@ class BaseSection:
 
     instances = OrderedDict()
 
+    @staticmethod
+    def __next_available_name() -> str:
+        index = 1
+        while True:
+            name = f"custom-section-{index}"
+            if name not in Material.instances:
+                return name
+            index += 1
+
     def __init__(
         self,
         geom_labels: Tuple[Tuple[int]],
         mater_names: Tuple[str],
+        name: Optional[str] = None,
     ):
         for labels in geom_labels:
             for label in labels:
                 assert abs(label) in Curve.instances
         for mat_name in mater_names:
             assert mat_name in Material.instances
+        if name is None:
+            name = BaseSection.__next_available_name()
+        elif name in BaseSection.instances:
+            raise ValueError
         self.__geom_labels = tuple(
             tuple(map(int, labels)) for labels in geom_labels
         )
         self.__mater_names = tuple(mater_names)
+        self.__name = name
+
+    @property
+    def name(self) -> str:
+        """
+        Gives the material name
+
+        :getter: Returns the material's name
+        :setter: Attribuates a new name for material
+        :type: str
+
+        """
+        return self.__name
+
+    @name.setter
+    def name(self, new_name: str):
+        if self.name == new_name:
+            return
+        if new_name in self.instances:
+            msg = f"Section name '{new_name}' is already used"
+            raise ValueError(msg)
+        self.instances[new_name] = self.instances.pop(self.name)
 
     @property
     def geom_labels(self) -> Tuple[Tuple[int]]:
