@@ -6,9 +6,8 @@ Mainly the the two types of files are : JSON and VTK/VTU
 
 import json
 from abc import ABC, abstractmethod
-from collections import OrderedDict
 from importlib import resources
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 
 import jsonschema
 
@@ -17,16 +16,16 @@ from .material import Material
 from .section import Section
 
 
-class FileReader(ABC):
+class FileIO(ABC):
     """
-    Abstract Reader class that serves as basic interface to read a file.
-    The read file format is defined by child.
+    Abstract Reader class that serves as basic interface to read/save
+    informations from/to given file.
+    The file format is defined by child class.
     """
 
     def __init__(self, filepath: str):
         assert isinstance(filepath, str)
         self.__filepath = filepath
-        self.file = None
 
     @property
     def filepath(self) -> str:
@@ -47,7 +46,7 @@ class FileReader(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def open(self):
+    def open(self, mode: str = "r"):
         """
         Opens the file
         """
@@ -105,169 +104,144 @@ class FileReader(ABC):
         self.close()
 
 
-class JsonIO(FileReader):
+class JsonIO(FileIO):
     """
     JsonIO class that serves as interface between the file
     and the data structures used in this packaged
     """
 
+    def __init__(self, filepath: str):
+        super().__init__(filepath)
+        self.__opened = False
 
-def read_json(filepath: str, schemapath: Optional[str] = None) -> Dict:
-    """
-    Reads a json file and returns the data inside it.
-    If `schema` is given, it verifies if the `filepath`
-    meets the given standard, by `jsonschema`
+    def is_open(self) -> bool:
+        return self.__opened
 
-    If `filepath` doesn't satisfy the `schema`,
-    raises the error `jsonschema.exceptions.ValidationError`
+    def open(self, mode: str = "r"):
+        self.__opened = True
 
-    Parameters
-    -----------
-    filepath: str
-        json filepath to be read from
-    schemapath: str, optional
-        schema filepath to be checked
-    return: dict
-        The dictionary with all infos read from json
+    def close(self):
+        self.__opened = False
 
-    """
-    if not isinstance(filepath, str):
-        raise TypeError
-    with open(filepath, "r", encoding="ascii") as file:
-        data = json.load(file)
-    if schemapath:
-        if not isinstance(schemapath, str):
-            raise TypeError
-        with open(schemapath, "r", encoding="ascii") as file:
-            schema = json.load(file)
-        jsonschema.validate(data, schema)
-    return data
+    def read_json(self, schemapath: Optional[str] = None) -> Dict:
+        """
+        Reads a json file and returns the data inside it.
+        If `schema` is given, it verifies if the `filepath`
+        meets the given standard, by `jsonschema`
 
+        If `filepath` doesn't satisfy the `schema`,
+        raises the error `jsonschema.exceptions.ValidationError`
 
-def read_section_json(filepath: str) -> Dict:
-    """
-    Reads a section json file and returns the data inside it.
+        Parameters
+        -----------
+        schemapath: str, optional
+            schema filepath to be checked
+        return: dict
+            The dictionary with all infos read from json
 
-    This file must be in accordance with the schema `section.json`
+        """
+        with open(self.filepath, "r", encoding="ascii") as file:
+            data = json.load(file)
+        if schemapath:
+            if not isinstance(schemapath, str):
+                raise TypeError
+            with open(schemapath, "r", encoding="ascii") as file:
+                schema = json.load(file)
+            jsonschema.validate(data, schema)
+        return data
 
-    Parameters
-    ----------
-    filepath: str
-        section json filepath to be read from
-    return: dict
-        The dictionary with all infos read from json
+    def save_json(self, dictionary: Dict):
+        """
+        Saves the given dictionary in a json file.
 
-    """
-    schema_name = "schema/section.json"
-    folder = resources.files("compmec.section")
-    schema_path = str(folder.joinpath(schema_name))
-    data = read_json(filepath, schema_path)
-    return data["sections"]
+        For now this function overwrides all the file.
+        It would be nice to add the informations, keeping
+        the old values (if not conflitant)
 
+        Parameters
+        ----------
+        dictionary: Dict
+        json_filepath: str
+            The path to save the informations
+        """
+        json_object = json.dumps(dictionary, indent=4)
+        with open(self.filepath, "w", encoding="ascii") as file:
+            file.write(json_object)
 
-def read_material_json(filepath: str) -> Dict:
-    """
-    Reads a material json and returns the data inside it.
+    def read_nodes(self):
+        """
+        Reads a nodes json and returns the data inside it.
 
-    This file must be in accordance with the schema `material.json`
+        This file must be in accordance with the schema `curve.json`
 
-    Parameters
-    ----------
-    filepath: str
-    return: dict
-    """
-    schema_name = "schema/material.json"
-    folder = resources.files("compmec.section")
-    schema_path = str(folder.joinpath(schema_name))
-    data = read_json(filepath, schema_path)
-    return data["materials"]
+        Parameters
+        ----------
+        filepath: str
+        return: dict
+        """
+        schema_name = "schema/curve.json"
+        folder = resources.files("compmec.section")
+        schema_path = str(folder.joinpath(schema_name))
+        matrix = self.read_json(schema_path)["nodes"]
+        Nodes.insert_matrix(matrix)
 
+    def read_curves(self):
+        """
+        Reads a curve json and returns the data inside it.
 
-def read_curve_json(filepath: str) -> Tuple[Dict]:
-    """
-    Reads a curve json and returns the data inside it.
+        This file must be in accordance with the schema `curve.json`
 
-    This file must be in accordance with the schema `curve.json`
+        Parameters
+        ----------
+        filepath: str
+        return: dict
+        """
+        schema_name = "schema/curve.json"
+        folder = resources.files("compmec.section")
+        schema_path = str(folder.joinpath(schema_name))
+        curves = self.read_json(schema_path)["curves"]
+        for label, infos in curves.items():
+            label = int(label)
+            curve = Curve.new_instance("nurbs", infos)
+            curve.label = label
 
-    Parameters
-    ----------
-    filepath: str
-    return: dict
-    """
-    schema_name = "schema/curve.json"
-    folder = resources.files("compmec.section")
-    schema_path = str(folder.joinpath(schema_name))
-    data = read_json(filepath, schema_path)
-    curves = OrderedDict()
-    for label, infos in data["curves"].items():
-        curves[int(label)] = infos
-    return curves
+    def read_materials(self):
+        """
+        Reads a material json and returns the data inside it.
 
+        This file must be in accordance with the schema `material.json`
 
-def read_nodes_json(filepath: str) -> Tuple[Dict]:
-    """
-    Reads a nodes json and returns the data inside it.
+        Parameters
+        ----------
+        filepath: str
+        return: dict
+        """
+        schema_name = "schema/material.json"
+        folder = resources.files("compmec.section")
+        schema_path = str(folder.joinpath(schema_name))
+        materials = self.read_json(schema_path)["materials"]
+        for name, info in materials.items():
+            material = Material.new_instance("isotropic", info)
+            material.name = name
 
-    This file must be in accordance with the schema `curve.json`
+    def read_sections(self):
+        """
+        Reads a section json file and returns the data inside it.
 
-    Parameters
-    ----------
-    filepath: str
-    return: dict
-    """
-    schema_name = "schema/curve.json"
-    folder = resources.files("compmec.section")
-    schema_path = str(folder.joinpath(schema_name))
-    data = read_json(filepath, schema_path)
-    curves = OrderedDict()
-    for label, infos in data["curves"].items():
-        curves[int(label)] = infos
-    return data["nodes"]
+        This file must be in accordance with the schema `section.json`
 
+        Parameters
+        ----------
+        filepath: str
+            section json filepath to be read from
+        return: dict
+            The dictionary with all infos read from json
 
-def save_json(dictionary: Dict, json_filepath: str):
-    """
-    Saves the given dictionary in a json file.
-
-    For now this function overwrides all the file.
-    It would be nice to add the informations, keeping
-    the old values (if not conflitant)
-
-    Parameters
-    ----------
-    dictionary: Dict
-    json_filepath: str
-        The path to save the informations
-    """
-    json_object = json.dumps(dictionary, indent=4)
-    with open(json_filepath, "w", encoding="ascii") as file:
-        file.write(json_object)
-
-
-def load_json(json_filepath: str):
-    """
-    Loads all the informations from json file,
-    and create classes: Curve, Material and Section
-
-    Parameters
-    ----------
-    json_filepath: str
-        The path to load the informations
-    """
-    matrix = read_nodes_json(json_filepath)
-    Nodes.insert_matrix(matrix)
-
-    curves = read_curve_json(json_filepath)
-    for label, info in curves.items():
-        curve = Curve.new_instance("nurbs", info)
-        curve.label = label
-
-    materials = read_material_json(json_filepath)
-    for name, info in materials.items():
-        material = Material.new_instance("isotropic", info)
-        material.name = name
-
-    sections = read_section_json(json_filepath)
-    for name, info in sections.items():
-        section = Section.from_dict(info)
-        section.name = name
+        """
+        schema_name = "schema/section.json"
+        folder = resources.files("compmec.section")
+        schema_path = str(folder.joinpath(schema_name))
+        sections = self.read_json(schema_path)["sections"]
+        for name, info in sections.items():
+            section = Section.from_dict(info)
+            section.name = name
