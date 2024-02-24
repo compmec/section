@@ -244,7 +244,11 @@ class NurbsCurve(Curve):
         degree = dictionary["degree"] if "degree" in dictionary else None
         knotvector = nurbs.KnotVector(dictionary["knotvector"], degree)
         nurbs_curve = nurbs.Curve(knotvector)
-        ctrlpoints = tuple(dictionary["ctrlpoints"])
+        if "ctrllabels" in dictionary:
+            labels = tuple(dictionary["ctrllabels"])
+            ctrlpoints = Nodes.from_labels(labels)
+        else:
+            ctrlpoints = dictionary["ctrlpoints"]
         nurbs_curve.ctrlpoints = np.array(ctrlpoints, dtype="float64")
         if "weights" in dictionary:
             nurbs_curve.weights = dictionary["weights"]

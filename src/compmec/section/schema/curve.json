@@ -14,6 +14,11 @@
       "type": "integer",
       "minimum": 1
     },
+    "point": {
+      "type": "array",
+      "maxItems": 2,
+      "items": [{"type": "number"}]
+    },
     "node": {
       "type": "array",
       "items": [
@@ -32,22 +37,29 @@
       "type": "object",
       "required": [
         "degree",
-        "knotvector",
-        "ctrlpoints"
+        "knotvector"
       ],
       "properties": {
         "label": {"$ref": "#/definitions/curve_label"},
         "degree": {"$ref": "#/definitions/degree"},
         "knotvector": {"$ref": "#/definitions/knotvector"},
-        "ctrlpoints": {
+        "ctrllabels": {
             "type": "array",
             "items": {"$ref": "#/definitions/node_label"}
+        },
+        "ctrlpoints": {
+            "type": "array",
+            "items": {"$ref": "#/definitions/point"}
         },
         "weights": {
             "type": "array",
             "items": {"type": "number"}
         }
-      }
+      },
+        "anyOf": [
+        {"required": ["ctrllabels"]},
+        {"required": ["ctrlpoints"]}
+      ]
     }
   },
   "type": "object",
