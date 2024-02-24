@@ -66,7 +66,7 @@ def read_section_json(filepath: str) -> Dict:
     folder = resources.files("compmec.section")
     schema_path = str(folder.joinpath(schema_name))
     data = read_json(filepath, schema_path)
-    return data["section"]
+    return data["sections"]
 
 
 def read_material_json(filepath: str) -> Dict:
