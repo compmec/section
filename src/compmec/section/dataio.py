@@ -11,6 +11,10 @@ from typing import Dict, Optional, Tuple
 
 import jsonschema
 
+from .curve import Curve, Nodes
+from .material import Material
+from .section import Section
+
 
 def read_json(filepath: str, schemapath: Optional[str] = None) -> Dict:
     """
@@ -101,7 +105,28 @@ def read_curve_json(filepath: str) -> Tuple[Dict]:
     curves = OrderedDict()
     for label, infos in data["curves"].items():
         curves[int(label)] = infos
-    return data["nodes"], curves
+    return curves
+
+
+def read_nodes_json(filepath: str) -> Tuple[Dict]:
+    """
+    Reads a nodes json and returns the data inside it.
+
+    This file must be in accordance with the schema `curve.json`
+
+    Parameters
+    ----------
+    filepath: str
+    return: dict
+    """
+    schema_name = "schema/curve.json"
+    folder = resources.files("compmec.section")
+    schema_path = str(folder.joinpath(schema_name))
+    data = read_json(filepath, schema_path)
+    curves = OrderedDict()
+    for label, infos in data["curves"].items():
+        curves[int(label)] = infos
+    return data["nodes"]
 
 
 def save_json(dictionary: Dict, json_filepath: str):
@@ -121,3 +146,32 @@ def save_json(dictionary: Dict, json_filepath: str):
     json_object = json.dumps(dictionary, indent=4)
     with open(json_filepath, "w", encoding="ascii") as file:
         file.write(json_object)
+
+
+def load_json(json_filepath: str):
+    """
+    Loads all the informations from json file,
+    and create classes: Curve, Material and Section
+
+    Parameters
+    ----------
+    json_filepath: str
+        The path to load the informations
+    """
+    matrix = read_nodes_json(json_filepath)
+    Nodes.insert_matrix(matrix)
+
+    curves = read_curve_json(json_filepath)
+    for label, info in curves.items():
+        curve = Curve.new_instance("nurbs", info)
+        curve.label = label
+
+    materials = read_material_json(json_filepath)
+    for name, info in materials.items():
+        material = Material.new_instance("isotropic", info)
+        material.name = name
+
+    sections = read_section_json(json_filepath)
+    for name, info in sections.items():
+        section = Section.from_dict(info)
+        section.name = name

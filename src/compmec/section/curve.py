@@ -16,6 +16,66 @@ from compmec.shape.shape import DefinedShape
 from compmec import nurbs
 
 
+class Nodes:
+    """
+    Class that stores all nodes
+    """
+
+    labels = []
+    xcoords = []
+    ycoords = []
+
+    @staticmethod
+    def insert_matrix(matrix: Tuple[Tuple[int, float, float]]):
+        """
+        Inserts the values of a matrix inside the
+        'labels', 'xcoords' and 'ycoords'
+
+        :param matrix: The matrix with nodes coordinates
+        :type matrix: Tuple[Tuple[int, float, float]]
+
+        Example
+        -------
+        >>> matrix = [[1, 0.0, 0.0],
+                      [2, 1.0, 0.0],
+                      [3, 0.0, 1.0]]
+        >>> Nodes.insert_matrix(matrix)
+
+        """
+        for line in matrix:
+            label = line[0]
+            assert label not in Nodes.labels
+            assert isinstance(label, int)
+            assert label > 0
+            Nodes.labels.append(label)
+            Nodes.xcoords.append(line[1])
+            Nodes.ycoords.append(line[2])
+
+    @staticmethod
+    def from_labels(labels: Tuple[int]) -> Tuple[Tuple[float]]:
+        """
+        Gives the coordinates of the points
+
+        :param labels: The desired node labels
+        :type labels: Tuple[int]
+        :return: A matrix of shape (n, 2)
+        :rtype: Tuple[Tuple[float]]
+
+        Example
+        -------
+        >>> Nodes.from_labels([1, 2, 3])
+        ((0.0, 0.0), (1.0, 0.0), (0.0, 1.0))
+
+        """
+        points = []
+        for label in labels:
+            assert isinstance(label, int)
+            index = Nodes.labels.index(label)
+            new_point = Nodes.xcoords[index], Nodes.ycoords[index]
+            points.append(new_point)
+        return tuple(points)
+
+
 class Curve(ABC):
     """
     Abstract curve to be parent of others.
