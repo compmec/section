@@ -6,14 +6,19 @@
       "type": "integer",
       "minimum": 1
     },
-    "shape": {
+    "labels": {
       "type": "array",
       "items": {"$ref": "#/definitions/curve_label"}
     },
     "section": {
       "type": "object",
-      "additionalProperties": {
-        "shapes": {"type": "array", "items": {"type": "string"}},
+      "required": [
+        "geom_labels", "materials"
+      ],
+      "properties": {
+        "geom_labels": {"type": "array",
+                   "items": {"$ref": "#/definitions/labels"}
+      	},
         "materials": {"type": "array", "items": {"type": "string"}}
       }
     }
@@ -21,14 +26,9 @@
   "type": "object",
   "title": "Root Schema",
   "required": [
-    "shapes",
     "sections"
   ],
   "properties": {
-    "shapes": {
-      "type": "object",
-      "additionalProperties": {"$ref": "#/definitions/shape"}
-    },
     "sections": {
       "type": "object",
       "additionalProperties": {"$ref": "#/definitions/section"}

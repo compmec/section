@@ -31,7 +31,6 @@
     "curve": {
       "type": "object",
       "required": [
-        "label",
         "degree",
         "knotvector",
         "ctrlpoints"
@@ -65,9 +64,8 @@
       }
     },
     "curves": {
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/curve"
+      "type": "object",
+      "additionalProperties": {"$ref": "#/definitions/curve"
       }
     }
   }
