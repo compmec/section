@@ -1,5 +1,3 @@
-import os
-
 import pytest
 
 from compmec.section.material import Isotropic
@@ -50,9 +48,9 @@ class TestIsotropic:
     @pytest.mark.dependency(depends=["TestIsotropic::test_main"])
     def test_fail_setting_poisson(self):
         with pytest.raises(ValueError):
-            mat = Isotropic(young_modulus=210e3, poissons_ratio=0.495)
+            Isotropic(young_modulus=210e3, poissons_ratio=0.495)
         with pytest.raises(ValueError):
-            mat = Isotropic(young_modulus=210e3, poissons_ratio=0.501)
+            Isotropic(young_modulus=210e3, poissons_ratio=0.501)
 
     @pytest.mark.order(1)
     @pytest.mark.dependency(depends=["TestIsotropic::test_main"])
@@ -70,8 +68,8 @@ class TestToFromJson:
     @pytest.mark.timeout(1)
     @pytest.mark.dependency(depends=["TestToFromJson::test_begin"])
     def test_main(self):
-        steel = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
-        
+        Isotropic(young_modulus=210e3, poissons_ratio=0.3)
+
     @pytest.mark.order(1)
     @pytest.mark.dependency(depends=["TestToFromJson::test_main"])
     def test_end(self):

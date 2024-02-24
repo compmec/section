@@ -4,9 +4,12 @@ This file tests the basic geometry properties, such as
 * First moment of inertia
 * Second moment of inertia
 """
+import math
+
 import pytest
 from compmec.shape import Primitive
 
+from compmec.section.dataio import JsonIO
 from compmec.section.material import Isotropic
 from compmec.section.section import Section
 
@@ -136,18 +139,44 @@ class TestToFromJson:
     @pytest.mark.timeout(1)
     @pytest.mark.dependency(depends=["TestToFromJson::test_begin"])
     def test_read_square(self):
-        json_filepath = "tests/json/test_square_section.json"
-        sections = Section.from_json(json_filepath)
-        square_sect = sections["square-sect"]
-        area = square_sect.area()
-        Qx, Qy = square_sect.first_moment()
-        Ixx, Ixy, Iyy = square_sect.second_moment()
-        assert area == 9
+        json_filepath = "tests/json/steel_square.json"
+        with JsonIO(json_filepath) as reader:
+            reader.read_nodes()
+            reader.read_curves()
+            reader.read_materials()
+            reader.read_sections()
+        square = Section.instances["square"]
+        area = square.area()
+        Qx, Qy = square.first_moment()
+        Ixx, Ixy, Iyy = square.second_moment()
+        assert area == 4
         assert Qx == 0
         assert Qy == 0
-        assert Ixx == 6.75
+        assert Ixx == 4 / 3
         assert Ixy == 0
-        assert Iyy == 6.75
+        assert Iyy == 4 / 3
+
+    @pytest.mark.order(3)
+    @pytest.mark.timeout(1)
+    @pytest.mark.skip(reason="Not yet implemented")
+    @pytest.mark.dependency(depends=["TestToFromJson::test_begin"])
+    def test_read_circle(self):
+        json_filepath = "tests/json/steel_circle.json"
+        with JsonIO(json_filepath) as reader:
+            reader.read_nodes()
+            reader.read_curves()
+            reader.read_materials()
+            reader.read_sections()
+        square = Section.instances["square"]
+        area = square.area()
+        Qx, Qy = square.first_moment()
+        Ixx, Ixy, Iyy = square.second_moment()
+        assert area == math.pi
+        assert Qx == 0
+        assert Qy == 0
+        assert Ixx == math.pi / 4
+        assert Ixy == 0
+        assert Iyy == math.pi / 4
 
     @pytest.mark.order(3)
     @pytest.mark.dependency(
