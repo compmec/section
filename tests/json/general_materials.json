@@ -1,0 +1,24 @@
+{
+    "materials": {
+        "steel": {
+            "young_modulus": 210e+3,
+            "poissons_ratio": 0.3
+        },
+        "ANSI 1020 Steel": {
+            "young_modulus": 186e+3,
+            "poissons_ratio": 0.29
+        },
+        "ANSI 1060 Steel": {
+            "young_modulus": 205e+3,
+            "poissons_ratio": 0.29
+        },
+        "aluminum": {
+            "young_modulus": 68e+3,
+            "poissons_ratio": 0.36
+        },
+        "copper": {
+            "young_modulus": 110e+3,
+            "poissons_ratio": 0.343
+        }
+    }
+}
