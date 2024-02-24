@@ -58,6 +58,7 @@ class BaseSection:
         )
         self.__mater_names = tuple(mater_names)
         self.__name = name
+        self.instances[name] = self
 
     @property
     def name(self) -> str:
@@ -79,6 +80,7 @@ class BaseSection:
             msg = f"Section name '{new_name}' is already used"
             raise ValueError(msg)
         self.instances[new_name] = self.instances.pop(self.name)
+        self.__name = new_name
 
     @property
     def geom_labels(self) -> Tuple[Tuple[int]]:
