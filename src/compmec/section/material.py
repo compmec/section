@@ -17,6 +17,22 @@ class Material(ABC):
     instances = OrderedDict()
 
     @staticmethod
+    def new_instance(tipo: str, dictionary: Dict) -> Material:
+        """
+        Creates a new instance of Material depending on
+        the 'tipo' and the informations from the dictionary
+
+        :param tipo: The Material-subclass to be called, in ["isotropic"]
+        :type tipo: str
+        :return: The created material instance
+        :rtype: Material
+        """
+        tipo2class = {"isotropic": Isotropic}
+        if tipo not in tipo2class:
+            raise NotImplementedError
+        return tipo2class[tipo].from_dict(dictionary)
+
+    @staticmethod
     def __next_available_name() -> str:
         index = 1
         while True:

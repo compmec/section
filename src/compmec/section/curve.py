@@ -89,6 +89,22 @@ class Curve(ABC):
     instances = OrderedDict()
 
     @staticmethod
+    def new_instance(tipo: str, dictionary: Dict) -> Curve:
+        """
+        Creates a new instance of Curve depending on
+        the 'tipo' and the informations from the dictionary
+
+        :param tipo: The curve-subclass to be called, in ["nurbs"]
+        :type tipo: str
+        :return: The created curve instance
+        :rtype: Curve
+        """
+        tipo2class = {"nurbs": NurbsCurve}
+        if tipo not in tipo2class:
+            raise NotImplementedError
+        return tipo2class[tipo].from_dict(dictionary)
+
+    @staticmethod
     def __next_available_label() -> str:
         index = 1
         while index in Curve.instances:

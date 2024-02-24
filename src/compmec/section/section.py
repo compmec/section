@@ -8,7 +8,7 @@ constant, torsion and shear center and others.
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import Tuple, Union
+from typing import Dict, Tuple, Union
 
 import numpy as np
 from compmec.shape.shape import DefinedShape
@@ -95,6 +95,20 @@ class BaseSection:
             materials = [materials]
         geom_labels = shapes_to_curves(shapes)
         mater_names = tuple(material.name for material in materials)
+        return cls(geom_labels, mater_names)
+
+    @classmethod
+    def from_dict(cls, dictionary: Dict) -> BaseSection:
+        """
+        Transforms the dictionary, read from json, into a section instance
+
+        :param dictionary: The informations that defines the section
+        :type dictionary: Dict
+        :return: The created section instance
+        :rtype: BaseSection
+        """
+        geom_labels = dictionary["geom_labels"]
+        mater_names = dictionary["materials"]
         return cls(geom_labels, mater_names)
 
 
