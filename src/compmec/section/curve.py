@@ -16,14 +16,15 @@ from compmec.shape.shape import DefinedShape
 from compmec import nurbs
 
 
-class Nodes:
+class Node:
     """
     Class that stores all nodes
     """
 
-    labels = []
-    xcoords = []
-    ycoords = []
+    instances = {}
+
+    def __new__(cls, label: int) -> Tuple[float]:
+        return Node.instances[label]
 
     @staticmethod
     def insert_matrix(matrix: Tuple[Tuple[int, float, float]]):
@@ -39,17 +40,14 @@ class Nodes:
         >>> matrix = [[1, 0.0, 0.0],
                       [2, 1.0, 0.0],
                       [3, 0.0, 1.0]]
-        >>> Nodes.insert_matrix(matrix)
+        >>> Node.insert_matrix(matrix)
 
         """
         for line in matrix:
-            label = line[0]
-            assert label not in Nodes.labels
-            assert isinstance(label, int)
-            assert label > 0
-            Nodes.labels.append(label)
-            Nodes.xcoords.append(line[1])
-            Nodes.ycoords.append(line[2])
+            label = int(line[0])
+            assert label not in Node.instances
+            point = tuple(map(float, line[1:3]))
+            Node.instances[label] = point
 
     @staticmethod
     def from_labels(labels: Tuple[int]) -> Tuple[Tuple[float]]:
@@ -63,16 +61,13 @@ class Nodes:
 
         Example
         -------
-        >>> Nodes.from_labels([1, 2, 3])
+        >>> Node.from_labels([1, 2, 3])
         ((0.0, 0.0), (1.0, 0.0), (0.0, 1.0))
 
         """
         points = []
         for label in labels:
-            assert isinstance(label, int)
-            index = Nodes.labels.index(label)
-            new_point = Nodes.xcoords[index], Nodes.ycoords[index]
-            points.append(new_point)
+            points.append(Node(label))
         return tuple(points)
 
 
@@ -246,7 +241,7 @@ class NurbsCurve(Curve):
         nurbs_curve = nurbs.Curve(knotvector)
         if "ctrllabels" in dictionary:
             labels = tuple(dictionary["ctrllabels"])
-            ctrlpoints = Nodes.from_labels(labels)
+            ctrlpoints = Node.from_labels(labels)
         else:
             ctrlpoints = dictionary["ctrlpoints"]
         nurbs_curve.ctrlpoints = np.array(ctrlpoints, dtype="float64")

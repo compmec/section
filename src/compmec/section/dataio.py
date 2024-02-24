@@ -11,7 +11,7 @@ from typing import Dict, Optional
 
 import jsonschema
 
-from .curve import Curve, Nodes
+from .curve import Curve, Node
 from .material import Material
 from .section import Section
 
@@ -62,7 +62,7 @@ class FileIO(ABC):
     @abstractmethod
     def read_nodes(self):
         """
-        Saves all the nodes from file into Nodes class
+        Saves all the nodes from file into Node class
         """
         raise NotImplementedError
 
@@ -183,7 +183,7 @@ class JsonIO(FileIO):
         folder = resources.files("compmec.section")
         schema_path = str(folder.joinpath(schema_name))
         matrix = self.read_json(schema_path)["nodes"]
-        Nodes.insert_matrix(matrix)
+        Node.insert_matrix(matrix)
 
     def read_curves(self):
         """
