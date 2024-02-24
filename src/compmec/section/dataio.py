@@ -5,6 +5,7 @@ Mainly the the two types of files are : JSON and VTK/VTU
 """
 
 import json
+from abc import ABC, abstractmethod
 from collections import OrderedDict
 from importlib import resources
 from typing import Dict, Optional, Tuple
@@ -14,6 +15,101 @@ import jsonschema
 from .curve import Curve, Nodes
 from .material import Material
 from .section import Section
+
+
+class FileReader(ABC):
+    """
+    Abstract Reader class that serves as basic interface to read a file.
+    The read file format is defined by child.
+    """
+
+    def __init__(self, filepath: str):
+        assert isinstance(filepath, str)
+        self.__filepath = filepath
+        self.file = None
+
+    @property
+    def filepath(self) -> str:
+        """
+        Gives the json filepath
+
+        :getter: Returns the json filepath
+        :type: str
+
+        """
+        return self.__filepath
+
+    @abstractmethod
+    def is_open(self) -> bool:
+        """
+        Tells if the reader is open
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def open(self):
+        """
+        Opens the file
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def close(self):
+        """
+        Closes the file
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def read_nodes(self):
+        """
+        Saves all the nodes from file into Nodes class
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def read_curves(self):
+        """
+        Creates all the curves instances from file
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def read_materials(self):
+        """
+        Creates all the materials instances from file
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def read_sections(self):
+        """
+        Creates all the sections instances from file
+        """
+        raise NotImplementedError
+
+    def read(self):
+        """
+        Read the file and create all instaces
+        """
+        self.read_nodes()
+        self.read_curves()
+        self.read_materials()
+        self.read_sections()
+
+    def __enter__(self):
+        self.open()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+
+class JsonIO(FileReader):
+    """
+    JsonIO class that serves as interface between the file
+    and the data structures used in this packaged
+    """
 
 
 def read_json(filepath: str, schemapath: Optional[str] = None) -> Dict:
