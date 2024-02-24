@@ -23,6 +23,8 @@ class FileIO(ABC):
     The file format is defined by child class.
     """
 
+    overwrite = True
+
     def __init__(self, filepath: str):
         assert isinstance(filepath, str)
         self.__filepath = filepath
@@ -183,6 +185,9 @@ class JsonIO(FileIO):
         folder = resources.files("compmec.section")
         schema_path = str(folder.joinpath(schema_name))
         matrix = self.read_json(schema_path)["nodes"]
+        if self.overwrite:
+            labels = tuple(int(line[0]) for line in matrix)
+            Node.clear(labels)
         Node.insert_matrix(matrix)
 
     def read_curves(self):
@@ -200,6 +205,9 @@ class JsonIO(FileIO):
         folder = resources.files("compmec.section")
         schema_path = str(folder.joinpath(schema_name))
         curves = self.read_json(schema_path)["curves"]
+        if self.overwrite:
+            labels = tuple(int(label) for label in curves.keys())
+            Curve.clear(labels)
         for label, infos in curves.items():
             label = int(label)
             curve = Curve.new_instance("nurbs", infos)
@@ -220,6 +228,8 @@ class JsonIO(FileIO):
         folder = resources.files("compmec.section")
         schema_path = str(folder.joinpath(schema_name))
         materials = self.read_json(schema_path)["materials"]
+        if self.overwrite:
+            Material.clear(materials.keys())
         for name, info in materials.items():
             material = Material.new_instance("isotropic", info)
             material.name = name
@@ -242,6 +252,8 @@ class JsonIO(FileIO):
         folder = resources.files("compmec.section")
         schema_path = str(folder.joinpath(schema_name))
         sections = self.read_json(schema_path)["sections"]
+        if self.overwrite:
+            Section.clear(sections.keys())
         for name, info in sections.items():
             section = Section.from_dict(info)
             section.name = name

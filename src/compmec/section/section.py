@@ -30,6 +30,18 @@ class BaseSection:
     instances = OrderedDict()
 
     @staticmethod
+    def clear(names: Optional[Tuple[str]] = None):
+        """
+        Removes all given instances of Curve
+        """
+        if names is None:
+            BaseSection.instances.clear()
+            return
+        for name in names:
+            if name in BaseSection.instances:
+                BaseSection.instances.pop(name)
+
+    @staticmethod
     def __next_available_name() -> str:
         index = 1
         while True:

@@ -27,6 +27,18 @@ class Node:
         return Node.instances[label]
 
     @staticmethod
+    def clear(labels: Optional[Tuple[int]] = None):
+        """
+        Remove node labels
+        """
+        if labels is None:
+            Node.instances.clear()
+            return
+        for label in labels:
+            if label in Node.instances:
+                Node.instances.pop(label)
+
+    @staticmethod
     def insert_matrix(matrix: Tuple[Tuple[int, float, float]]):
         """
         Inserts the values of a matrix inside the
@@ -65,10 +77,7 @@ class Node:
         ((0.0, 0.0), (1.0, 0.0), (0.0, 1.0))
 
         """
-        points = []
-        for label in labels:
-            points.append(Node(label))
-        return tuple(points)
+        return tuple(Node.instances[label] for label in labels)
 
 
 class Curve(ABC):
@@ -82,6 +91,18 @@ class Curve(ABC):
     """
 
     instances = OrderedDict()
+
+    @staticmethod
+    def clear(labels: Optional[Tuple[int]] = None):
+        """
+        Removes all given instances of Curve
+        """
+        if labels is None:
+            Curve.instances.clear()
+            return
+        for label in labels:
+            if label in Curve.instances:
+                Curve.instances.pop(label)
 
     @staticmethod
     def new_instance(tipo: str, dictionary: Dict) -> Curve:

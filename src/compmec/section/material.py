@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections import OrderedDict
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 
 class Material(ABC):
@@ -15,6 +15,18 @@ class Material(ABC):
     """
 
     instances = OrderedDict()
+
+    @staticmethod
+    def clear(names: Optional[Tuple[str]] = None):
+        """
+        Removes all given instances of Curve
+        """
+        if names is None:
+            Material.instances.clear()
+            return
+        for name in names:
+            if name in Material.instances:
+                Material.instances.pop(name)
 
     @staticmethod
     def new_instance(tipo: str, dictionary: Dict) -> Material:
