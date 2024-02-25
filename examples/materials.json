@@ -1,0 +1,14 @@
+{
+"Steel": {
+    "behaviour": "Isotropic",
+    "young_modulus": 210e+3,
+    "poissons_ratio": 0.3,
+    "density": 7.7e-9
+},
+"Aluminium": {
+    "behaviour": "Isotropic",
+    "young_modulus": 70e+3,
+    "poissons_ratio": 0.3,
+    "density": 2.7e-9
+}
+}

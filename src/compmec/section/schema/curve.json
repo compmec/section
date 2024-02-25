@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "$id": "http://example.com/example.json",
+  "definitions": {
+    "degree": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "node_label": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "curve_label": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "point": {
+      "type": "array",
+      "maxItems": 2,
+      "items": [{"type": "number"}]
+    },
+    "node": {
+      "type": "array",
+      "items": [
+          {"$ref": "#/definitions/node_label"},
+          {"type": "number"},
+          {"type": "number"}
+      ]
+    },
+    "knotvector": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      }
+    },
+    "curve": {
+      "type": "object",
+      "required": [
+        "degree",
+        "knotvector"
+      ],
+      "properties": {
+        "label": {"$ref": "#/definitions/curve_label"},
+        "degree": {"$ref": "#/definitions/degree"},
+        "knotvector": {"$ref": "#/definitions/knotvector"},
+        "ctrllabels": {
+            "type": "array",
+            "items": {"$ref": "#/definitions/node_label"}
+        },
+        "ctrlpoints": {
+            "type": "array",
+            "items": {"$ref": "#/definitions/point"}
+        },
+        "weights": {
+            "type": "array",
+            "items": {"type": "number"}
+        }
+      },
+        "anyOf": [
+        {"required": ["ctrllabels"]},
+        {"required": ["ctrlpoints"]}
+      ]
+    }
+  },
+  "type": "object",
+  "title": "Root Schema",
+  "required": [
+    "nodes",
+    "curves"
+  ],
+  "properties": {
+    "nodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/node"
+      }
+    },
+    "curves": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/definitions/curve"
+      }
+    }
+  }
+}

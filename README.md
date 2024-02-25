@@ -9,8 +9,7 @@
 
 ![compmec-section logo](docs/source/img/logo.svg)
 
-A python package for bidimensional geometric sections boolean manipulation.
-
+A python package for analysis of beam sections by using Boundary Element Method.
 
 ### Installation:
 

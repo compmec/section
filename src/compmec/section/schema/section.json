@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "$id": "http://example.com/example.json",
+  "definitions": {
+    "curve_label": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "labels": {
+      "type": "array",
+      "items": {"$ref": "#/definitions/curve_label"}
+    },
+    "section": {
+      "type": "object",
+      "required": [
+        "geom_labels", "materials"
+      ],
+      "properties": {
+        "geom_labels": {"type": "array",
+                   "items": {"$ref": "#/definitions/labels"}
+      	},
+        "materials": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  },
+  "type": "object",
+  "title": "Root Schema",
+  "required": [
+    "sections"
+  ],
+  "properties": {
+    "sections": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/definitions/section"}
+    }
+  }
+}

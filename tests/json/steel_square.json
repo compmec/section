@@ -1,0 +1,32 @@
+{
+    "nodes": [
+        [1, 1.0, 1.0],
+        [2, -1.0, 1.0],
+        [3, -1.0, -1.0],
+        [4, 1.0, -1.0]
+    ],
+    "curves": {
+        "1000": {"degree": 1,
+                 "knotvector": [0, 0, 0.25, 0.5, 0.75, 1, 1],
+                 "ctrllabels": [1, 2, 3, 4, 1]},
+        "1001": {"degree": 1,
+                 "knotvector": [0, 0, 0.25, 0.5, 0.75, 1, 1],
+                 "ctrlpoints": [[1.0, 1.0],
+                                [-1.0, 1.0],
+                                [-1.0, -1.0],
+                                [1.0, -1.0],
+                                [1.0, 1.0]]}
+    },
+    "materials": {
+        "steel": {
+            "young_modulus": 210e+3,
+            "poissons_ratio": 0.3
+        }
+    },
+    "sections": {
+        "square": {
+            "geom_labels": [[1000]],
+            "materials": ["steel"]
+        }
+    }
+}

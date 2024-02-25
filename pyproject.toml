@@ -1,14 +1,21 @@
 [tool.poetry]
 name = "compmec-section"
-version = "0.2.0"
+version = "0.3.0"
 description = "Analysis of beams cross-section using the boundary element method"
 authors = ["Carlos Adir <carlos.adir.leite@gmail.com>"]
 readme = "README.md"
 packages = [{ include = "compmec/section", from = "src" }]
+include = ["schema/*.json"]
+
+[tool.setuptools.packages.find]
+include = ["src/compmec/section/schema/*.json"]
 
 [tool.poetry.dependencies]
 numpy = "^1.0.0"
+compmec-nurbs = "^1.0.0"
+compmec-shape = "^1.0.0"
 python = "^3.7"
+jsonschema = "^4.17.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
@@ -23,3 +30,6 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.scriv]
 version = "literal: src/compmec/section/__init__.py: __version__"
+
+[tool.black]
+line-length = 79
