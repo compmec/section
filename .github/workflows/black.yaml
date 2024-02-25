@@ -15,7 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: psf/black
-        rev: 24.2.0 
+      - uses: psf/black@24.2.0
         with:
           options: "--check --verbose --exclude docs"
