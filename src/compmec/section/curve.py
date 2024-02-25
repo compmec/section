@@ -3,6 +3,7 @@ This file contains functions and classes responsible to
 deal with the boundary curves.
 
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

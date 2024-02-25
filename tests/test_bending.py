@@ -1,6 +1,7 @@
 """
 File to tests cases when only bending moments are applied
 """
+
 import numpy as np
 import pytest
 from compmec.shape import Primitive
