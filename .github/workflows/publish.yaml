@@ -1,7 +1,8 @@
 name: Publish to PyPI
 
 on:
-  push:
+  release:
+    types: [ published ]
     branches: [ main ]
   workflow_dispatch:
 
@@ -20,11 +21,7 @@ jobs:
           python-version: "3.x"
 
       - name: Install pypa/build
-        run: >-
-          python3 -m
-          pip install
-          build
-          --user
+        run: python3 -m pip install build --user
       - name: Build a binary wheel and a source tarball
         run: python3 -m build
       - name: Store the distribution packages
@@ -34,9 +31,8 @@ jobs:
           path: dist/
   
   publish-to-pypi:
-    name: >-
+    name: |
       Publish Python distribution to PyPI
-    if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
     needs:
     - build
     runs-on: ubuntu-latest
@@ -55,7 +51,7 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       
   github-release:
-    name: >-
+    name: |
       Sign the Python 🐍 distribution 📦 with Sigstore
       and upload them to GitHub Release
     needs:
@@ -75,13 +71,13 @@ jobs:
     - name: Sign the dists with Sigstore
       uses: sigstore/gh-action-sigstore-python@v1.2.3
       with:
-        inputs: >-
+        inputs: |
           ./dist/*.tar.gz
           ./dist/*.whl
     - name: Create GitHub Release
       env:
         GITHUB_TOKEN: ${{ github.token }}
-      run: >-
+      run: |
         gh release create
         '${{ github.ref_name }}'
         --repo '${{ github.repository }}'
@@ -92,7 +88,7 @@ jobs:
       # Upload to GitHub Release using the `gh` CLI.
       # `dist/` contains the built packages, and the
       # sigstore-produced signatures and certificates.
-      run: >-
+      run: |
         gh release upload
         '${{ github.ref_name }}' dist/**
         --repo '${{ github.repository }}'
