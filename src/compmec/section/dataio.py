@@ -181,10 +181,11 @@ class JsonIO(FileIO):
         filepath: str
         return: dict
         """
-        schema_name = "schema/curve.json"
-        folder = resources.files("compmec.section")
-        schema_path = str(folder.joinpath(schema_name))
-        matrix = self.read_json(schema_path)["nodes"]
+        schema_name = "curve.json"
+        with resources.path(
+            "compmec.section.schema", schema_name
+        ) as schema_path:
+            matrix = self.read_json(str(schema_path))["nodes"]
         if self.overwrite:
             labels = tuple(int(line[0]) for line in matrix)
             Node.clear(labels)
@@ -201,10 +202,11 @@ class JsonIO(FileIO):
         filepath: str
         return: dict
         """
-        schema_name = "schema/curve.json"
-        folder = resources.files("compmec.section")
-        schema_path = str(folder.joinpath(schema_name))
-        curves = self.read_json(schema_path)["curves"]
+        schema_name = "curve.json"
+        with resources.path(
+            "compmec.section.schema", schema_name
+        ) as schema_path:
+            curves = self.read_json(str(schema_path))["curves"]
         if self.overwrite:
             labels = tuple(int(label) for label in curves.keys())
             Curve.clear(labels)
@@ -224,10 +226,11 @@ class JsonIO(FileIO):
         filepath: str
         return: dict
         """
-        schema_name = "schema/material.json"
-        folder = resources.files("compmec.section")
-        schema_path = str(folder.joinpath(schema_name))
-        materials = self.read_json(schema_path)["materials"]
+        schema_name = "material.json"
+        with resources.path(
+            "compmec.section.schema", schema_name
+        ) as schema_path:
+            materials = self.read_json(str(schema_path))["materials"]
         if self.overwrite:
             Material.clear(materials.keys())
         for name, info in materials.items():
@@ -248,10 +251,11 @@ class JsonIO(FileIO):
             The dictionary with all infos read from json
 
         """
-        schema_name = "schema/section.json"
-        folder = resources.files("compmec.section")
-        schema_path = str(folder.joinpath(schema_name))
-        sections = self.read_json(schema_path)["sections"]
+        schema_name = "section.json"
+        with resources.path(
+            "compmec.section.schema", schema_name
+        ) as schema_path:
+            sections = self.read_json(str(schema_path))["sections"]
         if self.overwrite:
             Section.clear(sections.keys())
         for name, info in sections.items():
