@@ -5,8 +5,9 @@ Mainly the the two types of files are : JSON and VTK/VTU
 """
 
 import json
+import os
 from abc import ABC, abstractmethod
-from importlib import resources
+from pathlib import Path
 from typing import Dict, Optional
 
 import jsonschema
@@ -181,11 +182,10 @@ class JsonIO(FileIO):
         filepath: str
         return: dict
         """
-        schema_name = "curve.json"
-        with resources.path(
-            "compmec.section.schema", schema_name
-        ) as schema_path:
-            matrix = self.read_json(str(schema_path))["nodes"]
+
+        package_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+        schema_path = package_dir / "schema" / "curve.json"
+        matrix = self.read_json(str(schema_path))["nodes"]
         if self.overwrite:
             labels = tuple(int(line[0]) for line in matrix)
             Node.clear(labels)
@@ -202,11 +202,9 @@ class JsonIO(FileIO):
         filepath: str
         return: dict
         """
-        schema_name = "curve.json"
-        with resources.path(
-            "compmec.section.schema", schema_name
-        ) as schema_path:
-            curves = self.read_json(str(schema_path))["curves"]
+        package_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+        schema_path = package_dir / "schema" / "curve.json"
+        curves = self.read_json(str(schema_path))["curves"]
         if self.overwrite:
             labels = tuple(int(label) for label in curves.keys())
             Curve.clear(labels)
@@ -226,11 +224,9 @@ class JsonIO(FileIO):
         filepath: str
         return: dict
         """
-        schema_name = "material.json"
-        with resources.path(
-            "compmec.section.schema", schema_name
-        ) as schema_path:
-            materials = self.read_json(str(schema_path))["materials"]
+        package_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+        schema_path = package_dir / "schema" / "material.json"
+        materials = self.read_json(str(schema_path))["materials"]
         if self.overwrite:
             Material.clear(materials.keys())
         for name, info in materials.items():
@@ -251,11 +247,9 @@ class JsonIO(FileIO):
             The dictionary with all infos read from json
 
         """
-        schema_name = "section.json"
-        with resources.path(
-            "compmec.section.schema", schema_name
-        ) as schema_path:
-            sections = self.read_json(str(schema_path))["sections"]
+        package_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+        schema_path = package_dir / "schema" / "section.json"
+        sections = self.read_json(str(schema_path))["sections"]
         if self.overwrite:
             Section.clear(sections.keys())
         for name, info in sections.items():
