@@ -103,3 +103,26 @@ class Field(ABC):
             return self.eval(points)
         except TypeError:
             return self.eval([points])[0]
+
+
+class ChargedField(Field):
+    """
+    A stress and strain field evaluator when
+    given forces and momentums are applied
+
+    This evaluator returns the values
+    (S13, S23, S33, E33, E13, E23, E33, E11, E22)
+    """
+
+    def __init__(self, section):
+        self.section = section
+
+    @property
+    def ndata(self):
+        return 8
+
+    def eval_interior(self, points):
+        raise NotImplementedError
+
+    def eval_boundary(self, points):
+        raise NotImplementedError

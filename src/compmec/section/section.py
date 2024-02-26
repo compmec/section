@@ -15,6 +15,7 @@ import numpy as np
 from compmec.shape.shape import DefinedShape
 
 from .curve import Curve, shapes_to_curves
+from .field import ChargedField
 from .integral import integrate_polygon
 from .material import Material
 
@@ -367,6 +368,16 @@ class GeometricSection(BaseSection):
         area = self.area()
         ixx, _, iyy = self.second_moment()
         return np.sqrt(iyy / area), np.sqrt(ixx / area)
+
+    def charged_field(self) -> ChargedField:
+        """
+        Gives the charged field instance to evaluate stresses
+
+        :return: The field evaluator
+        :rtype: ChargedField
+
+        """
+        return ChargedField(self)
 
 
 class Section(GeometricSection):
