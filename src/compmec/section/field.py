@@ -9,6 +9,8 @@ stress and strain of the section for every
 from abc import ABC, abstractmethod
 from typing import Tuple
 
+import numpy as np
+
 
 class Field(ABC):
     """
@@ -88,7 +90,13 @@ class Field(ABC):
         :return: The results in a matrix of shape (n, ndata)
         :rtype: Tuple[Tuple[float]]
         """
-        raise NotImplementedError
+        points = np.array(points, dtype="float64")
+        results = np.zeros((len(points), self.ndata), dtype="float64")
+        mask_inside = self.is_inside(points)
+        results[mask_inside] = self.eval_interior(points[mask_inside])
+        mask_boundary = self.on_boundary(points)
+        results[mask_boundary] = self.eval_boundary(points[mask_boundary])
+        return results
 
     def __call__(self, points: Tuple[Tuple[float]]) -> Tuple[Tuple[float]]:
         try:
