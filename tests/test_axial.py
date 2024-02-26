@@ -11,7 +11,6 @@ from compmec.section.material import Isotropic
 
 
 @pytest.mark.order(4)
-@pytest.mark.skip(reason="Test only in the version 0.4.0")
 @pytest.mark.dependency(
     depends=[
         "tests/test_material.py::test_end",
@@ -36,7 +35,7 @@ class TestSinglePolygon:
         side = 2
         geometry = Primitive.square(side)
         material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
-        section = Section(geometry, material)
+        section = Section.from_shapes(geometry, material)
         field = section.charged_field()
         points = [(0, 0)]
         values = field.eval(points)
@@ -66,7 +65,7 @@ class TestHollowPolygon:
         geometry = Primitive.square(ext_side)
         geometry -= Primitive.square(int_side)
         material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
-        section = Section(geometry, material)
+        section = Section.from_shapes(geometry, material)
         field = section.charged_field()
         points = [(0, 0)]
         values = field.eval(points)
