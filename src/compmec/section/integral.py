@@ -322,6 +322,34 @@ class Integration:
         return nodes, weights
 
     @staticmethod
+    def opened(npts: int) -> Tuple[Tuple[float]]:
+        """
+        Open newton cotes formula
+
+        Parameters
+        ----------
+        npts: int
+            The number of points to use gauss integration.
+            Must be at least 1
+        return: tuple[tuple[float]]
+            The pair (nodes, weights), with each node in the interval [0, 1]
+        """
+        if not isinstance(npts, int) or npts < 1:
+            raise ValueError(f"npts invalid: {npts}")
+        if npts > 7:
+            raise NotImplementedError
+        nodes = tuple(num / (npts + 1) for num in range(1, npts + 1))
+        nodes = np.array(nodes, dtype="float64")
+        weights = (
+            (1.0,),
+            (0.5, 0.5),
+            (2 / 3, -1 / 3, 2 / 3),
+            (11 / 24, 1 / 24, 1 / 24, 11 / 24),
+        )
+        weights = np.array(weights[npts - 1], dtype="float64")
+        return nodes, weights
+
+    @staticmethod
     def chebyshev(npts: int) -> Tuple[Tuple[float]]:
         """Chebyshev integration
 
