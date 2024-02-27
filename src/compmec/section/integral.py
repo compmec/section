@@ -46,6 +46,49 @@ def comb(a, b):
     return prod
 
 
+def winding_number_linear(
+    pointa: Tuple[float], pointb: Tuple[float], center: Tuple[float]
+) -> float:
+    """
+    Computes the winding number for a straight line AB with respect to C
+
+    :param pointa: The pair (xa, ya)
+    :type pointa: Tuple[float]
+    :param pointb: The pair (xb, yb)
+    :type pointb: Tuple[float]
+    :param center: The pair (xc, yc)
+    :type center: Tuple[float]
+    :return: The winding number value in the interval [-0.5, 0.5]
+    :rtype: float
+    """
+    x1 = float(pointa[0] - center[0])
+    y1 = float(pointa[1] - center[1])
+    x2 = float(pointb[0] - center[0])
+    y2 = float(pointb[1] - center[1])
+    cross = x1 * y2 - x2 * y1
+    inner = x1 * x2 + y1 * y2
+    wind = np.arctan2(cross, inner) / math.tau
+    return wind
+
+
+def winding_number_curve(curve, center: Tuple[float]) -> float:
+    """
+    Computes the winding number for a closed curve with respect to C
+
+    :param curve: The curve around (or not) the center
+    :type curve: Curve
+    :param center: The pair (xc, yc)
+    :type center: Tuple[float]
+    :return: The winding number value in the interval [-1.0, 1.0]
+    :rtype: float
+    """
+    points = curve.eval(curve.knots)
+    return sum(
+        winding_number_linear(pointa, pointb, center)
+        for pointa, pointb in zip(points, points[1:])
+    )
+
+
 # pylint: disable=invalid-name
 def integrate_polygon(
     xverts: Tuple[float], yverts: Tuple[float], amax: int = 3, bmax: int = 3
