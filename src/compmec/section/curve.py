@@ -290,7 +290,8 @@ class NurbsCurve(Curve):
         return instance
 
     def eval(self, parameters: Tuple[float]) -> Tuple[Tuple[float]]:
-        return self.internal.eval(parameters)
+        values = self.internal.eval(parameters)
+        return np.array(values, dtype="float64")
 
     @property
     def knots(self) -> Tuple[float]:

@@ -366,6 +366,19 @@ class Polynomial:
 
     """
 
+    expoents = [
+        (0, 0),
+        (0, 1),
+        (1, 0),
+        (0, 2),
+        (1, 1),
+        (2, 0),
+        (0, 3),
+        (2, 1),
+        (1, 2),
+        (3, 0),
+    ]
+
     # pylint: disable=invalid-name
     @staticmethod
     def polygon(vertices: Tuple[Tuple[float]]) -> Tuple[float]:
@@ -394,18 +407,7 @@ class Polynomial:
         cross = vertices[:, 0] * np.roll(vertices[:, 1], shift=-1)
         cross -= vertices[:, 1] * np.roll(vertices[:, 0], shift=-1)
 
-        expoents = [
-            (0, 0),
-            (0, 1),
-            (1, 0),
-            (0, 2),
-            (1, 1),
-            (2, 0),
-            (0, 3),
-            (2, 1),
-            (1, 2),
-            (3, 0),
-        ]
+        expoents = Polynomial.expoents
         geomprops = np.zeros(len(expoents), dtype="float64")
         for k, (a, b) in enumerate(expoents):
             M = np.zeros((a + 1, b + 1), dtype="float64")
@@ -417,3 +419,140 @@ class Polynomial:
             geomprops[k] = np.einsum("k,ki,ij,kj", cross, X, M, Y)
             geomprops[k] /= (a + b + 2) * (a + b + 1) * comb(a + b, a)
         return geomprops
+
+    @staticmethod
+    def adaptative(curve) -> Tuple[float]:
+        """
+        Computes the polynomials integrals over the area defined by the curve
+
+        It uses an adaptative algorithm that allows computing the integrals
+        over smooth curves using milne's (open newton quadrature 3 points)
+
+        This function uses a recursive approach
+
+        :param curve: The boundary curve around the area
+        :type curve: Curve
+        :return: The integral values
+        :rtype: float
+        """
+        tolerance = 1e-6
+        expoents = Polynomial.expoents
+        integrals = np.zeros(len(expoents), dtype="float64")
+        integrator = AdaptativePolynomialIntegrator(curve)
+        for k, (expx, expy) in enumerate(expoents):
+            integrator.expx = expx
+            integrator.expy = expy
+            value = integrator.integrate(tolerance=tolerance)
+            integrals[k] = value / (2 + expx + expy)
+        return integrals
+
+
+class AdaptativePolynomialIntegrator:
+    """
+    Adaptative Polynomial Integrator
+
+    Receives a curve and computes the polynomials integrals recursivelly
+    using open newton cotes quadrature with 3 points
+    """
+
+    def __init__(self, curve, *, max_depth: int = 9):
+        self.curve = curve
+        self.expx = 0
+        self.expy = 0
+        self.max_depth = max_depth
+
+    def milne_formula(self, t0: float, t1: float) -> float:
+        """
+        Computes the integral using Milne formula
+
+        int_{t0}^{t1} x^a * y^b * (x * dy - y * dx)
+
+        with (x(t), y(t)) being the curve
+
+        Parameters
+        ----------
+
+        :param t0: The lower interval's value
+        :type t0: float
+        :param t1: The upper interval's value
+        :type t1: float
+        :return: The interval's integral value
+        :rtype: float
+
+        """
+        a, b = self.expx, self.expy
+        ts = np.linspace(t0, t1, 5)
+        points = self.curve.eval(ts)
+        xs = points[:, 0]
+        ys = points[:, 1]
+        f1 = xs[1] ** a * ys[1] ** b
+        f2 = xs[2] ** a * ys[2] ** b
+        f3 = xs[3] ** a * ys[3] ** b
+        f1 *= xs[1] * (ys[2] - ys[0]) - ys[1] * (xs[2] - xs[0])
+        f2 *= xs[2] * (ys[3] - ys[1]) - ys[2] * (xs[3] - xs[1])
+        f3 *= xs[3] * (ys[4] - ys[2]) - ys[3] * (xs[4] - xs[2])
+        return (4 * f1 - 2 * f2 + 4 * f3) / 3
+
+    def integrate_interval(
+        self, t0: float, t1: float, tolerance: float, depth: int
+    ) -> float:
+        """
+        Computes the integral
+
+        int_{t0}^{t1} x^expx * y^expy * (x * dy - y * dx)
+
+        with (x(t), y(t)) being the curve
+
+        This function is recursive
+
+        Parameters
+        ----------
+
+        :param t0: The lower interval's value
+        :type t0: float
+        :param t1: The upper interval's value
+        :type t1: float
+        :param tolerance: The stop tolerance
+        :type tolerance: float
+        :param depth: The current depth, a key to know when stop
+        :type depth: int
+        :return: The interval's integral value
+        :rtype: float
+
+        """
+        tm = 0.5 * (t0 + t1)
+        value_midl = self.milne_formula(t0, t1)
+        value_left = self.milne_formula(t0, tm)
+        value_righ = self.milne_formula(tm, t1)
+        value_some = value_left + value_righ
+        if depth < self.max_depth and abs(value_some - value_midl) > tolerance:
+            value_left = self.integrate_interval(
+                t0, tm, tolerance / 2, depth + 1
+            )
+            value_righ = self.integrate_interval(
+                tm, t1, tolerance / 2, depth + 1
+            )
+        return value_left + value_righ
+
+    def integrate(self, *, tolerance: float = 1e-9) -> float:
+        """
+        Computes the integral over the entire curve
+
+        int_{Gamma} x^expx * y^expy * (x * dy - y * dx)
+
+        with (x(t), y(t)) being the curve
+
+        Parameters
+        ----------
+
+        :param tolerance: The tolerance to how when stop adaptative quadrature
+        :type tolerance: float
+        :return: The interval's integral value
+        :rtype: float
+        """
+        value = 0
+        knots = self.curve.knots
+        for t0, t1 in zip(knots, knots[1:]):
+            sub_tolerance = tolerance * (t1 - t0) / (knots[-1] - knots[0])
+            value += self.integrate_interval(t0, t1, sub_tolerance, depth=0)
+        return value

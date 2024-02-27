@@ -187,8 +187,7 @@ class GeometricSection(BaseSection):
         all_labels = {val for labels in self.geom_labels for val in labels}
         for label in all_labels:
             curve = Curve.instances[label]
-            vertices = curve.eval(curve.knots)
-            integrals[label] = Polynomial.polygon(vertices)
+            integrals[label] = Polynomial.adaptative(curve)
 
         geomintegs = np.zeros(10, dtype="float64")
         for labels in self.geom_labels:
