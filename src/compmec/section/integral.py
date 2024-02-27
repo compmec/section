@@ -89,53 +89,6 @@ def winding_number_curve(curve, center: Tuple[float]) -> float:
     )
 
 
-# pylint: disable=invalid-name
-def integrate_polygon(
-    xverts: Tuple[float], yverts: Tuple[float], amax: int = 3, bmax: int = 3
-) -> Tuple[Tuple[float]]:
-    """
-    Computes integrals, returning a matrix II such
-
-    II_{a, b} = int_D x^a * y^b dx dy
-
-    for a = [0, ..., amax] and b = [0, ..., bmax]
-
-    and D being a polygonal domain given by the vertices
-
-    Parameters
-    ----------
-    xverts: tuple[float]
-        Abssice values of the vertices
-    yverts: tuple[float]
-        Ordoned values of the vertices
-    amax: int, default 3
-        The maximum expoent multiplying 'x'
-    bmax: int, default 3
-        The maximum expoent multiplying 'y'
-    return: tuple[tuple[float]]
-        A matrix II of shape (amax+1, bmax+1) such
-        II_{ij} = int_D x^a * y^b dx dy
-    """
-    xvan = np.vander(xverts, amax + 1, True)
-    yvan = np.vander(yverts, bmax + 1, True)
-
-    cross = xverts * np.roll(yverts, shift=-1)
-    cross -= yverts * np.roll(xverts, shift=-1)
-
-    geomprops = np.zeros((amax + 1, bmax + 1), dtype="float64")
-    for a in range(amax + 1):
-        for b in range(bmax + 1):
-            M = np.zeros((a + 1, b + 1), dtype="float64")
-            for i in range(a + 1):
-                for j in range(b + 1):
-                    M[i, j] = comb(i + j, i) * comb(a + b - i - j, b - j)
-            X = np.roll(xvan[:, : a + 1], shift=-1, axis=0) * xvan[:, a::-1]
-            Y = np.roll(yvan[:, : b + 1], shift=-1, axis=0) * yvan[:, b::-1]
-            geomprops[a, b] = np.einsum("k,ki,ij,kj", cross, X, M, Y)
-            geomprops[a, b] /= (a + b + 2) * (a + b + 1) * comb(a + b, a)
-    return geomprops
-
-
 class Integration:
     """
     This class contains nodes positions and weights to perform
@@ -400,3 +353,67 @@ class Integration:
         nodes = np.array(nodes, dtype="float64")
         weights = np.array(all_weights[npts - 1], dtype="float64")
         return nodes, weights
+
+
+class Polynomial:
+    """
+    Class responsible to compute the integral
+
+    II(a, b) = int_D x^a * y^b dx dy
+
+    Which D is the domain defined by the interior of a curve
+    The (a, b) values are the expoents
+
+    """
+
+    # pylint: disable=invalid-name
+    @staticmethod
+    def polygon(vertices: Tuple[Tuple[float]]) -> Tuple[float]:
+        """
+        Computes integrals, returning the values of the integral
+
+        II_{a, b} = int_D x^a * y^b dx dy
+
+        for (a, b) = [(0, 0), (0, 1), (1, 0), (0, 2), (1, 1), (2, 0),
+                      (0, 3), (2, 1), (1, 2), (3, 0)]
+
+        and D being a polygonal domain given by the vertices
+
+        Parameters
+        ----------
+
+        :param vertices: The vertices that defines the polygon
+        :type vertices: tuple[tuple[float]]
+        :return: A vector of lenght 10 containing the integral values
+        :rtype: tuple[float]
+        """
+        vertices = np.array(vertices, dtype="float64")
+        xvan = np.vander(vertices[:, 0], 4, True)
+        yvan = np.vander(vertices[:, 1], 4, True)
+
+        cross = vertices[:, 0] * np.roll(vertices[:, 1], shift=-1)
+        cross -= vertices[:, 1] * np.roll(vertices[:, 0], shift=-1)
+
+        expoents = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 2),
+            (1, 1),
+            (2, 0),
+            (0, 3),
+            (2, 1),
+            (1, 2),
+            (3, 0),
+        ]
+        geomprops = np.zeros(len(expoents), dtype="float64")
+        for k, (a, b) in enumerate(expoents):
+            M = np.zeros((a + 1, b + 1), dtype="float64")
+            for i in range(a + 1):
+                for j in range(b + 1):
+                    M[i, j] = comb(i + j, i) * comb(a + b - i - j, b - j)
+            X = np.roll(xvan[:, : a + 1], shift=-1, axis=0) * xvan[:, a::-1]
+            Y = np.roll(yvan[:, : b + 1], shift=-1, axis=0) * yvan[:, b::-1]
+            geomprops[k] = np.einsum("k,ki,ij,kj", cross, X, M, Y)
+            geomprops[k] /= (a + b + 2) * (a + b + 1) * comb(a + b, a)
+        return geomprops

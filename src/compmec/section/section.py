@@ -16,7 +16,7 @@ from compmec.shape.shape import DefinedShape
 
 from .curve import Curve, shapes_to_curves
 from .field import ChargedField
-from .integral import integrate_polygon
+from .integral import Polynomial
 from .material import Material
 
 
@@ -188,26 +188,13 @@ class GeometricSection(BaseSection):
         for label in all_labels:
             curve = Curve.instances[label]
             vertices = curve.eval(curve.knots)
-            vertices = np.array(vertices, dtype="float64")
-            xverts, yverts = np.transpose(vertices)
-            integrals[label] = integrate_polygon(xverts, yverts)
+            integrals[label] = Polynomial.polygon(vertices)
 
-        integral = np.zeros((4, 4), dtype="float64")
+        geomintegs = np.zeros(10, dtype="float64")
         for labels in self.geom_labels:
             for label in labels:
                 signal = 1 if label > 0 else -1
-                integral += signal * integrals[abs(label)]
-
-        geomintegs = [integral[0, 0]]
-        geomintegs += [integral[0, 1], integral[1, 0]]
-        geomintegs += [integral[0, 2], integral[1, 1], integral[2, 0]]
-        geomintegs += [
-            integral[0, 3],
-            integral[1, 2],
-            integral[2, 1],
-            integral[3, 0],
-        ]
-        geomintegs = tuple(map(float, geomintegs))
+                geomintegs += signal * integrals[abs(label)]
         self.__geomintegs = geomintegs
 
     def area(self) -> float:
