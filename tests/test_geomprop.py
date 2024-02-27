@@ -158,8 +158,7 @@ class TestToFromJson:
         assert Iyy == 4 / 3
 
     @pytest.mark.order(3)
-    @pytest.mark.timeout(1)
-    @pytest.mark.skip(reason="Not yet implemented")
+    @pytest.mark.timeout(20)
     @pytest.mark.dependency(depends=["TestToFromJson::test_begin"])
     def test_read_circle(self):
         json_filepath = "tests/json/steel_circle.json"
@@ -172,12 +171,12 @@ class TestToFromJson:
         area = square.area()
         Qx, Qy = square.first_moment()
         Ixx, Ixy, Iyy = square.second_moment()
-        assert area == math.pi
-        assert Qx == 0
-        assert Qy == 0
-        assert Ixx == math.pi / 4
-        assert Ixy == 0
-        assert Iyy == math.pi / 4
+        assert abs(area - math.pi) < 1e-6
+        assert abs(Qx) < 1e-6
+        assert abs(Qy) < 1e-6
+        assert abs(Ixx - math.pi / 4) < 1e-6
+        assert abs(Ixy) < 1e-6
+        assert abs(Iyy - math.pi / 4) < 1e-6
 
     @pytest.mark.order(3)
     @pytest.mark.dependency(

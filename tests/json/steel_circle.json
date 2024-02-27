@@ -10,7 +10,8 @@
     "curves": {
         "2000": {"degree": 3,
                  "knotvector": [0, 0, 0, 0, 0.5, 0.5, 0.5, 1, 1, 1, 1],
-                 "ctrllabels": [1, 2, 3, 4, 5, 6, 1]}
+                 "ctrllabels": [1, 2, 3, 4, 5, 6, 1],
+                 "weights": [3, 1, 1, 3, 1, 1, 3]}
     },
     "materials": {
         "steel": {
