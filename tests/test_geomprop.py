@@ -17,7 +17,10 @@ from compmec.section.section import Section
 
 @pytest.mark.order(3)
 @pytest.mark.dependency(
-    depends=["tests/test_material.py::test_end"],
+    depends=[
+        "tests/test_material.py::test_end",
+        "tests/test_curve.py::test_end",
+    ],
     scope="session",
 )
 def test_begin():

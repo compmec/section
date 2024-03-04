@@ -16,6 +16,8 @@ from compmec.shape.shape import DefinedShape
 
 from compmec import nurbs
 
+from . import integral
+
 
 class Node:
     """
@@ -139,6 +141,25 @@ class ICurve(ABC):
         :type parameters: Tuple[float]
         :return: A matrix of shape (n, 2)
         :rtype: Tuple[Tuple[float]]
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def winding(self, point: Tuple[float]) -> float:
+        """
+        Computes the winding number of the given curve
+
+        The possible results are one in the interval [0, 1]
+
+        * 0 means the point is outside the internal curve
+        * 1 means the point is inside the internal curve
+        * in (0, 1) means it's on the boundary
+
+        :param point: A 2D-point
+        :type point: Tuple[float]
+        :return: The winding value with respect to the curve
+        :rtype: float
+
         """
         raise NotImplementedError
 
@@ -324,6 +345,25 @@ class NurbsCurve(Curve):
             msg = "Invalid internal curve"
             raise TypeError(msg)
         self.__internal = new_curve
+
+    def winding(self, point: Tuple[float]) -> float:
+        # Verify if the point is at any vertex
+        vertices = self.eval(self.knots[:-1])
+        for i, vertex in enumerate(vertices):
+            if np.all(point == vertex):
+                vec_left = vertices[(i - 1) % len(vertices)] - point
+                vec_righ = vertices[(i + 1) % len(vertices)] - point
+                wind = 0.5 * np.arccos(np.inner(vec_left, vec_righ)) / np.pi
+                return wind
+
+        wind = 0
+        for vertexa, vertexb in zip(vertices, np.roll(vertices, -1, axis=0)):
+            sub_wind = integral.winding_number_linear(vertexa, vertexb, point)
+            if abs(sub_wind) == 0.5:
+                wind = 0.5
+                break
+            wind += sub_wind
+        return wind
 
 
 def shapes_to_curves(shapes: Tuple[DefinedShape]) -> Tuple[Tuple[int]]:
