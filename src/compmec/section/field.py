@@ -77,11 +77,11 @@ class ChargedField(Field):
         return self.__charges[3:]
 
     @forces.setter
-    def forces(self, new_forces: tuple[float]):
+    def forces(self, new_forces: Tuple[float]):
         self.__charges[:3] = new_forces
 
     @momentums.setter
-    def momentums(self, new_momentums: tuple[float]):
+    def momentums(self, new_momentums: Tuple[float]):
         self.__charges[3:] = new_momentums
 
     def __stress_axial(self, winds):
