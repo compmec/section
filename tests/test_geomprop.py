@@ -20,6 +20,7 @@ from compmec.section.section import Section
     depends=[
         "tests/test_material.py::test_end",
         "tests/test_curve.py::test_end",
+        "tests/test_geometry.py::test_end",
     ],
     scope="session",
 )
