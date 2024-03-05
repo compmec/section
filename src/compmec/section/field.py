@@ -21,71 +21,6 @@ class Field(IField):
     inside/outside of given section.
     """
 
-    def eval_interior(
-        self, points: Tuple[Tuple[float]]
-    ) -> Tuple[Tuple[float]]:
-        """
-        Evaluate the field on points in the interior
-
-        :param points: The wanted points, a matrix of shape (n, 2)
-        :type points: Tuple[Tuple[float]]
-        :return: The field value for every point
-        :rtype: Tuple[bool]
-        """
-        raise NotImplementedError
-
-    def eval_boundary(
-        self, points: Tuple[Tuple[float]]
-    ) -> Tuple[Tuple[float]]:
-        """
-        Evaluate the field on points at the boundary (internal or external)
-
-        :param points: The wanted points, a matrix of shape (n, 2)
-        :type points: Tuple[Tuple[float]]
-        :return: The field value for every point
-        :rtype: Tuple[bool]
-        """
-        raise NotImplementedError
-
-    def on_boundary(self, points: Tuple[Tuple[float]]) -> Tuple[bool]:
-        """
-        Tells if given points are at any boundary (internal or external)
-
-        :param points: The wanted points, a matrix of shape (n, 2)
-        :type points: Tuple[Tuple[float]]
-        :return: The result for every point
-        :rtype: Tuple[bool]
-        """
-        raise NotImplementedError
-
-    def is_inside(self, points: Tuple[Tuple[float]]) -> Tuple[bool]:
-        """
-        Tells if given points are inside the section or not
-
-        :param points: The wanted points, a matrix of shape (n, 2)
-        :type points: Tuple[Tuple[float]]
-        :return: The result for every point
-        :rtype: Tuple[bool]
-        """
-        raise NotImplementedError
-
-    def eval(self, points: Tuple[Tuple[float]]) -> Tuple[Tuple[float]]:
-        """
-        Evaluate the field at given points
-
-        :param points: The wanted points, a matrix of shape (n, 2)
-        :type points: Tuple[Tuple[float]]
-        :return: The results in a matrix of shape (n, ndata)
-        :rtype: Tuple[Tuple[float]]
-        """
-        points = np.array(points, dtype="float64")
-        results = np.zeros((len(points), self.ndata), dtype="float64")
-        mask_inside = self.is_inside(points)
-        results[mask_inside] = self.eval_interior(points[mask_inside])
-        mask_boundary = self.on_boundary(points)
-        results[mask_boundary] = self.eval_boundary(points[mask_boundary])
-        return results
-
     def __call__(self, points: Tuple[Tuple[float]]) -> Tuple[Tuple[float]]:
         try:
             return self.eval(points)
@@ -104,13 +39,49 @@ class ChargedField(Field):
 
     def __init__(self, section: ISection):
         self.section = section
+        self.__charges = np.zeros(6, dtype="float64")
 
     @property
     def ndata(self):
         return 8
 
-    def eval_interior(self, points):
-        raise NotImplementedError
+    @property
+    def forces(self):
+        """
+        Forces used in the charged field.
 
-    def eval_boundary(self, points):
+        * Fx: shear force
+        * Fy: shear force
+        * Fz: axial force
+
+        :getter: Returns the (Fx, Fy, Fz)
+        :setter: Sets the new forces
+        :type: Tuple[float]
+        """
+        return self.__charges[:3]
+
+    @property
+    def momentums(self):
+        """
+        Forces used in the charged field.
+
+        * Mx: bending momentum
+        * My: bending momentum
+        * Mz: torsion momentum
+
+        :getter: Returns the (Mx, My, Mz)
+        :setter: Sets the new momentums
+        :type: Tuple[float]
+        """
+        return self.__charges[3:]
+
+    @forces.setter
+    def forces(self, new_forces: tuple[float]):
+        self.__charges[:3] = new_forces
+
+    @momentums.setter
+    def momentums(self, new_momentums: tuple[float]):
+        self.__charges[3:] = new_momentums
+
+    def eval(self, points):
         raise NotImplementedError

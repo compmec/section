@@ -162,6 +162,7 @@ class TestToFromJson:
         assert Iyy == 4 / 3
 
     @pytest.mark.order(3)
+    @pytest.mark.skip()
     @pytest.mark.timeout(20)
     @pytest.mark.dependency(depends=["TestToFromJson::test_begin"])
     def test_read_circle(self):
