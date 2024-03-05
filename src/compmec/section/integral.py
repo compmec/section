@@ -71,24 +71,6 @@ def winding_number_linear(
     return wind
 
 
-def winding_number_curve(curve, center: Tuple[float]) -> float:
-    """
-    Computes the winding number for a closed curve with respect to C
-
-    :param curve: The curve around (or not) the center
-    :type curve: Curve
-    :param center: The pair (xc, yc)
-    :type center: Tuple[float]
-    :return: The winding number value in the interval [-1.0, 1.0]
-    :rtype: float
-    """
-    points = curve.eval(curve.knots)
-    return sum(
-        winding_number_linear(pointa, pointb, center)
-        for pointa, pointb in zip(points, points[1:])
-    )
-
-
 class Integration:
     """
     This class contains nodes positions and weights to perform
