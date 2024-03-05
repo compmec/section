@@ -105,7 +105,7 @@ class ChargedField(Field):
         for every geometry
 
         """
-        geometries = self.section.geometries
+        geometries = tuple(self.section.geometries)
         winds = np.zeros((len(points), len(geometries)), dtype="float64")
         for i, point in enumerate(points):
             for j, geome in enumerate(geometries):
@@ -137,7 +137,7 @@ class ChargedField(Field):
             results[:, 2] += self.__stress_bending(points, winds)
         if np.any(self.forces[:2]):  # Shear force
             raise NotImplementedError
-        if self.momentums[3]:  # Torsion
+        if self.momentums[2]:  # Torsion
             raise NotImplementedError
         return results
 
@@ -164,7 +164,19 @@ class ChargedField(Field):
         :rtype: Tuple[Tuple[float]]
 
         """
-        raise NotImplementedError
+        strain = np.zeros((len(winds), 4), dtype="float64")
+        for i, material in enumerate(self.section.materials):
+            subwinds = winds[:, i]
+            mask = subwinds != 0
+            young = material.young_modulus
+            poiss = material.poissons_ratio
+            fract11 = -poiss / young
+            fract13 = (1 + poiss) / young
+            strain[mask, 1] += subwinds[mask] * stresses[mask, 2] / young
+            strain[mask, 0] += fract11 * subwinds[mask] * stresses[mask, 2]
+            strain[mask, 2] += fract13 * subwinds[mask] * stresses[mask, 0]
+            strain[mask, 3] += fract13 * subwinds[mask] * stresses[mask, 1]
+        return strain
 
     def eval(self, points):
         """
