@@ -17,9 +17,10 @@ from compmec.shape.shape import DefinedShape
 from compmec import nurbs
 
 from . import integral
+from .abcs import LabeledTracker
 
 
-class Node:
+class Node(LabeledTracker):
     """
     Class that stores all nodes
     """
@@ -28,18 +29,6 @@ class Node:
 
     def __new__(cls, label: int) -> Tuple[float]:
         return Node.instances[label]
-
-    @staticmethod
-    def clear(labels: Optional[Tuple[int]] = None):
-        """
-        Remove node labels
-        """
-        if labels is None:
-            Node.instances.clear()
-            return
-        for label in labels:
-            if label in Node.instances:
-                Node.instances.pop(label)
 
     @staticmethod
     def insert_matrix(matrix: Tuple[Tuple[int, float, float]]):
@@ -164,24 +153,12 @@ class ICurve(ABC):
         raise NotImplementedError
 
 
-class Curve(ICurve):
+class Curve(LabeledTracker, ICurve):
     """
     Base class that tracks the instances
     """
 
     instances = OrderedDict()
-
-    @staticmethod
-    def clear(labels: Optional[Tuple[int]] = None):
-        """
-        Removes all given instances of Curve
-        """
-        if labels is None:
-            Curve.instances.clear()
-            return
-        for label in labels:
-            if label in Curve.instances:
-                Curve.instances.pop(label)
 
     @staticmethod
     def new_instance(tipo: str, dictionary: Dict) -> Curve:
@@ -198,54 +175,6 @@ class Curve(ICurve):
         if tipo not in tipo2class:
             raise NotImplementedError
         return tipo2class[tipo].from_dict(dictionary)
-
-    @staticmethod
-    def __next_available_label() -> str:
-        index = 1
-        while index in Curve.instances:
-            index += 1
-        return index
-
-    def __new__(cls, label: Optional[int] = None) -> Curve:
-        if label is None:
-            label = Curve.__next_available_label()
-        elif label in Curve.instances:
-            msg = f"Cannot create curve '{label}'! There's already one!"
-            raise ValueError(msg)
-        instance = super().__new__(cls)
-        instance.label = label
-        Curve.instances[label] = instance
-        return instance
-
-    @property
-    def label(self) -> int:
-        """
-        Gives the curve label
-
-        :getter: Returns the curve's label
-        :setter: Attribuates a new label for curve
-        :type: int
-
-        """
-        return self.__label
-
-    @label.setter
-    def label(self, new_label: int):
-        try:
-            cur_label = self.label
-        except AttributeError:
-            self.__label = new_label
-            return
-        if cur_label == new_label:
-            return
-        if new_label in self.instances:
-            msg = f"Cannot set the label '{new_label}' for the curve "
-            msg += f"'{cur_label}' cause there's already a curve with "
-            msg += "the same label!\n"
-            msg += f"Cur: '{self.instances[new_label]}'\n"
-            msg += f"New: '{self}'"
-            raise ValueError(msg)
-        self.instances[new_label] = self.instances.pop(cur_label)
 
 
 class NurbsCurve(Curve):
@@ -312,7 +241,8 @@ class NurbsCurve(Curve):
         if not isinstance(nurbs_curve, nurbs.Curve):
             msg = "Invalid internal curve"
             raise TypeError(msg)
-        instance = super().__new__(cls, label)
+        instance = super().__new__(cls)
+        instance.label = label
         instance.internal = nurbs_curve
         return instance
 

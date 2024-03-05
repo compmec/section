@@ -6,10 +6,11 @@ from typing import Tuple
 
 import numpy as np
 
+from .abcs import NamedTracker
 from .curve import Curve
 
 
-class ConnectedGeometry:
+class ConnectedGeometry(NamedTracker):
     """
     Connected Geometry class that represents a bidimensional region
     on the plane and has some functions such as to decide if points

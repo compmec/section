@@ -14,13 +14,14 @@ from typing import Dict, Optional, Tuple, Union
 import numpy as np
 from compmec.shape.shape import DefinedShape
 
+from .abcs import NamedTracker
 from .curve import Curve, shapes_to_curves
 from .field import ChargedField
 from .integral import Polynomial
 from .material import Material
 
 
-class BaseSection:
+class BaseSection(NamedTracker):
     """
     BaseSection class that is the base for others section classes
 
@@ -30,27 +31,6 @@ class BaseSection:
     """
 
     instances = OrderedDict()
-
-    @staticmethod
-    def clear(names: Optional[Tuple[str]] = None):
-        """
-        Removes all given instances of Curve
-        """
-        if names is None:
-            BaseSection.instances.clear()
-            return
-        for name in names:
-            if name in BaseSection.instances:
-                BaseSection.instances.pop(name)
-
-    @staticmethod
-    def __next_available_name() -> str:
-        index = 1
-        while True:
-            name = f"custom-section-{index}"
-            if name not in Material.instances:
-                return name
-            index += 1
 
     def __init__(
         self,
@@ -63,38 +43,12 @@ class BaseSection:
                 assert abs(label) in Curve.instances
         for mat_name in mater_names:
             assert mat_name in Material.instances
-        if name is None:
-            name = BaseSection.__next_available_name()
-        elif name in BaseSection.instances:
-            raise ValueError
+        self.name = name
         self.__geom_labels = tuple(
             tuple(map(int, labels)) for labels in geom_labels
         )
         self.__mater_names = tuple(mater_names)
-        self.__name = name
         self.instances[name] = self
-
-    @property
-    def name(self) -> str:
-        """
-        Gives the material name
-
-        :getter: Returns the material's name
-        :setter: Attribuates a new name for material
-        :type: str
-
-        """
-        return self.__name
-
-    @name.setter
-    def name(self, new_name: str):
-        if self.name == new_name:
-            return
-        if new_name in self.instances:
-            msg = f"Section name '{new_name}' is already used"
-            raise ValueError(msg)
-        self.instances[new_name] = self.instances.pop(self.name)
-        self.__name = new_name
 
     @property
     def geom_labels(self) -> Tuple[Tuple[int]]:
