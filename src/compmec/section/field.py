@@ -25,7 +25,8 @@ class Field(IField):
         try:
             return self.eval(points)
         except TypeError:
-            return self.eval([points])[0]
+            stress, strain = self.eval([points])
+            return stress[0], strain[0]
 
 
 class ChargedField(Field):
@@ -96,19 +97,95 @@ class ChargedField(Field):
         vector = np.dot(matrix, [-momy, momx]) / detii
         return np.dot(points, vector) * np.any(winds, axis=1)
 
-    def eval(self, points):
-        points = np.array(points, dtype="float64")
-        results = np.zeros((len(points), self.ndata), dtype="float64")
+    def __winding_numbers(
+        self, points: Tuple[Tuple[float]]
+    ) -> Tuple[Tuple[float]]:
+        """
+        Computes the winding number of every point,
+        for every geometry
+
+        """
         geometries = self.section.geometries
-        winds = tuple(
-            tuple(map(geome.winding, points)) for geome in geometries
-        )
-        winds = np.array(winds, dtype="float64")
-        forx, fory, forz, momx, momy, momz = self.__charges
-        if forz:  # Axial force
+        winds = np.zeros((len(points), len(geometries)), dtype="float64")
+        for i, point in enumerate(points):
+            for j, geome in enumerate(geometries):
+                winds[i, j] = geome.winding(point)
+        return winds
+
+    def __stress_eval(self, points, winds):
+        """
+        Evaluates the stress values
+
+        The stress tensor is given by
+            [  0    0  E13]
+        S = [  0    0  E23]
+            [E13  E23  E33]
+
+        Returned values are a matrix of shape (n, 3)
+        each line are the stress components: E13, E23, E33
+
+        :param points: The wanted points, a matrix of shape (n, 2)
+        :type points: Tuple[Tuple[float]]
+        :return: The strain matrix of shape (n, 3)
+        :rtype: Tuple[Tuple[float]]
+
+        """
+        results = np.zeros((len(points), 3), dtype="float64")
+        if self.forces[2]:  # Axial force
             results[:, 2] += self.__stress_axial(winds)
-        if momx or momy:  # Bending moments
+        if np.any(self.momentums[:2]):  # Bending moments
             results[:, 2] += self.__stress_bending(points, winds)
-        if forx or fory or momz:
+        if np.any(self.forces[:2]):  # Shear force
+            raise NotImplementedError
+        if self.momentums[3]:  # Torsion
             raise NotImplementedError
         return results
+
+    def __strain_eval(self, winds, stresses):
+        """
+        Evaluates the strain values from stress values by
+        using Hook's law for isotropic materials
+
+        The winds serves to know the position of the points,
+        to decide which material will be used
+
+        The strain tensor is given by
+            [E11    0  E13]
+        E = [  0  E22  E23]
+            [E13  E23  E33]
+        The values E22 and E11 are the same
+
+        Returned values are a matrix of shape (n, 4)
+        each line are the strain components: E11, E33, E13, E23
+
+        :param points: The wanted points, a matrix of shape (n, 2)
+        :type points: Tuple[Tuple[float]]
+        :return: The strain matrix of shape (n, 4)
+        :rtype: Tuple[Tuple[float]]
+
+        """
+        raise NotImplementedError
+
+    def eval(self, points):
+        """
+        Evaluate the stress and strain at given points
+
+        The inputs/outputs are matrices:
+        * points is a (n, 2) matrix
+        * stress is a (n, 3) matrix
+        * strain is a (n, 4) matrix
+
+        The stress components are S13, S23, S33, meaning
+        two shear stresses and one normal stress
+        The strain components are E11, E33, E13, E23
+
+        :param points: The wanted points, a matrix of shape (n, 2)
+        :type points: Tuple[Tuple[float]]
+        :return: The pair (stress, strain)
+        :rtype: Tuple[Tuple[Tuple[float]]]
+        """
+        points = np.array(points, dtype="float64")
+        winds = self.__winding_numbers(points)
+        stress = self.__stress_eval(points, winds)
+        strain = self.__strain_eval(winds, stress)
+        return stress, strain
