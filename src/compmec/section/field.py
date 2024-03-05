@@ -10,7 +10,7 @@ from typing import Tuple
 
 import numpy as np
 
-from .abcs import IField
+from .abcs import IField, ISection
 
 
 class Field(IField):
@@ -102,7 +102,7 @@ class ChargedField(Field):
     (S13, S23, S33, E33, E13, E23, E33, E11, E22)
     """
 
-    def __init__(self, section):
+    def __init__(self, section: ISection):
         self.section = section
 
     @property

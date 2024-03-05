@@ -14,7 +14,7 @@ from typing import Iterable, Optional, Tuple, Union
 import numpy as np
 from compmec.shape.shape import DefinedShape
 
-from .abcs import NamedTracker
+from .abcs import ISection, NamedTracker
 from .curve import Curve
 from .field import ChargedField
 from .geometry import Geometry, shapes2geometries
@@ -22,7 +22,7 @@ from .integral import Polynomial
 from .material import Material
 
 
-class BaseSection(NamedTracker):
+class BaseSection(ISection, NamedTracker):
     """
     BaseSection class that is the base for others section classes
 
@@ -73,7 +73,7 @@ class BaseSection(NamedTracker):
     def from_shapes(
         cls,
         shapes: Union[DefinedShape, Tuple[DefinedShape]],
-        materials=Union[Material, Tuple[Material]],
+        materials: Union[Material, Tuple[Material]],
     ) -> BaseSection:
         """
         Creates an Section instance based on given shapes and materials

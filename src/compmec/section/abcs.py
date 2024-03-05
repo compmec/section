@@ -336,3 +336,9 @@ class IField(ABC):
         :rtype: Tuple[Tuple[float]]
         """
         raise NotImplementedError
+
+
+class ISection(ABC):  # pylint: disable=too-few-public-methods
+    """
+    Section abstract class to serve as interface
+    """
