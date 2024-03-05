@@ -9,17 +9,20 @@ constant, torsion and shear center and others.
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import Dict, Optional, Tuple, Union
+from typing import Iterable, Optional, Tuple, Union
 
 import numpy as np
 from compmec.shape.shape import DefinedShape
 
-from .curve import Curve, shapes_to_curves
-from .integral import integrate_polygon
+from .abcs import ISection, NamedTracker
+from .curve import Curve
+from .field import ChargedField
+from .geometry import Geometry, shapes2geometries
+from .integral import Polynomial
 from .material import Material
 
 
-class BaseSection:
+class BaseSection(ISection, NamedTracker):
     """
     BaseSection class that is the base for others section classes
 
@@ -30,106 +33,47 @@ class BaseSection:
 
     instances = OrderedDict()
 
-    @staticmethod
-    def clear(names: Optional[Tuple[str]] = None):
-        """
-        Removes all given instances of Curve
-        """
-        if names is None:
-            BaseSection.instances.clear()
-            return
-        for name in names:
-            if name in BaseSection.instances:
-                BaseSection.instances.pop(name)
-
-    @staticmethod
-    def __next_available_name() -> str:
-        index = 1
-        while True:
-            name = f"custom-section-{index}"
-            if name not in Material.instances:
-                return name
-            index += 1
-
     def __init__(
         self,
-        geom_labels: Tuple[Tuple[int]],
+        geome_names: Tuple[str],
         mater_names: Tuple[str],
         name: Optional[str] = None,
     ):
-        for labels in geom_labels:
-            for label in labels:
-                assert abs(label) in Curve.instances
+        for geo_name in geome_names:
+            assert geo_name in Geometry.instances
         for mat_name in mater_names:
             assert mat_name in Material.instances
-        if name is None:
-            name = BaseSection.__next_available_name()
-        elif name in BaseSection.instances:
-            raise ValueError
-        self.__geom_labels = tuple(
-            tuple(map(int, labels)) for labels in geom_labels
-        )
+        self.name = name
+        self.__geome_names = tuple(geome_names)
         self.__mater_names = tuple(mater_names)
-        self.__name = name
-        self.instances[name] = self
 
     @property
-    def name(self) -> str:
-        """
-        Gives the material name
-
-        :getter: Returns the material's name
-        :setter: Attribuates a new name for material
-        :type: str
-
-        """
-        return self.__name
-
-    @name.setter
-    def name(self, new_name: str):
-        if self.name == new_name:
-            return
-        if new_name in self.instances:
-            msg = f"Section name '{new_name}' is already used"
-            raise ValueError(msg)
-        self.instances[new_name] = self.instances.pop(self.name)
-        self.__name = new_name
-
-    @property
-    def geom_labels(self) -> Tuple[Tuple[int]]:
+    def geometries(self) -> Iterable[Geometry]:
         """
         Geometric curves labels that defines shapes
 
         :getter: Returns the curve labels
         :type: Tuple[Tuple[int]]
         """
-        return self.__geom_labels
+        for name in self.__geome_names:
+            yield Geometry.instances[name]
 
     @property
-    def mater_names(self) -> Tuple[str]:
-        """
-        Material names in each shape
-
-        :getter: Returns the material names
-        :type: Tuple[str]
-        """
-        return self.__mater_names
-
-    @property
-    def materials(self) -> Tuple[Material]:
+    def materials(self) -> Iterable[Material]:
         """
         Used materials for every shape
 
         :getter: Returns the used materials, in the shapes' order
         :type: Tuple[Material]
         """
-        return tuple(Material.instances[name] for name in self.mater_names)
+        for name in self.__mater_names:
+            yield Material.instances[name]
 
     @classmethod
     def from_shapes(
         cls,
         shapes: Union[DefinedShape, Tuple[DefinedShape]],
-        materials=Union[Material, Tuple[Material]],
+        materials: Union[Material, Tuple[Material]],
     ) -> BaseSection:
         """
         Creates an Section instance based on given shapes and materials
@@ -144,23 +88,9 @@ class BaseSection:
             shapes = [shapes]
         if isinstance(materials, Material):
             materials = [materials]
-        geom_labels = shapes_to_curves(shapes)
+        geome_names = tuple(geom.name for geom in shapes2geometries(shapes))
         mater_names = tuple(material.name for material in materials)
-        return cls(geom_labels, mater_names)
-
-    @classmethod
-    def from_dict(cls, dictionary: Dict) -> BaseSection:
-        """
-        Transforms the dictionary, read from json, into a section instance
-
-        :param dictionary: The informations that defines the section
-        :type dictionary: Dict
-        :return: The created section instance
-        :rtype: BaseSection
-        """
-        geom_labels = dictionary["geom_labels"]
-        mater_names = dictionary["materials"]
-        return cls(geom_labels, mater_names)
+        return cls(geome_names, mater_names)
 
 
 class GeometricSection(BaseSection):
@@ -171,10 +101,10 @@ class GeometricSection(BaseSection):
 
     def __init__(
         self,
-        shapes: Tuple[Tuple[int]],
-        materials: Tuple[Material],
+        geome_names: Tuple[Geometry],
+        mater_names: Tuple[Material],
     ):
-        super().__init__(shapes, materials)
+        super().__init__(geome_names, mater_names)
         self.__geomintegs = None
 
     def __compute_geomintegs(self):
@@ -183,30 +113,18 @@ class GeometricSection(BaseSection):
         creating the object __geomintegs
         """
         integrals = {}
-        all_labels = {val for labels in self.geom_labels for val in labels}
+        all_labels = set()
+        for geometry in self.geometries:
+            all_labels |= set(map(abs, geometry.labels))
         for label in all_labels:
             curve = Curve.instances[label]
-            vertices = curve.eval(curve.knots)
-            vertices = np.array(vertices, dtype="float64")
-            xverts, yverts = np.transpose(vertices)
-            integrals[label] = integrate_polygon(xverts, yverts)
+            integrals[label] = Polynomial.adaptative(curve)
 
-        integral = np.zeros((4, 4), dtype="float64")
-        for labels in self.geom_labels:
-            for label in labels:
+        geomintegs = np.zeros(10, dtype="float64")
+        for geometry in self.geometries:
+            for label in geometry.labels:
                 signal = 1 if label > 0 else -1
-                integral += signal * integrals[abs(label)]
-
-        geomintegs = [integral[0, 0]]
-        geomintegs += [integral[0, 1], integral[1, 0]]
-        geomintegs += [integral[0, 2], integral[1, 1], integral[2, 0]]
-        geomintegs += [
-            integral[0, 3],
-            integral[1, 2],
-            integral[2, 1],
-            integral[3, 0],
-        ]
-        geomintegs = tuple(map(float, geomintegs))
+                geomintegs += signal * integrals[abs(label)]
         self.__geomintegs = geomintegs
 
     def area(self) -> float:
@@ -367,6 +285,16 @@ class GeometricSection(BaseSection):
         area = self.area()
         ixx, _, iyy = self.second_moment()
         return np.sqrt(iyy / area), np.sqrt(ixx / area)
+
+    def charged_field(self) -> ChargedField:
+        """
+        Gives the charged field instance to evaluate stresses
+
+        :return: The field evaluator
+        :rtype: ChargedField
+
+        """
+        return ChargedField(self)
 
 
 class Section(GeometricSection):

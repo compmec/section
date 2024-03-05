@@ -17,7 +17,11 @@ from compmec.section.section import Section
 
 @pytest.mark.order(3)
 @pytest.mark.dependency(
-    depends=["tests/test_material.py::test_end"],
+    depends=[
+        "tests/test_material.py::test_end",
+        "tests/test_curve.py::test_end",
+        "tests/test_geometry.py::test_end",
+    ],
     scope="session",
 )
 def test_begin():
@@ -111,9 +115,11 @@ class TestSinglePolygon:
         assert area == width * height
         assert Qx == area * center[1]
         assert Qy == area * center[0]
-        assert Ixx == width * height**3 / 12 + area * center[1] * center[1]
+        good_Ixx = width * height**3 / 12 + area * center[1] * center[1]
+        good_Iyy = height * width**3 / 12 + area * center[0] * center[0]
+        assert abs(Ixx - good_Ixx) < 1e-6
         assert Ixy == area * center[0] * center[1]
-        assert Iyy == height * width**3 / 12 + area * center[0] * center[0]
+        assert abs(Iyy - good_Iyy) < 1e-6
 
     @pytest.mark.order(3)
     @pytest.mark.dependency(
@@ -142,10 +148,10 @@ class TestToFromJson:
     def test_read_square(self):
         json_filepath = "tests/json/steel_square.json"
         with JsonIO(json_filepath) as reader:
-            reader.read_nodes()
-            reader.read_curves()
-            reader.read_materials()
-            reader.read_sections()
+            reader.load_nodes()
+            reader.load_curves()
+            reader.load_materials()
+            reader.load_sections()
         square = Section.instances["square"]
         area = square.area()
         Qx, Qy = square.first_moment()
@@ -153,31 +159,30 @@ class TestToFromJson:
         assert area == 4
         assert Qx == 0
         assert Qy == 0
-        assert Ixx == 4 / 3
+        assert abs(Ixx - 4 / 3) < 1e-9
         assert Ixy == 0
-        assert Iyy == 4 / 3
+        assert abs(Iyy - 4 / 3) < 1e-9
 
     @pytest.mark.order(3)
-    @pytest.mark.timeout(1)
-    @pytest.mark.skip(reason="Not yet implemented")
+    @pytest.mark.timeout(20)
     @pytest.mark.dependency(depends=["TestToFromJson::test_begin"])
     def test_read_circle(self):
         json_filepath = "tests/json/steel_circle.json"
         with JsonIO(json_filepath) as reader:
-            reader.read_nodes()
-            reader.read_curves()
-            reader.read_materials()
-            reader.read_sections()
+            reader.load_nodes()
+            reader.load_curves()
+            reader.load_materials()
+            reader.load_sections()
         square = Section.instances["square"]
         area = square.area()
         Qx, Qy = square.first_moment()
         Ixx, Ixy, Iyy = square.second_moment()
-        assert area == math.pi
-        assert Qx == 0
-        assert Qy == 0
-        assert Ixx == math.pi / 4
-        assert Ixy == 0
-        assert Iyy == math.pi / 4
+        assert abs(area - math.pi) < 2e-6
+        assert abs(Qx) < 1e-6
+        assert abs(Qy) < 1e-6
+        assert abs(Ixx - math.pi / 4) < 1e-6
+        assert abs(Ixy) < 1e-6
+        assert abs(Iyy - math.pi / 4) < 1e-6
 
     @pytest.mark.order(3)
     @pytest.mark.dependency(

@@ -4,29 +4,18 @@ This module contains the class 'Isotropic' to store and convert values
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from collections import OrderedDict
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
+
+from .abcs import IMaterial, NamedTracker
 
 
-class Material(ABC):
+class Material(IMaterial, NamedTracker):
     """
     Material abstract class, the parent of other more specific materials
     """
 
     instances = OrderedDict()
-
-    @staticmethod
-    def clear(names: Optional[Tuple[str]] = None):
-        """
-        Removes all given instances of Curve
-        """
-        if names is None:
-            Material.instances.clear()
-            return
-        for name in names:
-            if name in Material.instances:
-                Material.instances.pop(name)
 
     @staticmethod
     def new_instance(tipo: str, dictionary: Dict) -> Material:
@@ -43,64 +32,6 @@ class Material(ABC):
         if tipo not in tipo2class:
             raise NotImplementedError
         return tipo2class[tipo].from_dict(dictionary)
-
-    @staticmethod
-    def __next_available_name() -> str:
-        index = 1
-        while True:
-            name = f"custom-material-{index}"
-            if name not in Material.instances:
-                return name
-            index += 1
-
-    def __init__(self, name: Optional[str] = None):
-        if name is None:
-            name = Material.__next_available_name()
-        elif name in Material.instances:
-            msg = f"Cannot create material '{name}'! There's already one!"
-            raise ValueError(msg)
-        self.__name = name
-        self.__class__.instances[name] = self
-
-    @abstractmethod
-    def to_dict(self) -> Dict:
-        """
-        Converts the material to a dictionary
-        """
-        raise NotImplementedError
-
-    @classmethod
-    @abstractmethod
-    def from_dict(cls, dictionary: Dict) -> Material:
-        """
-        Converts the dictionary in a material instance
-        """
-        raise NotImplementedError
-
-    @property
-    def name(self) -> str:
-        """
-        Gives the material name
-
-        :getter: Returns the material's name
-        :setter: Attribuates a new name for material
-        :type: str
-
-        """
-        return self.__name
-
-    @name.setter
-    def name(self, new_name: str):
-        if self.name == new_name:
-            return
-        if new_name in self.instances:
-            msg = f"Cannot set the name '{new_name}' for the material "
-            msg += f"'{self.name}' cause there's already a material with "
-            msg += "the same name!\n"
-            msg += f"Cur: '{self.instances[new_name]}'\n"
-            msg += f"New: '{self}'"
-            raise ValueError(msg)
-        self.instances[new_name] = self.instances.pop(self.name)
 
 
 class Isotropic(Material):
@@ -147,9 +78,9 @@ class Isotropic(Material):
     ):
         Isotropic.__verify_young_modulus(young_modulus)
         Isotropic.__verify_poissons_ratio(poissons_ratio)
-        super().__init__(name)
         self.__young_modulus = young_modulus
         self.__poissons_ratio = poissons_ratio
+        self.name = name
 
     def __str__(self) -> str:
         values = [

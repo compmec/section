@@ -11,7 +11,6 @@ from compmec.section.material import Isotropic
 
 
 @pytest.mark.order(4)
-@pytest.mark.skip(reason="Test only in the version 0.4.0")
 @pytest.mark.dependency(
     depends=[
         "tests/test_material.py::test_end",
@@ -36,11 +35,43 @@ class TestSinglePolygon:
         side = 2
         geometry = Primitive.square(side)
         material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
-        section = Section(geometry, material)
+        section = Section.from_shapes(geometry, material)
         field = section.charged_field()
+
         points = [(0, 0)]
-        values = field.eval(points)
-        assert np.all(np.abs(values) < 1e-9)
+        points += [
+            (1, 0),
+            (1, 1),
+            (0, 1),
+            (-1, 1),
+            (-1, 0),
+            (-1, -1),
+            (0, -1),
+            (1, -1),
+        ]
+        field.forces = (0, 0, 0)
+        field.momentums = (0, 0, 0)
+        stress, strain = field.eval(points)
+        assert np.all(np.abs(stress) < 1e-9)  # no charge, all zero
+        assert np.all(np.abs(strain) < 1e-9)  # no charge, all zero
+
+        field.forces = (0, 0, 0)
+        field.momentums = (4 / 3, 0, 0)
+        stress, strain = field.eval(points)
+        assert np.all(np.abs(stress[:, :2]) < 1e-9)  # No shear
+        good_normal_stress = [0]
+        good_normal_stress += [0, 1, 1, 1, 0, -1, -1, -1]
+        abs_diff = np.abs(stress[:, 2] - good_normal_stress)
+        assert np.all(abs_diff < 1e-9)
+
+        field.forces = (0, 0, 0)
+        field.momentums = (0, 4 / 3, 0)
+        stress, strain = field.eval(points)
+        assert np.all(np.abs(stress[:, :2]) < 1e-9)  # No shear
+        good_normal_stress = [0]
+        good_normal_stress += [-1, -1, 0, 1, 1, 1, 0, -1]
+        abs_diff = np.abs(stress[:, 2] - good_normal_stress)
+        assert np.all(abs_diff < 1e-9)
 
     @pytest.mark.order(4)
     @pytest.mark.dependency(
@@ -66,11 +97,55 @@ class TestHollowPolygon:
         geometry = Primitive.square(ext_side)
         geometry -= Primitive.square(int_side)
         material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
-        section = Section(geometry, material)
+        section = Section.from_shapes(geometry, material)
         field = section.charged_field()
-        points = [(0, 0)]
-        values = field.eval(points)
-        assert np.all(np.abs(values) < 1e-9)
+
+        points = [(0, 0)]  # origin
+        points += [
+            (0.5, 0),
+            (0.5, 0.5),
+            (0, 0.5),
+            (-0.5, 0.5),
+            (-0.5, 0),
+            (-0.5, -0.5),
+            (0, -0.5),
+            (0.5, -0.5),
+        ]
+        points += [
+            (1, 0),
+            (1, 1),
+            (0, 1),
+            (-1, 1),
+            (-1, 0),
+            (-1, -1),
+            (0, -1),
+            (1, -1),
+        ]
+        field.forces = (0, 0, 0)
+        field.momentums = (0, 0, 0)
+        stress, strain = field.eval(points)
+        assert np.all(np.abs(stress) < 1e-9)  # no charge, all zero
+        assert np.all(np.abs(strain) < 1e-9)  # no charge, all zero
+
+        field.forces = (0, 0, 0)
+        field.momentums = (1.25, 0, 0)
+        stress, strain = field.eval(points)
+        assert np.all(np.abs(stress[:, :2]) < 1e-9)  # No shear
+        good_normal_stress = [0]  # origin
+        good_normal_stress += [0, 0.5, 0.5, 0.5, 0, -0.5, -0.5, -0.5]
+        good_normal_stress += [0, 1, 1, 1, 0, -1, -1, -1]
+        abs_diff = np.abs(stress[:, 2] - good_normal_stress)
+        assert np.all(abs_diff < 1e-9)
+
+        field.forces = (0, 0, 0)
+        field.momentums = (0, 1.25, 0)
+        stress, strain = field.eval(points)
+        assert np.all(np.abs(stress[:, :2]) < 1e-9)  # No shear
+        good_normal_stress = [0]
+        good_normal_stress += [-0.5, -0.5, 0, 0.5, 0.5, 0.5, 0, -0.5]
+        good_normal_stress += [-1, -1, 0, 1, 1, 1, 0, -1]
+        abs_diff = np.abs(stress[:, 2] - good_normal_stress)
+        assert np.all(abs_diff < 1e-9)
 
     @pytest.mark.order(4)
     @pytest.mark.dependency(

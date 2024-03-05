@@ -6,18 +6,19 @@ Mainly the the two types of files are : JSON and VTK/VTU
 
 import json
 import os
-from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, Optional
 
 import jsonschema
 
+from .abcs import IFileIO
 from .curve import Curve, Node
+from .geometry import Geometry
 from .material import Material
 from .section import Section
 
 
-class FileIO(ABC):
+class FileIO(IFileIO):
     """
     Abstract Reader class that serves as basic interface to read/save
     informations from/to given file.
@@ -40,64 +41,6 @@ class FileIO(ABC):
 
         """
         return self.__filepath
-
-    @abstractmethod
-    def is_open(self) -> bool:
-        """
-        Tells if the reader is open
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def open(self, mode: str = "r"):
-        """
-        Opens the file
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def close(self):
-        """
-        Closes the file
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def read_nodes(self):
-        """
-        Saves all the nodes from file into Node class
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def read_curves(self):
-        """
-        Creates all the curves instances from file
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def read_materials(self):
-        """
-        Creates all the materials instances from file
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def read_sections(self):
-        """
-        Creates all the sections instances from file
-        """
-        raise NotImplementedError
-
-    def read(self):
-        """
-        Read the file and create all instaces
-        """
-        self.read_nodes()
-        self.read_curves()
-        self.read_materials()
-        self.read_sections()
 
     def __enter__(self):
         self.open()
@@ -171,7 +114,7 @@ class JsonIO(FileIO):
         with open(self.filepath, "w", encoding="ascii") as file:
             file.write(json_object)
 
-    def read_nodes(self):
+    def load_nodes(self):
         """
         Reads a nodes json and returns the data inside it.
 
@@ -191,7 +134,7 @@ class JsonIO(FileIO):
             Node.clear(labels)
         Node.insert_matrix(matrix)
 
-    def read_curves(self):
+    def load_curves(self):
         """
         Reads a curve json and returns the data inside it.
 
@@ -213,7 +156,7 @@ class JsonIO(FileIO):
             curve = Curve.new_instance("nurbs", infos)
             curve.label = label
 
-    def read_materials(self):
+    def load_materials(self):
         """
         Reads a material json and returns the data inside it.
 
@@ -233,7 +176,7 @@ class JsonIO(FileIO):
             material = Material.new_instance("isotropic", info)
             material.name = name
 
-    def read_sections(self):
+    def load_sections(self):
         """
         Reads a section json file and returns the data inside it.
 
@@ -253,5 +196,9 @@ class JsonIO(FileIO):
         if self.overwrite:
             Section.clear(sections.keys())
         for name, info in sections.items():
-            section = Section.from_dict(info)
+            geome_labels = info["geom_labels"]
+            geometries = tuple(map(Geometry, geome_labels))
+            geome_names = tuple(geome.name for geome in geometries)
+            mater_names = tuple(info["materials"])
+            section = Section(geome_names, mater_names)
             section.name = name

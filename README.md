@@ -7,7 +7,7 @@
 [![Python Versions][pyversions-img]][pyversions-url]
 [![License: MIT][license-img]][license-url]
 
-![compmec-section logo](docs/source/img/logo.svg)
+![compmec-section logo](docs/source/img/logo.png)
 
 A python package for analysis of beam sections by using Boundary Element Method.
 

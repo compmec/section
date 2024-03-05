@@ -46,51 +46,29 @@ def comb(a, b):
     return prod
 
 
-# pylint: disable=invalid-name
-def integrate_polygon(
-    xverts: Tuple[float], yverts: Tuple[float], amax: int = 3, bmax: int = 3
-) -> Tuple[Tuple[float]]:
+def winding_number_linear(
+    pointa: Tuple[float], pointb: Tuple[float], center: Tuple[float]
+) -> float:
     """
-    Computes integrals, returning a matrix II such
+    Computes the winding number for a straight line AB with respect to C
 
-    II_{a, b} = int_D x^a * y^b dx dy
-
-    for a = [0, ..., amax] and b = [0, ..., bmax]
-
-    and D being a polygonal domain given by the vertices
-
-    Parameters
-    ----------
-    xverts: tuple[float]
-        Abssice values of the vertices
-    yverts: tuple[float]
-        Ordoned values of the vertices
-    amax: int, default 3
-        The maximum expoent multiplying 'x'
-    bmax: int, default 3
-        The maximum expoent multiplying 'y'
-    return: tuple[tuple[float]]
-        A matrix II of shape (amax+1, bmax+1) such
-        II_{ij} = int_D x^a * y^b dx dy
+    :param pointa: The pair (xa, ya)
+    :type pointa: Tuple[float]
+    :param pointb: The pair (xb, yb)
+    :type pointb: Tuple[float]
+    :param center: The pair (xc, yc)
+    :type center: Tuple[float]
+    :return: The winding number value in the interval [-0.5, 0.5]
+    :rtype: float
     """
-    xvan = np.vander(xverts, amax + 1, True)
-    yvan = np.vander(yverts, bmax + 1, True)
-
-    cross = xverts * np.roll(yverts, shift=-1)
-    cross -= yverts * np.roll(xverts, shift=-1)
-
-    geomprops = np.zeros((amax + 1, bmax + 1), dtype="float64")
-    for a in range(amax + 1):
-        for b in range(bmax + 1):
-            M = np.zeros((a + 1, b + 1), dtype="float64")
-            for i in range(a + 1):
-                for j in range(b + 1):
-                    M[i, j] = comb(i + j, i) * comb(a + b - i - j, b - j)
-            X = np.roll(xvan[:, : a + 1], shift=-1, axis=0) * xvan[:, a::-1]
-            Y = np.roll(yvan[:, : b + 1], shift=-1, axis=0) * yvan[:, b::-1]
-            geomprops[a, b] = np.einsum("k,ki,ij,kj", cross, X, M, Y)
-            geomprops[a, b] /= (a + b + 2) * (a + b + 1) * comb(a + b, a)
-    return geomprops
+    x1 = float(pointa[0] - center[0])
+    y1 = float(pointa[1] - center[1])
+    x2 = float(pointb[0] - center[0])
+    y2 = float(pointb[1] - center[1])
+    cross = x1 * y2 - x2 * y1
+    inner = x1 * x2 + y1 * y2
+    wind = np.arctan2(cross, inner) / math.tau
+    return wind
 
 
 class Integration:
@@ -279,6 +257,34 @@ class Integration:
         return nodes, weights
 
     @staticmethod
+    def opened(npts: int) -> Tuple[Tuple[float]]:
+        """
+        Open newton cotes formula
+
+        Parameters
+        ----------
+        npts: int
+            The number of points to use gauss integration.
+            Must be at least 1
+        return: tuple[tuple[float]]
+            The pair (nodes, weights), with each node in the interval [0, 1]
+        """
+        if not isinstance(npts, int) or npts < 1:
+            raise ValueError(f"npts invalid: {npts}")
+        if npts > 7:
+            raise NotImplementedError
+        nodes = tuple(num / (npts + 1) for num in range(1, npts + 1))
+        nodes = np.array(nodes, dtype="float64")
+        weights = (
+            (1.0,),
+            (0.5, 0.5),
+            (2 / 3, -1 / 3, 2 / 3),
+            (11 / 24, 1 / 24, 1 / 24, 11 / 24),
+        )
+        weights = np.array(weights[npts - 1], dtype="float64")
+        return nodes, weights
+
+    @staticmethod
     def chebyshev(npts: int) -> Tuple[Tuple[float]]:
         """Chebyshev integration
 
@@ -329,3 +335,193 @@ class Integration:
         nodes = np.array(nodes, dtype="float64")
         weights = np.array(all_weights[npts - 1], dtype="float64")
         return nodes, weights
+
+
+class Polynomial:
+    """
+    Class responsible to compute the integral
+
+    II(a, b) = int_D x^a * y^b dx dy
+
+    Which D is the domain defined by the interior of a curve
+    The (a, b) values are the expoents
+
+    """
+
+    expoents = [
+        (0, 0),
+        (0, 1),
+        (1, 0),
+        (0, 2),
+        (1, 1),
+        (2, 0),
+        (0, 3),
+        (2, 1),
+        (1, 2),
+        (3, 0),
+    ]
+
+    # pylint: disable=invalid-name
+    @staticmethod
+    def polygon(vertices: Tuple[Tuple[float]]) -> Tuple[float]:
+        """
+        Computes integrals, returning the values of the integral
+
+        II_{a, b} = int_D x^a * y^b dx dy
+
+        for (a, b) = [(0, 0), (0, 1), (1, 0), (0, 2), (1, 1), (2, 0),
+                      (0, 3), (2, 1), (1, 2), (3, 0)]
+
+        and D being a polygonal domain given by the vertices
+
+        Parameters
+        ----------
+
+        :param vertices: The vertices that defines the polygon
+        :type vertices: tuple[tuple[float]]
+        :return: A vector of lenght 10 containing the integral values
+        :rtype: tuple[float]
+        """
+        vertices = np.array(vertices, dtype="float64")
+        xvan = np.vander(vertices[:, 0], 4, True)
+        yvan = np.vander(vertices[:, 1], 4, True)
+
+        cross = vertices[:, 0] * np.roll(vertices[:, 1], shift=-1)
+        cross -= vertices[:, 1] * np.roll(vertices[:, 0], shift=-1)
+
+        expoents = Polynomial.expoents
+        geomprops = np.zeros(len(expoents), dtype="float64")
+        for k, (a, b) in enumerate(expoents):
+            M = np.zeros((a + 1, b + 1), dtype="float64")
+            for i in range(a + 1):
+                for j in range(b + 1):
+                    M[i, j] = comb(i + j, i) * comb(a + b - i - j, b - j)
+            X = np.roll(xvan[:, : a + 1], shift=-1, axis=0) * xvan[:, a::-1]
+            Y = np.roll(yvan[:, : b + 1], shift=-1, axis=0) * yvan[:, b::-1]
+            geomprops[k] = np.einsum("k,ki,ij,kj", cross, X, M, Y)
+            geomprops[k] /= (a + b + 2) * (a + b + 1) * comb(a + b, a)
+        return geomprops
+
+    @staticmethod
+    def adaptative(curve, tolerance: float = 1e-9) -> Tuple[float]:
+        """
+        Computes the polynomials integrals over the area defined by the curve
+
+        It uses an adaptative algorithm that allows computing the integrals
+        over smooth curves using milne's (open newton quadrature 3 points)
+
+        This function uses a recursive approach
+
+        :param curve: The boundary curve around the area
+        :type curve: Curve
+        :return: The integral values
+        :rtype: float
+
+        """
+        expoents = Polynomial.expoents
+        integrals = np.zeros(len(expoents), dtype="float64")
+        integrator = AdaptativePolynomialIntegrator(curve, tolerance=tolerance)
+        for k, (expx, expy) in enumerate(expoents):
+            value = integrator.integrate(expx, expy)
+            integrals[k] = value / (2 + expx + expy)
+        return integrals
+
+
+class AdaptativePolynomialIntegrator:
+    """
+    Adaptative Polynomial Integrator
+
+    Receives a curve and computes the polynomials integrals recursivelly
+    using open newton cotes quadrature with 3 points
+    """
+
+    integ_matrix = (
+        np.array([[0, 4, -1], [-4, 0, 4], [1, -4, 0]], dtype="float64") / 3
+    )
+
+    def __init__(self, curve, *, max_depth: int = 9, tolerance=1e-9):
+        self.curve = curve
+        self.max_depth = max_depth
+
+        mesh = set()
+        for t0, t1 in zip(curve.knots, curve.knots[1:]):
+            subtol = tolerance * (t1 - t0) / (curve.knots[-1] - curve.knots[0])
+            mesh |= self.find_mesh(t0, t1, tolerance=subtol)
+        self.mesh = tuple(sorted(mesh))
+
+    def find_mesh(
+        self, t0: float, t1: float, tolerance: float = 1e-9
+    ) -> Tuple[float]:
+        """
+        Finds the curve's subdivisions such the area computed
+        by the adaptative subdivision is lower than the tolerance
+        """
+        subknots = np.linspace(t0, t1, 5)
+        xvals, yvals = np.transpose(self.curve.eval(subknots))
+        area_mid = xvals[::2] @ self.integ_matrix @ yvals[::2]
+        area_lef = xvals[:3] @ self.integ_matrix @ yvals[:3]
+        area_rig = xvals[2:] @ self.integ_matrix @ yvals[2:]
+        diff = abs(area_lef + area_rig - area_mid)
+        mesh = {t0, t1}
+        if diff > tolerance:
+            mesh |= self.find_mesh(t0, subknots[2], tolerance / 2)
+            mesh |= self.find_mesh(subknots[2], t1, tolerance / 2)
+        return mesh
+
+    def milne_formula(self, t0: float, t1: float, a: int, b: int) -> float:
+        """
+        Computes the integral using Milne formula
+
+        int_{t0}^{t1} x^a * y^b * (x * dy - y * dx)
+
+        with (x(t), y(t)) being the curve
+
+        Parameters
+        ----------
+
+        :param t0: The lower interval's value
+        :type t0: float
+        :param t1: The upper interval's value
+        :type t1: float
+        :param a: The x expoent
+        :type a: int
+        :param b: The y expoent
+        :type b: int
+        :return: The interval's integral value
+        :rtype: float
+
+        """
+        ts = np.linspace(t0, t1, 5)
+        points = self.curve.eval(ts)
+        xs = points[:, 0]
+        ys = points[:, 1]
+        f1 = xs[1] ** a * ys[1] ** b
+        f2 = xs[2] ** a * ys[2] ** b
+        f3 = xs[3] ** a * ys[3] ** b
+        f1 *= xs[1] * (ys[2] - ys[0]) - ys[1] * (xs[2] - xs[0])
+        f2 *= xs[2] * (ys[3] - ys[1]) - ys[2] * (xs[3] - xs[1])
+        f3 *= xs[3] * (ys[4] - ys[2]) - ys[3] * (xs[4] - xs[2])
+        return (4 * f1 - 2 * f2 + 4 * f3) / 3
+
+    def integrate(self, expx: int, expy: int) -> float:
+        """
+        Computes the integral over the entire curve
+
+        int_{Gamma} x^expx * y^expy * (x * dy - y * dx)
+
+        with (x(t), y(t)) being the curve
+
+        Parameters
+        ----------
+
+        :param tolerance: The tolerance to how when stop adaptative quadrature
+        :type tolerance: float
+        :return: The interval's integral value
+        :rtype: float
+        """
+        value = 0
+        for t0, t1 in zip(self.mesh, self.mesh[1:]):
+            tm = 0.5 * (t0 + t1)
+            value += self.milne_formula(t0, tm, expx, expy)
+            value += self.milne_formula(tm, t1, expx, expy)
+        return value
