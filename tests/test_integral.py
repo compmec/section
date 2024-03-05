@@ -1,13 +1,54 @@
 import numpy as np
 import pytest
 
-from compmec.section.integral import Integration
+from compmec.section.integral import Integration, Polynomial, comb
 
 
 @pytest.mark.order(1)
 @pytest.mark.dependency()
 def test_begin():
     pass
+
+
+@pytest.mark.order(1)
+@pytest.mark.timeout(10)
+@pytest.mark.dependency(depends=["test_begin"])
+def test_comb():
+    """
+    Tests the binomial function
+    """
+    assert comb(1, 0) == 1
+    assert comb(1, 1) == 1
+
+    assert comb(2, 0) == 1
+    assert comb(2, 1) == 2
+    assert comb(2, 2) == 1
+
+    assert comb(3, 0) == 1
+    assert comb(3, 1) == 3
+    assert comb(3, 2) == 3
+    assert comb(3, 3) == 1
+
+    assert comb(4, 0) == 1
+    assert comb(4, 1) == 4
+    assert comb(4, 2) == 6
+    assert comb(4, 3) == 4
+    assert comb(4, 4) == 1
+
+    assert comb(5, 0) == 1
+    assert comb(5, 1) == 5
+    assert comb(5, 2) == 10
+    assert comb(5, 3) == 10
+    assert comb(5, 4) == 5
+    assert comb(5, 5) == 1
+
+    assert comb(6, 0) == 1
+    assert comb(6, 1) == 6
+    assert comb(6, 2) == 15
+    assert comb(6, 3) == 20
+    assert comb(6, 4) == 15
+    assert comb(6, 5) == 6
+    assert comb(6, 6) == 1
 
 
 @pytest.mark.order(1)
@@ -198,13 +239,56 @@ def test_singular_logarithm():
 
 
 @pytest.mark.order(1)
+@pytest.mark.timeout(10)
+@pytest.mark.dependency(depends=["test_begin"])
+def test_integral_polygon():
+    """
+    Tests the polynomial integrals of polygons
+    """
+    vertices = ((1, 1), (-1, 1), (-1, -1), (1, -1))
+    geomprops = Polynomial.polygon(vertices)
+    assert geomprops[0] == 4  # area
+    assert geomprops[1] == 0  # Qx
+    assert geomprops[2] == 0  # Qy
+    assert geomprops[3] == 4 / 3  # Ixx
+    assert geomprops[4] == 0  # Ixy
+    assert geomprops[5] == 4 / 3  # Iyy
+    assert geomprops[6] == 0  # Ixxx
+    assert geomprops[7] == 0  # Ixxy
+    assert geomprops[8] == 0  # Ixyy
+    assert geomprops[9] == 0  # Iyyy
+
+
+@pytest.mark.order(1)
+@pytest.mark.timeout(10)
+@pytest.mark.dependency(depends=["test_begin"])
+def test_fail():
+    """
+    Tests the fail cases
+    """
+    with pytest.raises(ValueError):
+        Integration.opened(0)
+    with pytest.raises(ValueError):
+        Integration.closed(1)
+    with pytest.raises(ValueError):
+        Integration.chebyshev(0)
+    with pytest.raises(ValueError):
+        Integration.gauss(0)
+    with pytest.raises(ValueError):
+        Integration.log(0)
+
+
+@pytest.mark.order(1)
 @pytest.mark.dependency(
     depends=[
+        "test_comb",
         "test_closed_newton",
         "test_opened_newton",
         "test_chebyshev",
         "test_gauss",
         "test_singular_logarithm",
+        "test_integral_polygon",
+        "test_fail",
     ]
 )
 def test_end():
