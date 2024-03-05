@@ -13,7 +13,7 @@ from .abcs import NamedTracker
 from .curve import Curve, NurbsCurve
 
 
-class ConnectedGeometry(NamedTracker):
+class Geometry(NamedTracker):
     """
     Connected Geometry class that represents a bidimensional region
     on the plane and has some functions such as to decide if points
@@ -56,7 +56,7 @@ class ConnectedGeometry(NamedTracker):
         return float(np.all(mask))
 
 
-def shapes2geometries(shapes: Tuple[DefinedShape]) -> Tuple[ConnectedGeometry]:
+def shapes2geometries(shapes: Tuple[DefinedShape]) -> Tuple[Geometry]:
     """
     Transform shapes instances into geometry instances
 
@@ -75,6 +75,6 @@ def shapes2geometries(shapes: Tuple[DefinedShape]) -> Tuple[ConnectedGeometry]:
                 jordan = ~jordan
             curve = NurbsCurve.from_jordan(jordan)
             curve_labels.append(signal * curve.label)
-        geometry = ConnectedGeometry(curve_labels)
+        geometry = Geometry(curve_labels)
         geometries.append(geometry)
     return geometries

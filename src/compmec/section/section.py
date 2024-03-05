@@ -17,7 +17,7 @@ from compmec.shape.shape import DefinedShape
 from .abcs import NamedTracker
 from .curve import Curve
 from .field import ChargedField
-from .geometry import ConnectedGeometry, shapes2geometries
+from .geometry import Geometry, shapes2geometries
 from .integral import Polynomial
 from .material import Material
 
@@ -40,7 +40,7 @@ class BaseSection(NamedTracker):
         name: Optional[str] = None,
     ):
         for geo_name in geome_names:
-            assert geo_name in ConnectedGeometry.instances
+            assert geo_name in Geometry.instances
         for mat_name in mater_names:
             assert mat_name in Material.instances
         self.name = name
@@ -48,7 +48,7 @@ class BaseSection(NamedTracker):
         self.__mater_names = tuple(mater_names)
 
     @property
-    def geometries(self) -> Iterable[ConnectedGeometry]:
+    def geometries(self) -> Iterable[Geometry]:
         """
         Geometric curves labels that defines shapes
 
@@ -56,7 +56,7 @@ class BaseSection(NamedTracker):
         :type: Tuple[Tuple[int]]
         """
         for name in self.__geome_names:
-            yield ConnectedGeometry.instances[name]
+            yield Geometry.instances[name]
 
     @property
     def materials(self) -> Iterable[Material]:
@@ -101,7 +101,7 @@ class GeometricSection(BaseSection):
 
     def __init__(
         self,
-        geome_names: Tuple[ConnectedGeometry],
+        geome_names: Tuple[Geometry],
         mater_names: Tuple[Material],
     ):
         super().__init__(geome_names, mater_names)

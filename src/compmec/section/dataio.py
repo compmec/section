@@ -13,7 +13,7 @@ import jsonschema
 
 from .abcs import IFileIO
 from .curve import Curve, Node
-from .geometry import ConnectedGeometry
+from .geometry import Geometry
 from .material import Material
 from .section import Section
 
@@ -197,7 +197,7 @@ class JsonIO(FileIO):
             Section.clear(sections.keys())
         for name, info in sections.items():
             geome_labels = info["geom_labels"]
-            geometries = tuple(map(ConnectedGeometry, geome_labels))
+            geometries = tuple(map(Geometry, geome_labels))
             geome_names = tuple(geome.name for geome in geometries)
             mater_names = tuple(info["materials"])
             section = Section(geome_names, mater_names)

@@ -7,7 +7,7 @@ import pytest
 
 from compmec import nurbs
 from compmec.section.curve import NurbsCurve
-from compmec.section.geometry import ConnectedGeometry
+from compmec.section.geometry import Geometry
 
 
 @pytest.mark.order(1)
@@ -26,7 +26,7 @@ def test_full_square():
     curve = nurbs.Curve(knotvector, vertices)
     curve = NurbsCurve(curve)
 
-    geometry = ConnectedGeometry([curve.label])
+    geometry = Geometry([curve.label])
 
     assert geometry.winding((0, 0)) == 1
     assert geometry.winding((1, 0)) == 0.5
@@ -55,7 +55,7 @@ def test_hollow_square():
     curve_int = nurbs.Curve(knotvector, vertices)
     curve_int = NurbsCurve(curve_int)
 
-    geometry = ConnectedGeometry([curve_ext.label, -curve_int.label])
+    geometry = Geometry([curve_ext.label, -curve_int.label])
 
     assert geometry.winding((0, 0)) == 0
     assert geometry.winding((1, 0)) == 0.5
