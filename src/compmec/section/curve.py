@@ -11,7 +11,6 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 from compmec.shape import JordanCurve
-from compmec.shape.shape import DefinedShape
 
 from compmec import nurbs
 
@@ -212,28 +211,3 @@ class NurbsCurve(Curve):
                 break
             wind += sub_wind
         return wind
-
-
-def shapes_to_curves(shapes: Tuple[DefinedShape]) -> Tuple[Tuple[int]]:
-    """
-    Transform shapes instances into the pair (curves, geom_labels)
-    curves contains all the parametric curves used to define the shapes
-    geom_labels relates which curves are used to describe each shape
-
-    :param shapes: The group of shapes used in section
-    :type shapes: Tuple[DefinedShape]
-    :return: The pair (curves, geom_labels)
-    :rtype: Tuple[Tuple[int]]
-    """
-    geom_labels = []
-    for shape in shapes:
-        assert isinstance(shape, DefinedShape)
-        new_geom_labels = []
-        for jordan in shape.jordans:
-            signal = 1 if float(jordan) > 0 else -1
-            if signal < 0:
-                jordan = ~jordan
-            curve = NurbsCurve.from_jordan(jordan)
-            new_geom_labels.append(signal * curve.label)
-        geom_labels.append(new_geom_labels)
-    return geom_labels
