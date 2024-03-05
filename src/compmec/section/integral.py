@@ -403,7 +403,7 @@ class Polynomial:
         return geomprops
 
     @staticmethod
-    def adaptative(curve) -> Tuple[float]:
+    def adaptative(curve, tolerance: float = 1e-9) -> Tuple[float]:
         """
         Computes the polynomials integrals over the area defined by the curve
 
@@ -416,15 +416,13 @@ class Polynomial:
         :type curve: Curve
         :return: The integral values
         :rtype: float
+
         """
-        tolerance = 1e-6
         expoents = Polynomial.expoents
         integrals = np.zeros(len(expoents), dtype="float64")
-        integrator = AdaptativePolynomialIntegrator(curve)
+        integrator = AdaptativePolynomialIntegrator(curve, tolerance=tolerance)
         for k, (expx, expy) in enumerate(expoents):
-            integrator.expx = expx
-            integrator.expy = expy
-            value = integrator.integrate(tolerance=tolerance)
+            value = integrator.integrate(expx, expy)
             integrals[k] = value / (2 + expx + expy)
         return integrals
 
@@ -437,13 +435,40 @@ class AdaptativePolynomialIntegrator:
     using open newton cotes quadrature with 3 points
     """
 
-    def __init__(self, curve, *, max_depth: int = 9):
+    integ_matrix = (
+        np.array([[0, 4, -1], [-4, 0, 4], [1, -4, 0]], dtype="float64") / 3
+    )
+
+    def __init__(self, curve, *, max_depth: int = 9, tolerance=1e-9):
         self.curve = curve
-        self.expx = 0
-        self.expy = 0
         self.max_depth = max_depth
 
-    def milne_formula(self, t0: float, t1: float) -> float:
+        mesh = set()
+        for t0, t1 in zip(curve.knots, curve.knots[1:]):
+            subtol = tolerance * (t1 - t0) / (curve.knots[-1] - curve.knots[0])
+            mesh |= self.find_mesh(t0, t1, tolerance=subtol)
+        self.mesh = tuple(sorted(mesh))
+
+    def find_mesh(
+        self, t0: float, t1: float, tolerance: float = 1e-9
+    ) -> Tuple[float]:
+        """
+        Finds the curve's subdivisions such the area computed
+        by the adaptative subdivision is lower than the tolerance
+        """
+        subknots = np.linspace(t0, t1, 5)
+        xvals, yvals = np.transpose(self.curve.eval(subknots))
+        area_mid = xvals[::2] @ self.integ_matrix @ yvals[::2]
+        area_lef = xvals[:3] @ self.integ_matrix @ yvals[:3]
+        area_rig = xvals[2:] @ self.integ_matrix @ yvals[2:]
+        diff = abs(area_lef + area_rig - area_mid)
+        mesh = {t0, t1}
+        if diff > tolerance:
+            mesh |= self.find_mesh(t0, subknots[2], tolerance / 2)
+            mesh |= self.find_mesh(subknots[2], t1, tolerance / 2)
+        return mesh
+
+    def milne_formula(self, t0: float, t1: float, a: int, b: int) -> float:
         """
         Computes the integral using Milne formula
 
@@ -458,11 +483,14 @@ class AdaptativePolynomialIntegrator:
         :type t0: float
         :param t1: The upper interval's value
         :type t1: float
+        :param a: The x expoent
+        :type a: int
+        :param b: The y expoent
+        :type b: int
         :return: The interval's integral value
         :rtype: float
 
         """
-        a, b = self.expx, self.expy
         ts = np.linspace(t0, t1, 5)
         points = self.curve.eval(ts)
         xs = points[:, 0]
@@ -475,48 +503,7 @@ class AdaptativePolynomialIntegrator:
         f3 *= xs[3] * (ys[4] - ys[2]) - ys[3] * (xs[4] - xs[2])
         return (4 * f1 - 2 * f2 + 4 * f3) / 3
 
-    def integrate_interval(
-        self, t0: float, t1: float, tolerance: float, depth: int
-    ) -> float:
-        """
-        Computes the integral
-
-        int_{t0}^{t1} x^expx * y^expy * (x * dy - y * dx)
-
-        with (x(t), y(t)) being the curve
-
-        This function is recursive
-
-        Parameters
-        ----------
-
-        :param t0: The lower interval's value
-        :type t0: float
-        :param t1: The upper interval's value
-        :type t1: float
-        :param tolerance: The stop tolerance
-        :type tolerance: float
-        :param depth: The current depth, a key to know when stop
-        :type depth: int
-        :return: The interval's integral value
-        :rtype: float
-
-        """
-        tm = 0.5 * (t0 + t1)
-        value_midl = self.milne_formula(t0, t1)
-        value_left = self.milne_formula(t0, tm)
-        value_righ = self.milne_formula(tm, t1)
-        value_some = value_left + value_righ
-        if depth < self.max_depth and abs(value_some - value_midl) > tolerance:
-            value_left = self.integrate_interval(
-                t0, tm, tolerance / 2, depth + 1
-            )
-            value_righ = self.integrate_interval(
-                tm, t1, tolerance / 2, depth + 1
-            )
-        return value_left + value_righ
-
-    def integrate(self, *, tolerance: float = 1e-9) -> float:
+    def integrate(self, expx: int, expy: int) -> float:
         """
         Computes the integral over the entire curve
 
@@ -533,8 +520,8 @@ class AdaptativePolynomialIntegrator:
         :rtype: float
         """
         value = 0
-        knots = self.curve.knots
-        for t0, t1 in zip(knots, knots[1:]):
-            sub_tolerance = tolerance * (t1 - t0) / (knots[-1] - knots[0])
-            value += self.integrate_interval(t0, t1, sub_tolerance, depth=0)
+        for t0, t1 in zip(self.mesh, self.mesh[1:]):
+            tm = 0.5 * (t0 + t1)
+            value += self.milne_formula(t0, tm, expx, expy)
+            value += self.milne_formula(tm, t1, expx, expy)
         return value
