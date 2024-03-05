@@ -6,13 +6,14 @@ For example, ChargedField is responsible to compute the
 stress and strain of the section for every
 """
 
-from abc import ABC, abstractmethod
 from typing import Tuple
 
 import numpy as np
 
+from .abcs import IField
 
-class Field(ABC):
+
+class Field(IField):
     """
     This is a base abstract class parent of others
 
@@ -20,7 +21,6 @@ class Field(ABC):
     inside/outside of given section.
     """
 
-    @abstractmethod
     def eval_interior(
         self, points: Tuple[Tuple[float]]
     ) -> Tuple[Tuple[float]]:
@@ -34,7 +34,6 @@ class Field(ABC):
         """
         raise NotImplementedError
 
-    @abstractmethod
     def eval_boundary(
         self, points: Tuple[Tuple[float]]
     ) -> Tuple[Tuple[float]]:
@@ -45,17 +44,6 @@ class Field(ABC):
         :type points: Tuple[Tuple[float]]
         :return: The field value for every point
         :rtype: Tuple[bool]
-        """
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def ndata(self) -> int:
-        """
-        Gives the quantity of output numbers for one point
-
-        :getter: Returns the lenght of output data
-        :type: int
         """
         raise NotImplementedError
 

@@ -6,18 +6,18 @@ Mainly the the two types of files are : JSON and VTK/VTU
 
 import json
 import os
-from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, Optional
 
 import jsonschema
 
+from .abcs import IFileIO
 from .curve import Curve, Node
 from .material import Material
 from .section import Section
 
 
-class FileIO(ABC):
+class FileIO(IFileIO):
     """
     Abstract Reader class that serves as basic interface to read/save
     informations from/to given file.
@@ -40,64 +40,6 @@ class FileIO(ABC):
 
         """
         return self.__filepath
-
-    @abstractmethod
-    def is_open(self) -> bool:
-        """
-        Tells if the reader is open
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def open(self, mode: str = "r"):
-        """
-        Opens the file
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def close(self):
-        """
-        Closes the file
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def read_nodes(self):
-        """
-        Saves all the nodes from file into Node class
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def read_curves(self):
-        """
-        Creates all the curves instances from file
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def read_materials(self):
-        """
-        Creates all the materials instances from file
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def read_sections(self):
-        """
-        Creates all the sections instances from file
-        """
-        raise NotImplementedError
-
-    def read(self):
-        """
-        Read the file and create all instaces
-        """
-        self.read_nodes()
-        self.read_curves()
-        self.read_materials()
-        self.read_sections()
 
     def __enter__(self):
         self.open()

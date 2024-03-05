@@ -6,7 +6,6 @@ deal with the boundary curves.
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from collections import OrderedDict
 from typing import Dict, Optional, Tuple
 
@@ -17,7 +16,7 @@ from compmec.shape.shape import DefinedShape
 from compmec import nurbs
 
 from . import integral
-from .abcs import LabeledTracker
+from .abcs import ICurve, LabeledTracker
 
 
 class Node(LabeledTracker):
@@ -70,87 +69,6 @@ class Node(LabeledTracker):
 
         """
         return tuple(Node.instances[label] for label in labels)
-
-
-class ICurve(ABC):
-    """
-    Interface abstract curve to be parent of others.
-
-    This class serves as interface between the curves from others packaged
-    like nurbs.Curve, to this package, expliciting the minimum requirements
-    of a curve must have.
-    With this, it's possible to implement your own type of parametric curve
-    """
-
-    @classmethod
-    @abstractmethod
-    def from_dict(cls, dictionary: Dict) -> Curve:
-        """
-        Gives a curve instance based on the given parameters
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def to_dict(self) -> Dict:
-        """
-        Transforms a curve instance into a dictionary
-        """
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def limits(self) -> Tuple[float]:
-        """
-        Gives the curve's parametric interval
-
-        :getter: Returns the pair [a, b] in which curve is parametric defined
-        :type: Tuple[float]
-
-        """
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def knots(self) -> Tuple[float]:
-        """
-        Gives the curve's knots, in which the parametric interval is divided
-
-        :getter: Returns the knots that divides the curve's interval
-        :type: Tuple[float]
-
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def eval(self, parameters: Tuple[float]) -> Tuple[Tuple[float]]:
-        """
-        Evaluates the curves at given parameters.
-
-        :param parameters: A vector-like of lenght n
-        :type parameters: Tuple[float]
-        :return: A matrix of shape (n, 2)
-        :rtype: Tuple[Tuple[float]]
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def winding(self, point: Tuple[float]) -> float:
-        """
-        Computes the winding number of the given curve
-
-        The possible results are one in the interval [0, 1]
-
-        * 0 means the point is outside the internal curve
-        * 1 means the point is inside the internal curve
-        * in (0, 1) means it's on the boundary
-
-        :param point: A 2D-point
-        :type point: Tuple[float]
-        :return: The winding value with respect to the curve
-        :rtype: float
-
-        """
-        raise NotImplementedError
 
 
 class Curve(LabeledTracker, ICurve):

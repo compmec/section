@@ -4,14 +4,13 @@ This module contains the class 'Isotropic' to store and convert values
 
 from __future__ import annotations
 
-from abc import abstractmethod
 from collections import OrderedDict
 from typing import Dict, Optional
 
-from .abcs import NamedTracker
+from .abcs import IMaterial, NamedTracker
 
 
-class Material(NamedTracker):
+class Material(IMaterial, NamedTracker):
     """
     Material abstract class, the parent of other more specific materials
     """
@@ -33,21 +32,6 @@ class Material(NamedTracker):
         if tipo not in tipo2class:
             raise NotImplementedError
         return tipo2class[tipo].from_dict(dictionary)
-
-    @abstractmethod
-    def to_dict(self) -> Dict:
-        """
-        Converts the material to a dictionary
-        """
-        raise NotImplementedError
-
-    @classmethod
-    @abstractmethod
-    def from_dict(cls, dictionary: Dict) -> Material:
-        """
-        Converts the dictionary in a material instance
-        """
-        raise NotImplementedError
 
 
 class Isotropic(Material):
