@@ -113,7 +113,7 @@ class JsonIO(FileIO):
         with open(self.filepath, "w", encoding="ascii") as file:
             file.write(json_object)
 
-    def read_nodes(self):
+    def load_nodes(self):
         """
         Reads a nodes json and returns the data inside it.
 
@@ -133,7 +133,7 @@ class JsonIO(FileIO):
             Node.clear(labels)
         Node.insert_matrix(matrix)
 
-    def read_curves(self):
+    def load_curves(self):
         """
         Reads a curve json and returns the data inside it.
 
@@ -155,7 +155,7 @@ class JsonIO(FileIO):
             curve = Curve.new_instance("nurbs", infos)
             curve.label = label
 
-    def read_materials(self):
+    def load_materials(self):
         """
         Reads a material json and returns the data inside it.
 
@@ -175,7 +175,7 @@ class JsonIO(FileIO):
             material = Material.new_instance("isotropic", info)
             material.name = name
 
-    def read_sections(self):
+    def load_sections(self):
         """
         Reads a section json file and returns the data inside it.
 

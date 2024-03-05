@@ -146,10 +146,10 @@ class TestToFromJson:
     def test_read_square(self):
         json_filepath = "tests/json/steel_square.json"
         with JsonIO(json_filepath) as reader:
-            reader.read_nodes()
-            reader.read_curves()
-            reader.read_materials()
-            reader.read_sections()
+            reader.load_nodes()
+            reader.load_curves()
+            reader.load_materials()
+            reader.load_sections()
         square = Section.instances["square"]
         area = square.area()
         Qx, Qy = square.first_moment()
@@ -167,10 +167,10 @@ class TestToFromJson:
     def test_read_circle(self):
         json_filepath = "tests/json/steel_circle.json"
         with JsonIO(json_filepath) as reader:
-            reader.read_nodes()
-            reader.read_curves()
-            reader.read_materials()
-            reader.read_sections()
+            reader.load_nodes()
+            reader.load_curves()
+            reader.load_materials()
+            reader.load_sections()
         square = Section.instances["square"]
         area = square.area()
         Qx, Qy = square.first_moment()

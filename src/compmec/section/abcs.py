@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Tuple, Union
 
 
-class Tracker(ABC):
+class Tracker(ABC):  # pylint: disable=too-few-public-methods
     """
     Parent class to track all the instances
     """
@@ -278,28 +278,28 @@ class IFileIO(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def read_nodes(self):
+    def load_nodes(self):
         """
         Saves all the nodes from file into Node class
         """
         raise NotImplementedError
 
     @abstractmethod
-    def read_curves(self):
+    def load_curves(self):
         """
         Creates all the curves instances from file
         """
         raise NotImplementedError
 
     @abstractmethod
-    def read_materials(self):
+    def load_materials(self):
         """
         Creates all the materials instances from file
         """
         raise NotImplementedError
 
     @abstractmethod
-    def read_sections(self):
+    def load_sections(self):
         """
         Creates all the sections instances from file
         """
