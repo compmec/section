@@ -37,9 +37,49 @@ class TestSinglePolygon:
         material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
         section = Section.from_shapes(geometry, material)
         field = section.charged_field()
-        points = [(0, 0)]
+
+        points = [
+            (0, 0),
+            (1, 0),
+            (1, 1),
+            (0, 1),
+            (-1, 1),
+            (-1, 0),
+            (-1, -1),
+            (0, -1),
+            (1, -1),
+        ]
+        field.forces = (0, 0, 0)
+        field.momentums = (0, 0, 0)
         values = field.eval(points)
-        assert np.all(np.abs(values) < 1e-9)
+        assert np.all(np.abs(values) < 1e-9)  # no charge, all zero
+
+        field.forces = (0, 0, 4)
+        field.momentums = (0, 0, 0)
+        values = field.eval(points)
+        assert np.all(np.abs(values[:, :2]) < 1e-9)  # no shear
+        test_normal_stress = values[:, 2]
+        good_normal_stress = 1
+        abs_diff = np.abs(test_normal_stress - good_normal_stress)
+        assert np.all(abs_diff < 1e-9)
+
+        field.forces = (0, 0, 0)
+        field.momentums = (4 / 3, 0, 0)
+        values = field.eval(points)
+        assert np.all(np.abs(values[:, :2]) < 1e-9)  # No shear
+        test_normal_stress = values[:, 2]
+        good_normal_stress = (0, 0, 1, 1, 1, 0, -1, -1, -1)
+        abs_diff = np.abs(test_normal_stress - good_normal_stress)
+        assert np.all(abs_diff < 1e-9)
+
+        field.forces = (0, 0, 0)
+        field.momentums = (0, 4 / 3, 0)
+        values = field.eval(points)
+        assert np.all(np.abs(values[:, :2]) < 1e-9)  # No shear
+        test_normal_stress = values[:, 2]
+        good_normal_stress = (0, -1, -1, 0, 1, 1, 1, 0, -1)
+        abs_diff = np.abs(test_normal_stress - good_normal_stress)
+        assert np.all(abs_diff < 1e-9)
 
     @pytest.mark.order(4)
     @pytest.mark.dependency(

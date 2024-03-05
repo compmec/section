@@ -83,5 +83,32 @@ class ChargedField(Field):
     def momentums(self, new_momentums: tuple[float]):
         self.__charges[3:] = new_momentums
 
+    def __stress_axial(self, winds):
+        sigmazz = self.forces[2] / self.section.area()
+        return np.any(winds, axis=1) * sigmazz
+
+    def __stress_bending(self, points, winds):
+        bend_center = self.section.bending_center()
+        ixx, ixy, iyy = self.section.second_moment(bend_center)
+        detii = ixx * iyy - ixy**2
+        matrix = np.array([[iyy, -ixy], [-ixy, ixx]])
+        momx, momy, _ = self.momentums
+        vector = np.dot(matrix, [-momy, momx]) / detii
+        return np.dot(points, vector) * np.any(winds, axis=1)
+
     def eval(self, points):
-        raise NotImplementedError
+        points = np.array(points, dtype="float64")
+        results = np.zeros((len(points), self.ndata), dtype="float64")
+        geometries = self.section.geometries
+        winds = tuple(
+            tuple(map(geome.winding, points)) for geome in geometries
+        )
+        winds = np.array(winds, dtype="float64")
+        forx, fory, forz, momx, momy, momz = self.__charges
+        if forz:  # Axial force
+            results[:, 2] += self.__stress_axial(winds)
+        if momx or momy:  # Bending moments
+            results[:, 2] += self.__stress_bending(points, winds)
+        if forx or fory or momz:
+            raise NotImplementedError
+        return results
