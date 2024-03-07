@@ -342,3 +342,43 @@ class ISection(ABC):  # pylint: disable=too-few-public-methods
     """
     Section abstract class to serve as interface
     """
+
+
+class IBasis(ABC):
+    """
+    Basis functions abstract class
+    """
+
+    @property
+    @abstractmethod
+    def ndofs(self) -> Tuple[float]:
+        """
+        Gives the number of the basis functions
+
+        :getter: Returns the number of the basis functions
+        :type: int
+        """
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def knots(self) -> Tuple[float]:
+        """
+        Gives the dividing knots
+
+        :getter: Returns the knots of the basis functions
+        :type: Tuple[float]
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def eval(self, params: Tuple[float]) -> Tuple[Tuple[float]]:
+        """
+        Evaluate the (m, ) basis functions at given parameters
+
+        :param params: The (n, ) parameter values to be evaluated
+        :type params: Tuple[float]
+        :return: The results in a matrix of shape (n, m)
+        :rtype: Tuple[Tuple[float]]
+        """
+        raise NotImplementedError
