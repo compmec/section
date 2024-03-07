@@ -12,8 +12,65 @@ from typing import Tuple
 
 import numpy as np
 
-from .abcs import ISection
+from .abcs import IBasis, ISection
 from .curve import Curve
+
+
+class ComputeMatrix:
+    """
+    This class is resposible to compute the matrix [M]
+    made by the following integral
+
+    M_ij = int phi_j * (r x p')/<r, r> * dt
+
+    Which represents the integral
+
+    int u * (dv/dn) ds
+    """
+
+    @staticmethod
+    def incurve(curve: Curve, basis: IBasis, tsources: Tuple[float]):
+        """
+        Computes the integral when the sources are placed at the curve.
+        The emplacement of these sources are given by parameter 'tsources'
+
+        Parameters
+        ----------
+
+        :param curve: The parametric curve
+        :type curve: Curve
+        :param basis: The evaluation basis functions
+        :type basis: IBasis
+        :param tsources: The parametric emplacement of sources
+        :type tsources: Tuple[float]
+        :return: The output matrix, integral of UVn
+        :rtype: Tuple[Tuple[float]]
+        """
+        raise NotImplementedError
+
+    @staticmethod
+    def outcurve(curve: Curve, basis: IBasis, sources: Tuple[Tuple[float]]):
+        """
+        Computes the integral when the sources are placed outside (or not)
+        of the curve.
+
+        The emplacement of these sources can be any, including on the curve.
+
+        Not yet implemented cases which source lies on the curve
+
+        Parameters
+        ----------
+
+        :param curve: The parametric curve
+        :type curve: Curve
+        :param basis: The evaluation basis functions
+        :type basis: IBasis
+        :param sources: The sources positions, points
+        :type sources: Tuple[Tuple[float]]
+        :return: The output matrix, integral of UVn
+        :rtype: Tuple[Tuple[float]]
+        """
+        raise NotImplementedError
 
 
 class BEMModel:
@@ -23,6 +80,10 @@ class BEMModel:
 
     def __init__(self, section: ISection):
         self.section = section
+        labels = set()
+        for geometry in self.section.geometries:
+            labels |= set(map(abs, geometry.labels))
+        self.all_labels = tuple(sorted(labels))
         self.__meshes = {}
 
     def make_mesh(self, distance: float):
@@ -33,10 +94,7 @@ class BEMModel:
         :type distance: float
         """
         assert distance > 0
-        labels = set()
-        for geometry in self.section.geometries:
-            labels |= set(map(abs, geometry.labels))
-        for label in labels:
+        for label in self.all_labels:
             curve = Curve.instances[label]
             knots = curve.knots
             new_mesh = set(knots)
@@ -57,5 +115,8 @@ class BEMModel:
     def __getitem__(self, key: int):
         return self.__meshes[key]
 
-    def __setitem__(self, key: int, value: Tuple[float]):
-        self.__meshes[key] = value
+    def __setitem__(self, label: int, value: Tuple[float]):
+        if label not in self.all_labels:
+            msg = f"Given label {label} is not in {self.all_labels}"
+            raise ValueError(msg)
+        self.__meshes[label] = value
