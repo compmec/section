@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from compmec.shape import Primitive
 
-from compmec.section import Section
+from compmec.section import Curve, Material, Section
 from compmec.section.bem2d import BEMModel
 from compmec.section.material import Isotropic
 
@@ -15,6 +15,7 @@ from compmec.section.material import Isotropic
 @pytest.mark.dependency(
     depends=[
         "tests/test_integral.py::test_end",
+        "tests/test_basisfunc.py::test_end",
         "tests/test_material.py::test_end",
         "tests/test_curve.py::test_end",
         "tests/test_geometry.py::test_end",
@@ -32,7 +33,9 @@ class TestConstruction:
     @pytest.mark.order(8)
     @pytest.mark.dependency(depends=["test_begin"])
     def test_begin(self):
-        pass
+        Curve.clear()
+        Material.clear()
+        Section.clear()
 
     @pytest.mark.order(8)
     @pytest.mark.timeout(10)
@@ -45,6 +48,7 @@ class TestConstruction:
 
         mesh = np.linspace(0, 1, 5)
         bemmodel[1] = mesh
+        del mesh
         mesh = bemmodel[1]
         assert np.all(mesh == (0, 0.25, 0.5, 0.75, 1))
 
