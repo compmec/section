@@ -211,3 +211,68 @@ class NurbsCurve(Curve):
                 break
             wind += sub_wind
         return wind
+
+
+class PolygonCurve(Curve):
+    """
+    A Curve that defines a polygon
+    """
+
+    def __init__(
+        self, vertices: Tuple[Tuple[float]], label: Optional[int] = None
+    ):
+        self.label = label
+        print("vertices = ")
+        print(vertices)
+        self.vertices = np.array(vertices)
+        if np.all(self.vertices[0] == self.vertices[-1]):
+            raise ValueError
+
+    @property
+    def limits(self) -> Tuple[float]:
+        return (0.0, float(len(self.vertices)))
+
+    @property
+    def knots(self) -> Tuple[float]:
+        return np.arange(0, len(self.vertices), 1.0)
+
+    @classmethod
+    def from_dict(cls, dictionary: Dict) -> ICurve:
+        vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1]]
+        return cls(vertices)
+
+    def to_dict(self) -> Dict:
+        return {}
+
+    def eval(self, parameters):
+        nvertices = len(self.vertices)
+        points = []
+        for parameter in parameters:
+            lower = int(np.floor(parameter))
+            middle = parameter - lower
+            new_point = (1 - middle) * self.vertices[lower % nvertices]
+            new_point += middle * self.vertices[(lower + 1) % nvertices]
+            points.append(new_point)
+        points = np.array(points, dtype="float64")
+        return points
+
+    def winding(self, point: Tuple[float]) -> float:
+        # Verify if the point is at any vertex
+        vertices = self.vertices
+        nverts = len(vertices)
+        for i, vertex in enumerate(vertices):
+            if np.all(point == vertex):
+                verta = vertices[(i - 1) % nverts]
+                vertb = vertices[(i + 1) % nverts]
+                wind = integral.winding_number_linear(vertb, verta, point)
+                return wind
+
+        wind = 0
+        for i, vertexa in enumerate(vertices):
+            vertexb = vertices[(i + 1) % nverts]
+            sub_wind = integral.winding_number_linear(vertexa, vertexb, point)
+            if abs(sub_wind) == 0.5:
+                wind = 0.5
+                break
+            wind += sub_wind
+        return wind
