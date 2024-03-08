@@ -174,18 +174,6 @@ class ICurve(ABC):
 
     @property
     @abstractmethod
-    def limits(self) -> Tuple[float]:
-        """
-        Gives the curve's parametric interval
-
-        :getter: Returns the pair [a, b] in which curve is parametric defined
-        :type: Tuple[float]
-
-        """
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
     def knots(self) -> Tuple[float]:
         """
         Gives the curve's knots, in which the parametric interval is divided

@@ -172,10 +172,6 @@ class NurbsCurve(Curve):
         return self.internal.knotvector.knots
 
     @property
-    def limits(self) -> Tuple[float]:
-        return self.internal.knotvector.limits
-
-    @property
     def internal(self) -> nurbs.Curve:
         """
         Gives the internal nurbs.Curve object
@@ -222,15 +218,9 @@ class PolygonCurve(Curve):
         self, vertices: Tuple[Tuple[float]], label: Optional[int] = None
     ):
         self.label = label
-        print("vertices = ")
-        print(vertices)
         self.vertices = np.array(vertices)
         if np.all(self.vertices[0] == self.vertices[-1]):
             raise ValueError
-
-    @property
-    def limits(self) -> Tuple[float]:
-        return (0.0, float(len(self.vertices)))
 
     @property
     def knots(self) -> Tuple[float]:
