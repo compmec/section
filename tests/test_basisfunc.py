@@ -31,8 +31,9 @@ class TestCyclic:
         basis = BasisFunc.cyclic(knots, degree=1)
         umesh = (0, 0.25, 0.5, 0.75, 1)
         valus = basis.eval(umesh)
-        assert np.all(valus[:, 0] == (1, 0.5, 0, 0.5, 1))
-        assert np.all(valus[:, 1] == (0, 0.5, 1, 0.5, 0))
+        assert valus.shape == (basis.ndofs, len(umesh))
+        assert np.all(valus[0] == (1, 0.5, 0, 0.5, 1))
+        assert np.all(valus[1] == (0, 0.5, 1, 0.5, 0))
 
     @pytest.mark.order(1)
     @pytest.mark.dependency(

@@ -57,6 +57,6 @@ class BasisFunc(IBasisFunc):
         ndofs = self.ndofs
         start = self.basis.degree
         values = self.basis.eval(parameters)
-        values = np.transpose(values)
-        values[:, :start] += values[:, ndofs:]
-        return values[:, :ndofs]
+        values = np.array(values)
+        values[:start] += values[ndofs:]
+        return values[:ndofs]
