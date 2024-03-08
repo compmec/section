@@ -28,7 +28,7 @@ The theory is divided in parts:
 2) :ref:`torsion_properties`
 3) :ref:`shear_properties`
 4) :ref:`stress_and_strain`
-5) :ref:`numerical_integration`
+5) :ref:`numerical_integration_differences`
 6) :ref:`boundary_element_method`
 
 -----------------------------------------------------------------
@@ -420,6 +420,7 @@ Hence, the strain is given by elasticity law:
 .. math::
     \boldsymbol{\varepsilon} = \dfrac{\mathrm{F}_{z}}{EA}\begin{bmatrix}-\nu & 0 & 0 \\ 0 & -\nu & 0 \\ 0 & 0 & 1\end{bmatrix}
 
+
 .. _bending_moments:
 
 Bending Moments
@@ -445,13 +446,13 @@ Let :math:`\bar{x}=x-x_{bc}` and :math:`\bar{y}=y-y_{bc}`, the function :math:`\
 Add the hypothesis that :math:`\sigma_{zz}` is linear with respect to :math:`x` and :math:`y`, then 
 
 .. math::
-    \sigma_{zz}(x, \ y) & = \dfrac{1}{\det \left(\mathbb{I}_{local}\right)} \begin{bmatrix}\bar{y} & \bar{x}\end{bmatrix} \left[\mathbb{I}_{b}\right] \begin{bmatrix}M_{x} \\ M_{y}\end{bmatrix} \\
+    \sigma_{zz}(x, \ y) & = \dfrac{1}{\det \left(\mathbb{I}_{local}\right)} \begin{bmatrix}\bar{y} & \bar{x}\end{bmatrix} \left[\mathbb{I}_{local}\right] \begin{bmatrix}M_{x} \\ M_{y}\end{bmatrix} \\
      & = -\left(\dfrac{I_{\overline{xy}}\mathrm{M}_{x} + I_{\overline{xx}}\mathrm{M}_{y}}{I_{\overline{xx}}I_{\overline{yy}}-I_{\overline{xy}}^2}\right) \cdot \bar{x} + \left(\dfrac{I_{\overline{yy}}\mathrm{M}_{x} + I_{\overline{xy}}\mathrm{M}_{y}}{I_{\overline{xx}}I_{\overline{yy}}-I_{\overline{xy}}^2}\right) \cdot \bar{y}
 
 With constants given in :ref:`local_second_moment_area`
 
 The neutral line is the set of pairs :math:`(x, \ y)` such :math:`\sigma_{zz}(x, \ y) = 0`.
-That means the neutral line is the line that pass thought :math:`\boldsymbol{B}` and it's parallel to the vector :math:`\left[\mathbb{I}_{b}\right] \cdot \left(\mathrm{M}_{x}, \ \mathrm{M}_{y}\right)`
+That means the neutral line is the line that pass thought :math:`\boldsymbol{B}` and it's parallel to the vector :math:`\left[\mathbb{I}_{local}\right] \cdot \left(\mathrm{M}_{x}, \ \mathrm{M}_{y}\right)`
 
 It's possible to obtain strain values from elasticity law:
 
@@ -462,7 +463,6 @@ It's possible to obtain strain values from elasticity law:
 
 .. math::
     \boldsymbol{\varepsilon} = \dfrac{\sigma_{zz}}{E} \cdot \begin{bmatrix}-\nu & 0 & 0 \\ 0 & -\nu & 0 \\ 0 & 0 & 1\end{bmatrix}
-
 
 
 .. _torsion_moment:
@@ -524,11 +524,35 @@ TODO
 
 -----------------------------------------------------------------
 
-.. _numerical_integration:
+.. _numerical_integration_differences:
 
-=====================
-Numerical Integration
-=====================
+=========================================
+Numerical Differentiation and Integration
+=========================================
+
+To evaluate the matrices :math:`\mathbb{M}` and :math:`\mathbb{F}`,
+we use numerical differentiation to estimate the derivative and numerical integration to estimate the defined integral value.
+
+.. _differentiation:
+
+Numerical derivative
+--------------------
+
+It's objective to compute the value of :math:`f'(x)` only with values of points nearby.
+
+There are many formulas for it, but here we present only some
+
+.. math::
+    f'(x) \approx \dfrac{1}{2h} \cdot \begin{bmatrix}-1 & 0 & 1\end{bmatrix}\begin{bmatrix}f(x-h) \\ f(x) \\ f(x+h)\end{bmatrix}
+
+.. math::
+    f'(x) \approx \dfrac{1}{12h} \cdot \begin{bmatrix}-6 & -20 & 36 & -12 & 2\end{bmatrix}\begin{bmatrix}f(x-h) \\ f(x) \\ f(x+h) \\ f(x+2h) \\ f(x+3h)\end{bmatrix}
+
+.. math::
+    f'(x) \approx \dfrac{1}{12h} \cdot \begin{bmatrix}1 & -8 & 0 & 8 & -1\end{bmatrix}\begin{bmatrix}f(x-2h) \\ f(x-h) \\ f(x) \\ f(x+h) \\ f(x+2h)\end{bmatrix}
+
+.. math::
+    f'(x) \approx \dfrac{1}{12h} \cdot \begin{bmatrix}-2 & 12 & -36 & 20 & 6\end{bmatrix}\begin{bmatrix}f(x-3h) \\ f(x-2h) \\ f(x-h) \\ f(x) \\ f(x+h)\end{bmatrix}
 
 .. _regular_integrals:
 
@@ -587,7 +611,7 @@ In special, by taking :math:`\alpha = \dfrac{a+1}{a+b+2}`, it's transformed to
 .. math::
     (a+b+2) \cdot I_{a, b} = \int_{\Gamma} x^a \cdot y^b \cdot \mathbf{p} \times \mathbf{p}' \ dt
 
-Computing it can be done by :ref:`regular_integrals`
+Finding :math:`I_{a, b}` it can be easily done with :ref:`regular_integrals`
 
 Polygonal domains
 ^^^^^^^^^^^^^^^^^
@@ -601,7 +625,7 @@ In that case, each segment is a straight line, so
 which is constant for an arbitrary segment :math:`i`. Hence
 
 .. math::
-    (a+b+2) \cdot I_{a, b} = \sum_{i=0}^{n-1} \left(x_{i}y_{i+1}-x_{i+1}y_{i}\right) I_{a, b, i}
+    (a+b+2) \cdot I_{a, b} = \sum_{i=0}^{m-1} \left(x_{i}y_{i+1}-x_{i+1}y_{i}\right) I_{a, b}^{(i)}
 
 .. math::
     I_{a, b}^{(i)} = \int_{\Gamma_i} x^a \cdot y^b \ dt
@@ -616,13 +640,19 @@ Leading to
 .. math::
     (a+b+1)\binom{a+b}{a} I_{a, b}^{(i)} = \sum_{j=0}^{a}\sum_{k=0}^{b}\binom{j+k}{k}\binom{a+b-j-k}{b-k}x_{i}^{a-j}x_{i+1}^{j}y_{i}^{b-k}y_{i+1}^{k}
 
+Therefore
+
+.. math::
+    (a+b+2) (a+b+1)\binom{a+b}{a} I_{a, b} = \sum_{i=0, j=0, k=0}^{m-1,a,b}\binom{j+k}{k}\binom{a+b-j-k}{b-k} x_{i}^{a-j}x_{i+1}^{j} y_{i}^{b-k}y_{i+1}^{k}
+
+
 For special cases that :math:`a=0` or :math:`b=0`, we get
 
 .. math::
-    (a+2)(a+1)I_{a,0} = \sum_{i=0}^{n-1} \left(x_{i}y_{i+1}-x_{i+1}y_{i}\right)\dfrac{x_{i+1}^{a+1}-x_{i}^{a+1}}{x_{i+1}-x_{i}}
+    (a+2)(a+1)I_{a,0} = \sum_{i=0}^{m-1} \left(x_{i}y_{i+1}-x_{i+1}y_{i}\right)\dfrac{x_{i+1}^{a+1}-x_{i}^{a+1}}{x_{i+1}-x_{i}}
 
 .. math::
-    (b+2)(b+1)I_{0,b} = \sum_{i=0}^{n-1} \left(x_{i}y_{i+1}-x_{i+1}y_{i}\right)\dfrac{y_{i+1}^{b+1}-y_{i}^{b+1}}{y_{i+1}-y_{i}}
+    (b+2)(b+1)I_{0,b} = \sum_{i=0}^{m-1} \left(x_{i}y_{i+1}-x_{i+1}y_{i}\right)\dfrac{y_{i+1}^{b+1}-y_{i}^{b+1}}{y_{i+1}-y_{i}}
 
 .. note::
     It's possible to have :math:`x_{i+1} = x_{i}` or :math:`y_{i+1} = y_{i}` in some segment, which leads to divide by zero in :math:`I_{a,0}` and :math:`I_{0,b}`.
@@ -667,7 +697,15 @@ there are only two types of singular integrals developed in :ref:`boundary_eleme
 Logarithm singularity
 ^^^^^^^^^^^^^^^^^^^^^
 
+To compute the :math:`\mathbb{F}` matrix, we are interested in computing
+
+.. math::
+    \int_{0}^{1} f(\tau) \cdot \ln \left|\tau - \tau_i\right| \ d\tau
+
 We are interested in computing the integral
+
+.. math::
+    I = \int_{0}^{1} f(x) \ \cdot \ln x \ dx
 
 .. math::
     I = \int_{0}^{1} f(x) \ \cdot \ln x \ dx
@@ -772,26 +810,26 @@ BEM transforms :eq:`eq_laplace` into a boundary version :eq:`eq_bem`
 .. math::
     :label: eq_bem
 
-    \alpha\left(\mathbf{s}\right) \cdot u\left(\mathbf{s}\right) = \int_{\Gamma} u \cdot \dfrac{\partial v}{\partial n} \ d\Gamma - \int_{\Gamma} \dfrac{\partial u}{\partial n}  \cdot v \ d\Gamma
+    \varpi\left(\mathbf{s}\right) \cdot u\left(\mathbf{s}\right) = \int_{\Gamma} u \cdot \dfrac{\partial v}{\partial n} \ d\Gamma - \int_{\Gamma} \dfrac{\partial u}{\partial n}  \cdot v \ d\Gamma
 
-Which :math:`\mathbf{s}` is the source point of the Green function :math:`v` and :math:`\alpha(\mathbf{s})` is the angle at the point :math:`\mathbf{s}`.
+Which :math:`\mathbf{s}` is the source point of the Green function :math:`v` and :math:`\varpi(\mathbf{s})` is the winding number
 
 .. math::
     :label: eq_source
 
-    v(\mathbf{p}, \ \mathbf{s}) = \ln r = \ln \|\mathbf{r}\| = \ln \|\mathbf{p} - \mathbf{s}\|
+    v(\mathbf{p}, \ \mathbf{s}) = \dfrac{1}{2\pi} \ln r = \dfrac{1}{2\pi} \ln \|\mathbf{r}\| = \dfrac{1}{2\pi} \ln \|\mathbf{p} - \mathbf{s}\|
 
 Since all the PDEs used in this package have only Neumann's boundary conditions,
 all values of :math:`\dfrac{\partial u}{\partial n}` are known and the objective is finding all the values of :math:`u` at the boundary.
 
-Once :math:`u` and :math:`\dfrac{\partial u}{\partial n}` are known at the boundary,
+Once :math:`u` and :math:`\dfrac{\partial u}{\partial n}` are both known at the boundary,
 it's possible to compute :math:`u(x, y)` and its derivatives at any point inside by using :eq:`eq_bem`.
 
 
-Solution at the boundary
+Discretize solution
 ------------------------
 
-Parametrize the curve :math:`\Gamma` by :math:`\mathbf{p}(t)`
+Parametrize the curve :math:`\Gamma` by :math:`\mathbf{p}(t)` with :math:`m` subdivisions with knots :math:`\left(t_0, \ t_1, \ \cdots, \ t_m\right)`
 
 .. math::
     :label: eq_curve_param
@@ -805,59 +843,65 @@ Set :math:`u(t)` as a linear combination of :math:`n` basis functions :math:`\va
 
     u(t) = \sum_{j=0}^{n-1} \varphi_j(t) \cdot U_j = \langle \mathbf{\varphi}(t), \ \mathbf{U}\rangle
 
-Fix the source point :math:`\mathbf{s}_i = \mathbf{p}(t_i)` at the boundary and
+Fix the source point :math:`\mathbf{s}_i = \mathbf{p}(\hat{t}_i)` at the boundary and
 expand :eq:`eq_bem` by using :eq:`eq_discret_func` to get :eq:`eq_matrix_formula`
 
 .. math::
     :label: eq_matrix_formula
 
-    \sum_{j=0}^{n-1} A_{ij} \cdot U_{j} = \sum_{j=0}^{n-1} M_{ij} \cdot U_{j} - F_{i}
+    \sum_{j=0}^{n-1} \mathbb{W}_{ij} \cdot U_{j} = \sum_{j=0}^{n-1} \mathbb{M}_{ij} \cdot U_{j} - \mathbf{F}_{i}
 
-With the auxiliar values which depends only on the geometry, the source point and the basis functions
-
-.. math::
-    A_{ij} = \alpha\left(\mathbf{s}_i\right) \cdot \varphi_j\left(t_i\right)
+With the auxiliar values which depends only on the geometry :math:`\mathbf{p}`, the source point :math:`\mathbf{s}` and the basis functions :math:`\varphi`
 
 .. math::
-    M_{ij} = \int_{\Gamma} \varphi_j \cdot \dfrac{\partial v_i}{\partial n} \ d\Gamma
+    \mathbb{W}_{ij} = \varpi\left(\mathbf{s}_i\right) \cdot \varphi_j\left(t_i\right)
 
 .. math::
-    F_{i} = \int_{\Gamma} \dfrac{\partial u}{\partial n} \cdot v_i \ d\Gamma
+    \mathbb{M}_{ij} = \int_{\Gamma} \varphi_j \cdot \dfrac{\partial v_i}{\partial n} \ d\Gamma
+
+.. math::
+    \mathbb{F}_{i} = \int_{\Gamma} \dfrac{\partial u}{\partial n} \cdot v_i \ d\Gamma
 
 Applying for :math:`n` different source points :math:`\mathbf{s}_i` at boundary,
-we get the matrices :math:`\mathbb{A}`, :math:`\mathbb{M}` and :math:`\mathbf{F}` such
+we get the matrices :math:`\mathbb{W}`, :math:`\mathbb{M}` and :math:`\mathbb{F}` such
 
 .. math::
     :label: eq_linear_system
 
-    \left(\mathbb{M}-\mathbb{A}\right) \cdot \mathbf{U} = \mathbf{F}
+    \left(\mathbb{M}-\mathbb{W}\right) \cdot \mathbf{U} = \mathbb{F}
 
 Finding the values of :math:`\mathbf{U}` means solving the linear system :eq:`eq_linear_system`.
 The objective then is computing these matrices to solve :eq:`eq_linear_system`.
 
-Matrix :math:`\mathbb{A}`
+General evaluation of matrices
+------------------------------
+
+Matrix :math:`\mathbb{W}`
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The angle :math:`\alpha` is the mesure for a given point with respect to its position to the domain :math:`\Omega`.
+The winding number :math:`\varpi` tells the position of a point :math:`\mathbf{s}` with respect to the domain :math:`\Omega`.
+
+.. image:: ../img/winding.svg
+    :width: 50 %
+    :alt: winding-number-definition
+    :align: center
+
+- If :math:`\mathbf{s}` is outside :math:`\mathrm{closed}\left(\Omega\right)`, then :math:`\varpi\left(\mathbf{s}\right) = 0`, like in white region
+- If :math:`\mathbf{s}` is inside :math:`\mathrm{open}\left(\Omega\right)`, then :math:`\varpi\left(\mathbf{s}\right) = 1`, like in green region
+- If :math:`\mathbf{s}` is on the boundary :math:`\partial \Omega`, then :math:`\varpi\left(\mathbf{s}\right) \in \left(0, \ 1\right)`, meaning :math:`\frac{1}{2}` when :math:`\partial \Omega` is smooth at :math:`\mathbf{s}` (red lines).
+
+Then, the value of :math:`\mathbb{W}_{ij}` can be computed as:
 
 .. math::
-    \alpha\left(\mathbf{s}\right) = \begin{cases}\in \left(0, \ 2\pi\right) \ \ \ \ \text{if} \ \mathbf{s} \in \partial \Omega \\ 0 \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \text{if} \ \mathbf{s} \notin \text{closed}\left(\Omega\right) \\   2\pi \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \text{if} \ \mathbf{s} \in \text{open}\left(\Omega\right) \end{cases}
+    \mathbb{W}_{ij} = \varpi\left(\mathbf{s}_i\right) \cdot \varphi_j\left(t_i\right)
 
-When :math:`\mathbf{s} \in \partial \Omega`, there is a value :math:`\tau` such :math:`\mathbf{p}(\tau) = \mathbf{s}` and the angle :math:`\alpha` is computed by
-
-.. math::
-    \mathbf{v}_0 = -\lim_{\delta \to 0^{+}} \mathbf{p}'\left(\tau - \delta\right)
-
-.. math::
-    \mathbf{v}_1 = \lim_{\delta \to 0^{+}} \mathbf{p}'\left(\tau + \delta\right)
-
-.. math::
-    \alpha = \arg\left(\langle\mathbf{v_0}, \ \mathbf{v_1} \rangle + i \cdot \left(\mathbf{v_0} \times \mathbf{v_1}\right)\right)
-
-For smooth regions, the first derivative of :math:`\mathbf{p}` is continuous and therefore then :math:`\alpha = \pi`.
+For construction of the basis functions :math:`\varphi`, many :math:`\varphi_j\left(t_i\right)` are zero, normally leading :math:`\mathbb{W}` to be a diagonal matrix.
 
 .. note::
-    In python code, it's in fact used ``alpha = arctan2(cross(v0, v1), inner(v0, v1))``
+    Formal definition: Let :math:`D(\mathbf{c}, \ r)` be a disk of center :math:`\mathbf{c}` and radius :math:`r`, :math:`\varpi(\mathbf{s})` is defined by the limit of the ratio
+
+    .. math::
+        \varpi(\mathbf{s}) = \lim_{\delta \to 0^{+}} \dfrac{\mathrm{area}\left(D\left(\mathbf{s}, \ \delta\right) \cap \Omega\right)}{\mathrm{area}\left(D\left(\mathbf{s}, \ \delta\right)\right)}
 
 Matrix :math:`\mathbb{M}`
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -865,15 +909,29 @@ Matrix :math:`\mathbb{M}`
 We use
 
 .. math::
-    \dfrac{\partial v}{\partial n} ds = \dfrac{\mathbf{r} \times \mathbf{p}'}{\left\langle\mathbf{r}, \ \mathbf{r}\right\rangle}
+    \dfrac{\partial v}{\partial n} ds = \dfrac{1}{2\pi} \cdot \dfrac{\mathbf{r} \times \mathbf{p}'}{\left\langle\mathbf{r}, \ \mathbf{r}\right\rangle} \ dt
 
 to write
 
 .. math::
-    M_{ij} = \int_{t_{min}}^{t_{max}} \varphi_{j}(t) \cdot \dfrac{\mathbf{r} \times \mathbf{p}'}{\left\langle\mathbf{r}, \ \mathbf{r}\right\rangle} \ dt
+    \mathbb{M}_{ij} = \dfrac{1}{2\pi} \int_{t_{min}}^{t_{max}} \varphi_{j}(t) \cdot \dfrac{\mathbf{r} \times \mathbf{p}'}{\left\langle\mathbf{r}, \ \mathbf{r}\right\rangle} \ dt
 
-Vector :math:`\mathbf{F}` for warping
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Since the geometry is divided at knots :math:`\left(t_{0}, \ t_{1}, \ \cdots, \ t_{m}\right)`
+
+.. math::
+    \mathbb{M}_{ij} = \dfrac{1}{2\pi} \sum_{k=0}^{m-1} \int_{t_{k}}^{t_{k+1}} \varphi_{j}(t) \cdot \dfrac{\mathbf{r} \times \mathbf{p}'}{\left\langle\mathbf{r}, \ \mathbf{r}\right\rangle} \ dt
+
+Change the variable from :math:`t` to :math:`\tau` to get
+
+.. math::
+    \mathbb{M}_{ij} = \dfrac{1}{2\pi} \sum_{k=0}^{m-1} \int_{0}^{1} \overline{\varphi}_{j}(\tau) \cdot \dfrac{\mathbf{r} \times \mathbf{p}'}{\left\langle\mathbf{r}, \ \mathbf{r}\right\rangle} \ d\tau
+
+Each integral is easily computed by :ref:`regular_integrals` except for the intervals which :math:`r = 0` and we use :ref:`singular_integrals`.
+
+Matrix :math:`\mathbb{F}`
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The matrix :math:`\mathbb{F}` contains in fact 3 columns: 1 for warping, 2 for shear.
 
 For the warping function
 
@@ -881,43 +939,29 @@ For the warping function
     \dfrac{\partial u}{\partial n} = \mathbf{n} \times \mathbf{p} = \dfrac{\langle \mathbf{p}, \ \mathbf{p}'\rangle}{\|\mathbf{p}'\|}
 
 .. math::
-    F_i = \int_{t_{min}}^{t_{max}} \left\langle \mathbf{p}, \ \mathbf{p}'\right\rangle \cdot \ln \|\mathbf{r}_i\| \ dt
+    \mathbb{F}_{i0} = \dfrac{1}{2\pi} \int_{t_{min}}^{t_{max}} \left\langle \mathbf{p}, \ \mathbf{p}'\right\rangle \cdot \ln \|\mathbf{r}_i\| \ dt
 
+.. math::
+    \mathbb{F}_{i0} = \dfrac{1}{2\pi}\sum_{k=0}^{m-1} \int_{t_{k}}^{t_{k+1}} \left\langle \mathbf{p}, \ \mathbf{p}'\right\rangle \cdot \ln \|\mathbf{r}_i\| \ dt
 
-Vector :math:`\mathbf{F}` for shear
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. math::
+    \mathbb{F}_{i0} = \dfrac{1}{2\pi} \sum_{k=0}^{m-1} \int_{0}^{1} \left\langle \mathbf{p}, \ \mathbf{p}'\right\rangle \cdot \ln \|\mathbf{r}_i\| \ d\tau
 
 TODO
 
-
-Evaluating matrices
-^^^^^^^^^^^^^^^^^^^
-
-The matrices highly depend on the geometry and the basis functions :math:`\varphi`.
-
-To compute the coefficients :math:`M_{ij}` and :math:`F_{i}`, it's used numerical integration, like Gaussian-Quadrature.
-Unfortunatelly, when :math:`r = 0` at some point, the integrants are singular and special techniques are used.
-
-The main idea to compute them is decompose the integral in intervals and use
-
-* **Outside integration**: uses :ref:`regular_integrals` for elements which :math:`r\ne 0` for all points
-
-* **Inside integration**: uses :ref:`singular_integrals` for elements which :math:`r=0` at any point
-
-For polygonal domains the **Inside integration** is not required cause it can be done analiticaly. But for higher degrees, it's indeed necessary
 
 .. _constraint_solution:
 
 Constraint solution
 ^^^^^^^^^^^^^^^^^^^
 
-Although the matrix :math:`\mathbb{K}=\mathbb{M}-\mathbb{A}` is not singular, all the PDEs have Neumann's boundary conditions and has no unique solution.
+Although the matrix :math:`\left(\mathbb{M}-\mathbb{W}\right)` is not singular, all the PDEs have Neumann's boundary conditions hence there's no unique solution.
 If :math:`u^{\star}` is found as solution, then :math:`\left(u^{\star} + \text{const}\right)` also is a solution.
 
-Although both functions give the same properties cause it envolves only the derivatives of :math:`u`, we restrict the solution by solving the system with Lagrange Multiplier.
+Although both functions give the same properties cause they uses only the derivatives of :math:`u`, we restrict the solution by solving the system with Lagrange Multiplier.
 
 .. math::
-    \begin{bmatrix}K & \mathbf{C} \\ \mathbf{C}^T & 0\end{bmatrix} \begin{bmatrix}\mathbf{U} \\ \lambda \end{bmatrix} = \begin{bmatrix}\mathbf{F} \\ 0\end{bmatrix}
+    \begin{bmatrix}K & \mathbf{C} \\ \mathbf{C}^T & 0\end{bmatrix} \begin{bmatrix}\mathbf{U} \\ \lambda \end{bmatrix} = \begin{bmatrix}\mathbb{F} \\ 0\end{bmatrix}
 
 Which vector :math:`\mathbf{C}` is a vector of ones.
 
@@ -926,15 +970,16 @@ The determination exacly of the constant depends on the problem and are better t
 
 .. _bem_polygonal_domain:
 
-Polygonal domain
-----------------
+Polygonal evaluation of matrices
+--------------------------------
 
-For polygonal domains, when the basis functions :math:`\phi(t)` are piecewise linear, some computations becomes easier. Let's say the parametric space :math:`t` is divided by the knots :math:`t_0`, :math:`t_1`, :math:`\cdots`, :math:`t_{m-1}`, :math:`t_m`, which correspond to the vertices
+For polygonal domains, when the basis functions :math:`\phi(t)` are piecewise linear, some computations becomes easier.
+The :math:`m` vertices are placed at knots :math:`\left(t_0, \ t_1, \ \cdots, \ t_m\right)`.
 
-For an arbitrary interval :math:`\left[t_k, \ t_{k+1}\right]`, :math:`\mathbf{p}(t)` is described as
+For an arbitrary interval :math:`\left[t_k, \ t_{k+1}\right]`, :math:`\mathbf{p}(t)` is described as :math:`\mathbf{p}_{k}(\tau)`
 
 .. math::
-    \mathbf{p}(t) = \mathbf{P}_{k} + \tau \cdot \mathbf{V}_k
+    \mathbf{p}_{k}(\tau) = \mathbf{P}_{k} + \tau \cdot \mathbf{V}_k
     
 .. math::
     \mathbf{V}_k = \mathbf{P}_{k+1} - \mathbf{P}_{k}
@@ -942,109 +987,103 @@ For an arbitrary interval :math:`\left[t_k, \ t_{k+1}\right]`, :math:`\mathbf{p}
 .. math::
     \tau = \dfrac{t - t_{k}}{t_{k+1} - t_{k}} \in \left[0, \ 1\right]
 
-Since the source point :math:`\mathbf{s}_i = \mathbf{p}(t_i)`,
+Since the source point lies on the boundary at parameter :math:`\hat{t}_i`, meaning :math:`\mathbf{s}_i = \mathbf{p}(t_i)`, then
 
-* If :math:`t_i \in \left[t_{k}, \ t_{k+1}\right]` then
 
+* If :math:`\hat{t}_i \notin \left[t_{k}, \ t_{k+1}\right]` then
+    
     .. math::
-        \mathbf{r}(t) = \left(\tau-\tau_i\right) \cdot \left(\mathbf{P}_{k+1} - \mathbf{P}_{k}\right)
-
-    .. math::
-        \tau_i = \dfrac{t_i - t_{k}}{t_{k+1} - t_{k}}\in \left[0, \ 1\right]
+        \mathbf{r}(\tau) = \left(\mathbf{P}_{k}-\mathbf{s}_i\right) + \tau \cdot \mathbf{V}_{k}
 
 * Else
 
     .. math::
-        \mathbf{r}(t) = \left(\mathbf{P}_{k}-\mathbf{s}_i\right) + \tau \cdot \left(\mathbf{P}_{k+1} - \mathbf{P}_{k}\right)
+        \hat{\tau}_i = \dfrac{\hat{t}_i - t_{k}}{t_{k+1} - t_{k}}\in \left[0, \ 1\right]
+
+    .. math::
+        \mathbf{r}(\tau) = \left(\tau-\tau_i\right) \cdot \mathbf{V}_{k}
+
+For further computations, let
+
+.. math::
+    \alpha_k = \left\langle \mathbf{P}_k, \ \mathbf{V}_k\right\rangle
+.. math::
+    \beta_k = \left\langle \mathbf{V}_k, \ \mathbf{V}_k\right\rangle
 
 
-Matrix :math:`\mathbb{A}`
+Matrix :math:`\mathbb{W}`
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If the source point :math:`\mathbf{s}_i` lies in the middle of the segment
 
 .. math::
-    \alpha(\mathbf{s}_i) = \pi
+    \varpi\left(\mathbf{s}_i\right) = \dfrac{1}{2}
 
-If the source point :math:`s_i` lies in the vertex :math:`P_{k}` then
+If the source point :math:`s_i` lies in the vertex :math:`P_{k}`, meaning :math:`\hat{t}_i = t_{k}` then
 
 .. math::
-    \mathbf{v}_0 = \mathbf{P}_{k-1}-\mathbf{P}_{k}
-.. math::
-    \mathbf{v}_1 = \mathbf{P}_{k+1}-\mathbf{P}_{k}
-.. math::
-    \alpha = \arg\left(\langle\mathbf{v}_0, \ \mathbf{v}_1 \rangle + i \cdot \left(\mathbf{v}_0 \times \mathbf{v}_1\right)\right)
+    \varpi\left(\mathbf{s}_i\right) = \dfrac{1}{2\pi}\arg\left(-\langle\mathbf{V}_{k-1}, \ \mathbf{V}_{k} \rangle + i \cdot \mathbf{V}_{k-1} \times \mathbf{V}_{k}\right)
+
+.. note::
+    The function ``arctan2`` can be used in place of :math:`\arg`
 
 
 Matrix :math:`\mathbb{M}`
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. math::
-    M_{ij} = \sum_{k=0}^{m-1} \int_{t_{k}}^{t_{k+1}} \varphi_{j} \cdot \dfrac{\mathbf{r} \times \mathbf{p}'}{\left\langle \mathbf{r}, \mathbf{r}\right\rangle} \ dt
-
-* If :math:`t_i \notin \left[t_k, \ t_{k+1}\right]`, then the evaluation is made by :ref:`regular_integrals`
-
-* If :math:`t_i \in \left[t_k, \ t_{k+1}\right]`
-
-    .. math::
-        \mathbf{V}_k = \mathbf{P}_{k+1} - \mathbf{P}_k
-    .. math::
-        \mathbf{p(t)} = \mathbf{P}_k + \tau \cdot \mathbf{V}_{k} 
-    .. math::
-        \mathbf{r(t)} = \left(\tau-\tau_i\right) \cdot \mathbf{V}_{k} 
-    .. math::
-        \mathbf{r} \times \mathbf{p}' = 0 
-
-    Therefore, we can ignore the integration over the interval :math:`\left[t_k, \ t_{k+1}\right]`
-
-
-Vector :math:`\mathbf{F}` for warping
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-For warping function, the expression :math:`F_i` is written as
+So far
 
 .. math::
-    \dfrac{\partial u}{\partial n} = \dfrac{\left\langle \mathbf{p}, \ \mathbf{p}'\right\rangle}{\|\mathbf{p}'\|}
+    \mathbb{M}_{ij} = \dfrac{1}{2\pi} \sum_{k=0}^{m-1} \int_{0}^{1} \overline{\varphi}_{j}(\tau) \cdot \dfrac{\mathbf{r} \times \mathbf{p}'}{\left\langle\mathbf{r}, \ \mathbf{r}\right\rangle} \ d\tau
+
+
+* If :math:`\hat{t}_i \in \left[t_k, \ t_{k+1}\right]`
+
+    .. math::
+        \mathbf{p}_k(\tau) = \mathbf{P}_k + \tau \cdot \mathbf{V}_{k} 
+    .. math::
+        \mathbf{r}(\tau) = \left(\tau-\hat{\tau}_i\right) \cdot \mathbf{V}_{k} 
+    .. math::
+        \mathbf{r} \times \mathbf{p}' = \left(\tau-\hat{\tau}_i\right) \cdot \mathbf{V}_{k} \times \mathbf{V}_{k} = 0 
+
+    Therefore, we can ignore the integration over the interval which the source lies on
+
+
+Matrix :math:`\mathbb{F}`
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+So far, there's three functions:
+
+.. math::
+    \mathbb{F}_{i0} = \dfrac{1}{2\pi} sum_{k=0}^{m-1} \int_{0}^{1} \left\langle \mathbf{p}, \ \mathbf{p}'\right\rangle \cdot \ln \|\mathbf{r}\| \ \tau
+.. math::
+    \mathbb{F}_{i1} = \mathrm{unknown}
+.. math::
+    \mathbb{F}_{i2} = \mathrm{unknown}
+
+For warping function, the expression :math:`\mathbb{F}_{i0}` is written as
     
 .. math::
-    F_{i} = \sum_{k=0}^{m-1} \int_{0}^{1} \left(\alpha_k + \tau \cdot \beta_k \right) \ln\|\mathbf{r}\| \ d\tau
+    \mathbb{F}_{i0} = \dfrac{1}{2\pi} \sum_{k=0}^{m-1} \int_{0}^{1} \left(\alpha_k + \tau \cdot \beta_k \right) \ln\|\mathbf{r}\| \ d\tau
 
-With :math:`\mathbf{P}_k` begin the :math:`k`-vertex and
+* If :math:`\hat{t}_i \in \left[t_k, \ t_{k+1}\right]`, then
 
-.. math::
-    \mathbf{V}_k = \mathbf{P}_{k+1} - \mathbf{P}_k
-.. math::
-    \alpha_k = \left\langle \mathbf{P}_k, \ \mathbf{V}_k\right\rangle
-.. math::
-    \beta_k = \left\langle \mathbf{V}_k, \ \mathbf{V}_k\right\rangle
-    
-* If  :math:`t_i \notin \left[t_k, \ t_{k+1}\right]`, :ref:`regular_integrals` are used
+    .. math::
+        \mathbf{F}_{i0k} = & \left(\alpha_{k} + \dfrac{1}{2}\beta_{k}\right) \cdot \dfrac{1}{2} \ln \beta_k \\
+                & + \alpha_{k} \int_{0}^{1} \ln |\tau-\hat{\tau}_i| d\tau \\
+                & + \beta_k \int_{0}^{1} \tau \cdot \ln |\tau-\hat{\tau}_i| \ d\tau 
 
-* If :math:`t_i \in \left[t_k, \ t_{k+1}\right]`, then
-    .. math::
-        \tau_i = \dfrac{t_i-t_k}{t_{k+1}-t_{k}} \in \left[0, \ 1\right]
-    .. math::
-        \mathbf{V}_k = \mathbf{P}_{k+1} - \mathbf{P}_k
-    .. math::
-        \mathbf{p(t)} = \mathbf{P}_k + \tau \cdot \mathbf{V}_{k} 
-    .. math::
-        \mathbf{r(t)} = \left(\tau-\tau_i\right) \cdot \mathbf{V}_{k}
-    .. math::
-        F_{ik} = & \int_{0}^{1} \left(\alpha_k + \tau \beta_k \right) \ln\|\left(\tau-\tau_i\right) \cdot \mathbf{V}_k\| \ d\tau \\
-            = & \left(\alpha_{k} + \dfrac{1}{2}\beta_{k}\right) \cdot \dfrac{1}{2}\ln \beta_k \\
-                & + \alpha_{k} \int_{0}^{1} \ln |\tau-\tau_i| dz \\
-                & + \beta_k \int_{0}^{1} \tau \cdot \ln |\tau-\tau_i| \ dz 
-
-    These two log integrals are computed analiticaly, the expressions are complicated (`here <https://www.wolframalpha.com/input?i=int_%7B0%7D%5E%7B1%7D+ln%28abs%28x-x_0%29%29+dx%3B+0+%3C%3D+x_0+%3C%3D+1>`_ and `here <https://www.wolframalpha.com/input?i=int_%7B0%7D%5E%7B1%7D+x*ln%28abs%28x-x_0%29%29+dx%3B+0+%3C%3D+x_0+%3C%3D+1>`_) and depends on the value of :math:`\tau_i`. Bellow you find a table with some values
+    These two logarithm integrals are well defined and has exact value.
+    The expressions depends on the value of :math:`\hat{\tau}_i`:
 
     .. list-table:: Values of logarithm integrals
         :widths: 20 40 40
         :header-rows: 1
         :align: center
 
-        * - :math:`\tau_i`
-          - :math:`\int_0^1 \ln|\tau-\tau_i| dz`
-          - :math:`\int_0^1 \tau\ln|\tau-\tau_i| dz`
+        * - :math:`\hat{\tau}_i`
+          - :math:`\int_0^1 \ln\left|\tau-\hat{\tau}_i\right| d\tau`
+          - :math:`\int_0^1 \tau\ln\left|\tau-\hat{\tau}_i\right| d\tau`
         * - :math:`0`
           - :math:`-1`
           - :math:`\frac{-1}{4}`
@@ -1055,14 +1094,9 @@ With :math:`\mathbf{P}_k` begin the :math:`k`-vertex and
           - :math:`-1`
           - :math:`\frac{-3}{4}`
 
-    Therefore, the integral over interval which :math:`t_i` lies on is made by using analitic values, and singular integrals are not computed.
-
-
-Vector :math:`\mathbf{F}` for shear
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-TODO
-
-
-
-
+    * For :math:`0 < \hat{\tau}_i < 1`, then
+        
+        .. math::
+            \int_{0}^{1} \ln |\tau-\hat{\tau}_i| d\tau = & \hat{\tau}_i \ln \hat{\tau}_i + (1-\hat{\tau}_i)\ln \left(1-\hat{\tau}_i\right) - 1 \\
+            \int_{0}^{1} \tau \cdot \ln |\tau-\hat{\tau}_i| d\tau = & \dfrac{-1}{4}\hat{\tau}_i^2\left(3 - 2\ln \hat{\tau}_i\right) \\ & - \dfrac{1}{4}\left(1-\hat{\tau}_i\right)\left(1+3\hat{\tau}_i-2\left(1+\hat{\tau}_i\right)\ln \left(1-\hat{\tau}_i\right)\right)
+    
