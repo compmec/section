@@ -12,7 +12,7 @@ from typing import Tuple
 
 import numpy as np
 
-from .abcs import IBasis, ISection
+from .abcs import IBasisFunc, ISection
 from .curve import Curve
 
 
@@ -28,8 +28,22 @@ class ComputeMatrix:
     int u * (dv/dn) ds
     """
 
-    @staticmethod
-    def incurve(curve: Curve, basis: IBasis, tsources: Tuple[float]):
+    def __init__(self, curve: Curve, basis: IBasisFunc):
+        self.curve = curve
+        self.basis = basis
+
+    @property
+    def tmesh(self) -> Tuple[float]:
+        """
+        The subdivisions of parametric space
+
+        :getter: Returns the union of curve and base knots
+        :type: Tuple[float]
+        """
+        tmesh = set(self.curve.knots) | set(self.basis.knots)
+        return np.array(sorted(tmesh))
+
+    def incurve(self, tsources: Tuple[float]):
         """
         Computes the integral when the sources are placed at the curve.
         The emplacement of these sources are given by parameter 'tsources'
@@ -37,10 +51,6 @@ class ComputeMatrix:
         Parameters
         ----------
 
-        :param curve: The parametric curve
-        :type curve: Curve
-        :param basis: The evaluation basis functions
-        :type basis: IBasis
         :param tsources: The parametric emplacement of sources
         :type tsources: Tuple[float]
         :return: The output matrix, integral of UVn
@@ -48,8 +58,7 @@ class ComputeMatrix:
         """
         raise NotImplementedError
 
-    @staticmethod
-    def outcurve(curve: Curve, basis: IBasis, sources: Tuple[Tuple[float]]):
+    def outcurve(self, sources: Tuple[Tuple[float]]):
         """
         Computes the integral when the sources are placed outside (or not)
         of the curve.
@@ -61,12 +70,6 @@ class ComputeMatrix:
         Parameters
         ----------
 
-        :param curve: The parametric curve
-        :type curve: Curve
-        :param basis: The evaluation basis functions
-        :type basis: IBasis
-        :param sources: The sources positions, points
-        :type sources: Tuple[Tuple[float]]
         :return: The output matrix, integral of UVn
         :rtype: Tuple[Tuple[float]]
         """
