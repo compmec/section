@@ -8,12 +8,14 @@ subject only to neumman's boundary condition
 
 """
 
+import math
 from typing import Tuple
 
 import numpy as np
 
 from .abcs import IBasisFunc, ISection
 from .curve import Curve
+from .integral import Integration
 
 
 class ComputeMatrix:
@@ -43,10 +45,13 @@ class ComputeMatrix:
         tmesh = set(self.curve.knots) | set(self.basis.knots)
         return np.array(sorted(tmesh))
 
-    def incurve(self, tsources: Tuple[float]):
+    # pylint: disable=too-many-locals
+    def inpolygon(self, tsources: Tuple[float]):
         """
         Computes the integral when the sources are placed at the curve.
         The emplacement of these sources are given by parameter 'tsources'
+
+        We suppose the curve is a polygon.
 
         Parameters
         ----------
@@ -56,7 +61,42 @@ class ComputeMatrix:
         :return: The output matrix, integral of UVn
         :rtype: Tuple[Tuple[float]]
         """
-        raise NotImplementedError
+        ndofs = self.basis.ndofs
+        assert ndofs == len(tsources)
+        cknots = np.array(self.curve.knots, dtype="float64")
+        tknots = np.array(sorted(set(self.tmesh) | set(tsources)))
+        matrix = np.zeros((ndofs, ndofs), dtype="float64")
+        nodes, weights = Integration.gauss(10)
+
+        vertices = self.curve.eval(cknots[:-1])
+        vectors = np.roll(vertices, shift=-1, axis=0) - vertices
+        sources = self.curve.eval(tsources)
+
+        for i, vector in enumerate(vectors):
+            tva, tvb = cknots[i], cknots[i + 1]
+            vertex = vertices[i]
+            mask = (tva <= tknots) * (tknots <= tvb)
+            tmesh = tknots[mask]
+            for tk0, tk1 in zip(tmesh, tmesh[1:]):
+                tvals = tk0 + nodes * (tk1 - tk0)
+                taus = (tvals - tva) / (tvb - tva)
+                phis = self.basis.eval(tvals)
+                points = vertex + np.tensordot(taus, vector, axes=0)
+                for i, (tsi, source) in enumerate(zip(tsources, sources)):
+                    if tsi in (tk0, tk1):
+                        continue
+                    radius = tuple(point - source for point in points)
+                    radius = np.array(radius, dtype="float64")
+                    rcrossdp = vector[1] * radius[:, 0]
+                    rcrossdp -= vector[0] * radius[:, 1]
+                    rcrossdp *= (tk1 - tk0) / (tvb - tva)
+                    rinnerr = np.einsum("ij,ij->i", radius, radius)  # <r, r>
+                    funcvals = rcrossdp / rinnerr
+                    matrix[i] += np.einsum(
+                        "ij,j,j->i", phis, weights, funcvals
+                    )
+        matrix[np.abs(matrix) < 1e-9] = 0
+        return matrix / math.tau
 
     def outcurve(self, sources: Tuple[Tuple[float]]):
         """

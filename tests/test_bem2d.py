@@ -4,11 +4,10 @@ File to tests cases when only bending moments are applied
 
 import numpy as np
 import pytest
-from compmec.shape import Primitive
 
-from compmec.section import Curve, Material, Section
-from compmec.section.bem2d import BEMModel
-from compmec.section.material import Isotropic
+from compmec.section.basisfunc import BasisFunc
+from compmec.section.bem2d import ComputeMatrix
+from compmec.section.curve import PolygonCurve
 
 
 @pytest.mark.order(8)
@@ -29,33 +28,49 @@ def test_begin():
     pass
 
 
-class TestConstruction:
+class TestComputeMatrix:
     @pytest.mark.order(8)
     @pytest.mark.dependency(depends=["test_begin"])
     def test_begin(self):
-        Curve.clear()
-        Material.clear()
-        Section.clear()
+        pass
 
     @pytest.mark.order(8)
     @pytest.mark.timeout(10)
-    @pytest.mark.dependency(depends=["TestConstruction::test_begin"])
-    def test_centered_square(self):
-        geometry = Primitive.square(2)
-        material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
-        section = Section.from_shapes(geometry, material)
-        bemmodel = BEMModel(section)
+    @pytest.mark.dependency(depends=["TestComputeMatrix::test_begin"])
+    def test_eqtriangle(self):
 
-        mesh = np.linspace(0, 1, 5)
-        bemmodel[1] = mesh
-        del mesh
-        mesh = bemmodel[1]
-        assert np.all(mesh == (0, 0.25, 0.5, 0.75, 1))
+        vertices = [[1, 0], [-0.5, np.sqrt(3) / 2], [-0.5, -np.sqrt(3) / 2]]
+        curve = PolygonCurve(vertices)
+        basis = BasisFunc.cyclic(curve.knots)
+        tsources = basis.knots[: basis.ndofs]
+        computer = ComputeMatrix(curve, basis)
+        test_matrix = computer.inpolygon(tsources)
+        good_matrix = [[0, 1, 1], [1, 0, 1], [1, 1, 0]]
+        good_matrix = np.array(good_matrix) / 12
+        assert test_matrix.shape == good_matrix.shape
+        np.testing.assert_allclose(test_matrix, good_matrix)
+
+    @pytest.mark.order(8)
+    @pytest.mark.timeout(10)
+    @pytest.mark.dependency(depends=["TestComputeMatrix::test_begin"])
+    def test_square(self):
+
+        vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1]]
+        curve = PolygonCurve(vertices)
+        basis = BasisFunc.cyclic(curve.knots)
+        tsources = basis.knots[: basis.ndofs]
+        computer = ComputeMatrix(curve, basis)
+        test_matrix = computer.inpolygon(tsources)
+        good_matrix = [[0, 1, 1, 1], [1, 0, 1, 1], [1, 1, 0, 1], [1, 1, 1, 0]]
+        good_matrix = np.array(good_matrix) / 12
+        assert test_matrix.shape == good_matrix.shape
+        np.testing.assert_allclose(test_matrix, good_matrix)
 
     @pytest.mark.order(8)
     @pytest.mark.dependency(
         depends=[
-            "TestConstruction::test_centered_square",
+            "TestComputeMatrix::test_eqtriangle",
+            "TestComputeMatrix::test_square",
         ]
     )
     def test_end(self):
@@ -63,6 +78,6 @@ class TestConstruction:
 
 
 @pytest.mark.order(8)
-@pytest.mark.dependency(depends=["TestConstruction::test_end"])
+@pytest.mark.dependency(depends=["TestComputeMatrix::test_end"])
 def test_end():
     pass

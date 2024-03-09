@@ -224,7 +224,7 @@ class PolygonCurve(Curve):
 
     @property
     def knots(self) -> Tuple[float]:
-        return np.arange(0, len(self.vertices), 1.0)
+        return np.arange(0, len(self.vertices) + 1, 1.0)
 
     @classmethod
     def from_dict(cls, dictionary: Dict) -> ICurve:
