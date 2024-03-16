@@ -15,7 +15,7 @@ from compmec.shape import JordanCurve
 from compmec import nurbs
 
 from . import integral
-from .abcs import ICurve, LabeledTracker
+from .abcs import ICurve, ISegment, LabeledTracker
 
 
 class Node(LabeledTracker):
@@ -68,6 +68,38 @@ class Node(LabeledTracker):
 
         """
         return tuple(Node.instances[label] for label in labels)
+
+
+class LinearSegment(ISegment):
+    """
+    Defines a Linear segment, that connects two points.
+
+    The parametric space is defined as [0, 1]
+
+    """
+
+    def __init__(self, pointa: Tuple[float], pointb: Tuple[float]):
+        self.pointa = np.array(pointa, dtype="float64")
+        self.pointb = np.array(pointb, dtype="float64")
+
+    @property
+    def vector(self) -> Tuple[float]:
+        """
+        Gives the directional vector V = B - A
+
+        :getter: Returns the vector V = B - A
+        :type: Tuple[float]
+        """
+        return self.pointb - self.pointa
+
+    def eval(self, parameters: Tuple[float]) -> Tuple[Tuple[float]]:
+        return self.pointa + np.tensordot(parameters, self.vector, axes=0)
+
+    def projection(self, point: Tuple[float]) -> float:
+        vector = self.vector
+        parameter = np.inner(point - self.pointa, vector)
+        parameter /= np.inner(vector, vector)
+        return max(0, min(1, parameter))
 
 
 class Curve(LabeledTracker, ICurve):
@@ -208,6 +240,9 @@ class NurbsCurve(Curve):
             wind += sub_wind
         return wind
 
+    def projection(self, point: Tuple[float]) -> Tuple[float]:
+        return nurbs.advanced.Projection.point_on_curve(point, self.internal)
+
 
 class PolygonCurve(Curve):
     """
@@ -266,3 +301,25 @@ class PolygonCurve(Curve):
                 break
             wind += sub_wind
         return wind
+
+    def projection(self, point: Tuple[float]) -> Tuple[float]:
+        point = np.array(point, dtype="float64")
+        proj_params = []
+        distances = []
+        nverts = len(self.vertices)
+        for i, vertexa in enumerate(self.vertices):
+            vertexb = self.vertices[(i + 1) % nverts]
+            segment = LinearSegment(vertexa, vertexb)
+            temp_params = segment.projection(point)
+            proj_point = segment.eval(temp_params)[0]
+            distance = np.linalg.norm(point - proj_point)
+            proj_params.append(i + temp_params[0])
+            distances.append(distance)
+
+        min_distance = min(distances)
+        params = tuple(
+            param
+            for param, dist in zip(proj_params, distances)
+            if dist == min_distance
+        )
+        return params

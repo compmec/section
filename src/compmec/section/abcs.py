@@ -215,6 +215,19 @@ class ICurve(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def projection(self, point: Tuple[float]) -> Tuple[float]:
+        """
+        Finds the parameter t* such the distance between the
+        `curve(t*)` and `point` is the nearest possible.
+
+        :param parameters: The point to project
+        :type parameters: Tuple[float]
+        :return: A parameters that minimizes the distance
+        :rtype: Tuple[float]
+        """
+        raise NotImplementedError
+
 
 class IMaterial(ABC):
     """
@@ -368,5 +381,36 @@ class IBasisFunc(ABC):
         :type parameters: Tuple[float]
         :return: The results in a matrix of shape (m, n)
         :rtype: Tuple[Tuple[float]]
+        """
+        raise NotImplementedError
+
+
+class ISegment(ABC):
+    """
+    A class to represent a geometric curve between two knots
+    """
+
+    @abstractmethod
+    def eval(self, parameters: Tuple[float]) -> Tuple[Tuple[float]]:
+        """
+        Evaluates the segment at given parameters.
+
+        :param parameters: A vector-like of lenght n
+        :type parameters: Tuple[float]
+        :return: A matrix of shape (n, 2)
+        :rtype: Tuple[Tuple[float]]
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def projection(self, point: Tuple[float]) -> Tuple[float]:
+        """
+        Finds the parameter t* such the distance between the
+        `segment(t*)` and `point` is the nearest possible.
+
+        :param parameters: The point to project
+        :type parameters: Tuple[float]
+        :return: A parameters that minimizes the distance
+        :rtype: Tuple[float]
         """
         raise NotImplementedError
