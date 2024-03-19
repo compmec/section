@@ -111,12 +111,78 @@ class TestComputeMatrix:
         np.testing.assert_allclose(test_matrix, good_matrix)
 
     @pytest.mark.order(8)
+    @pytest.mark.timeout(10)
+    @pytest.mark.dependency(depends=["TestComputeMatrix::test_begin"])
+    def test_hexagon_corner(self):
+        pi, ln2, ln3, sq3 = np.pi, np.log(2), np.log(3), np.sqrt(3)
+        a = 1 / 8 - sq3 * ln3 / (8 * pi)
+        b = 1 / 24 + sq3 * (3 * ln3 - 4 * ln2) / (8 * pi)
+        c = sq3 * (2 * ln2 - ln3) / (2 * pi)
+        good_matrix = [
+            [0, a, b, c, b, a],
+            [a, 0, a, b, c, b],
+            [b, a, 0, a, b, c],
+            [c, b, a, 0, a, b],
+            [b, c, b, a, 0, a],
+            [a, b, c, b, a, 0],
+        ]
+        good_matrix = np.array(good_matrix)
+
+        angles = np.linspace(0, 2 * np.pi, 6, endpoint=False)
+        vertices = tuple((np.cos(angle), np.sin(angle)) for angle in angles)
+        tsources = (0, 1, 2, 3, 4, 5)
+        curve = PolygonCurve(vertices)
+        basis = BasisFunc.cyclic(curve.knots)
+        computer = ComputeMatrix(curve, basis)
+        test_matrix = computer.inpolygon(tsources)
+
+        assert test_matrix.shape == good_matrix.shape
+        np.testing.assert_allclose(test_matrix, good_matrix)
+
+    @pytest.mark.order(8)
+    @pytest.mark.timeout(10)
+    @pytest.mark.dependency(depends=["TestComputeMatrix::test_begin"])
+    def test_hexagon_middle(self):
+        pi, ln7, ln13, sq3 = np.pi, np.log(7), np.log(13), np.sqrt(3)
+        a = -5 / 48 - sq3 * ln7 / (16 * pi) + 5 * np.arctan(5 / sq3) / (8 * pi)
+        b = 1 / 48 + sq3 * (4 * ln7 - 3 * ln13) / (16 * pi)
+        b += 5 * np.arctan(3 * sq3 / 8) / (8 * pi) - np.arctan(5 / sq3) / (
+            8 * pi
+        )
+        c = 3 * sq3 * (ln13 - ln7) / (16 * pi) - np.arctan(5 * sq3 / 9) / (
+            8 * pi
+        )
+        c += np.arctan(sq3 / 9) / (8 * pi) + np.arctan(sq3 / 6) / (2 * pi)
+        good_matrix = [
+            [a, a, b, c, c, b],
+            [b, a, a, b, c, c],
+            [c, b, a, a, b, c],
+            [c, c, b, a, a, b],
+            [b, c, c, b, a, a],
+            [a, b, c, c, b, a],
+        ]
+        good_matrix = np.array(good_matrix)
+
+        angles = np.linspace(0, 2 * np.pi, 6, endpoint=False)
+        vertices = tuple((np.cos(angle), np.sin(angle)) for angle in angles)
+        tsources = (0.5, 1.5, 2.5, 3.5, 4.5, 5.5)
+        curve = PolygonCurve(vertices)
+        basis = BasisFunc.cyclic(curve.knots)
+        computer = ComputeMatrix(curve, basis)
+        test_matrix = computer.inpolygon(tsources)
+
+        assert test_matrix.shape == good_matrix.shape
+        np.testing.assert_allclose(test_matrix, good_matrix)
+
+    @pytest.mark.order(8)
     @pytest.mark.dependency(
         depends=[
             "TestComputeMatrix::test_eqtriangle_corner",
             "TestComputeMatrix::test_eqtriangle_middle",
             "TestComputeMatrix::test_square_corner",
             "TestComputeMatrix::test_square_middle",
+            "TestComputeMatrix::test_hexagon_corner",
+            "TestComputeMatrix::test_hexagon_middle",
         ]
     )
     def test_end(self):
