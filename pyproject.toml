@@ -12,8 +12,8 @@ include = ["src/compmec/section/schema/*.json"]
 
 [tool.poetry.dependencies]
 numpy = "^1.0.0"
-compmec-nurbs = "^1.0.0"
-compmec-shape = "^1.0.0"
+pynurbs = "^1.0.0"
+shapepy = "^1.0.0"
 python = "^3.7"
 jsonschema = "^4.17.3"
 

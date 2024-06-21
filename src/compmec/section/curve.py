@@ -10,9 +10,9 @@ from collections import OrderedDict
 from typing import Dict, Optional, Tuple
 
 import numpy as np
-from compmec.shape import JordanCurve
+from shapepy import JordanCurve
 
-from compmec import nurbs
+import pynurbs
 
 from . import integral
 from .abcs import ICurve, ISegment, LabeledTracker
@@ -137,16 +137,16 @@ class NurbsCurve(Curve):
         """
         Converts a jordan curve into a NurbsCurve instance
 
-        :param jordan: A jordan curve from compmec-shape packaged
-        :type jordan: compmec.shape.JordanCurve
+        :param jordan: A jordan curve from shapepy packaged
+        :type jordan: shapepy.JordanCurve
         :return: A NurbsCurve instance
         :rtype: NurbsCurve
         """
         bezier_curves = []
         for i, segment in enumerate(jordan.segments):
-            knotvector = nurbs.GeneratorKnotVector.bezier(segment.degree)
+            knotvector = pynurbs.GeneratorKnotVector.bezier(segment.degree)
             knotvector.shift(i)
-            new_bezier = nurbs.Curve(knotvector)
+            new_bezier = pynurbs.Curve(knotvector)
             new_bezier.ctrlpoints = segment.ctrlpoints
             bezier_curves.append(new_bezier)
 
@@ -164,8 +164,8 @@ class NurbsCurve(Curve):
     @classmethod
     def from_dict(cls, dictionary: Dict) -> NurbsCurve:
         degree = dictionary["degree"] if "degree" in dictionary else None
-        knotvector = nurbs.KnotVector(dictionary["knotvector"], degree)
-        nurbs_curve = nurbs.Curve(knotvector)
+        knotvector = pynurbs.KnotVector(dictionary["knotvector"], degree)
+        nurbs_curve = pynurbs.Curve(knotvector)
         if "ctrllabels" in dictionary:
             labels = tuple(dictionary["ctrllabels"])
             ctrlpoints = Node.from_labels(labels)
@@ -186,8 +186,8 @@ class NurbsCurve(Curve):
             dictionary["weights"] = weights
         return dictionary
 
-    def __new__(cls, nurbs_curve: nurbs.Curve, label: Optional[int] = None):
-        if not isinstance(nurbs_curve, nurbs.Curve):
+    def __new__(cls, nurbs_curve: pynurbs.Curve, label: Optional[int] = None):
+        if not isinstance(nurbs_curve, pynurbs.Curve):
             msg = "Invalid internal curve"
             raise TypeError(msg)
         instance = super().__new__(cls)
@@ -204,19 +204,19 @@ class NurbsCurve(Curve):
         return self.internal.knotvector.knots
 
     @property
-    def internal(self) -> nurbs.Curve:
+    def internal(self) -> pynurbs.Curve:
         """
-        Gives the internal nurbs.Curve object
+        Gives the internal pynurbs.Curve object
 
         :getter: Returns the curve's label
         :setter: Sets the new curve instance
-        :type: compmec.nurbs.Curve
+        :type: compmec.pynurbs.Curve
         """
         return self.__internal
 
     @internal.setter
-    def internal(self, new_curve: nurbs.Curve):
-        if not isinstance(new_curve, nurbs.Curve):
+    def internal(self, new_curve: pynurbs.Curve):
+        if not isinstance(new_curve, pynurbs.Curve):
             msg = "Invalid internal curve"
             raise TypeError(msg)
         self.__internal = new_curve
@@ -241,7 +241,7 @@ class NurbsCurve(Curve):
         return wind
 
     def projection(self, point: Tuple[float]) -> Tuple[float]:
-        return nurbs.advanced.Projection.point_on_curve(point, self.internal)
+        return pynurbs.advanced.Projection.point_on_curve(point, self.internal)
 
 
 class PolygonCurve(Curve):

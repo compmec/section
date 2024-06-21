@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from compmec import nurbs
+import pynurbs
 from compmec.section.curve import NurbsCurve, PolygonCurve
 
 
@@ -15,10 +15,10 @@ def test_begin():
 @pytest.mark.timeout(10)
 @pytest.mark.dependency(depends=["test_begin"])
 def test_winding_square():
-    knotvector = nurbs.GeneratorKnotVector.uniform(1, 5)
+    knotvector = pynurbs.GeneratorKnotVector.uniform(1, 5)
     vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1], [1, 1]]
     vertices = np.array(vertices, dtype="float64")
-    curve = nurbs.Curve(knotvector, vertices)
+    curve = pynurbs.Curve(knotvector, vertices)
     curve = NurbsCurve(curve)
 
     assert curve.winding((0, 0)) == 1

@@ -5,7 +5,7 @@ File to test src/compmec/section/geometry.py module
 import numpy as np
 import pytest
 
-from compmec import nurbs
+import pynurbs
 from compmec.section.curve import NurbsCurve
 from compmec.section.geometry import Geometry
 
@@ -20,10 +20,10 @@ def test_begin():
 @pytest.mark.timeout(10)
 @pytest.mark.dependency(depends=["test_begin"])
 def test_full_square():
-    knotvector = nurbs.GeneratorKnotVector.uniform(1, 5)
+    knotvector = pynurbs.GeneratorKnotVector.uniform(1, 5)
     vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1], [1, 1]]
     vertices = np.array(vertices, dtype="float64")
-    curve = nurbs.Curve(knotvector, vertices)
+    curve = pynurbs.Curve(knotvector, vertices)
     curve = NurbsCurve(curve)
 
     geometry = Geometry([curve.label])
@@ -44,15 +44,15 @@ def test_full_square():
 @pytest.mark.timeout(10)
 @pytest.mark.dependency(depends=["test_begin"])
 def test_hollow_square():
-    knotvector = nurbs.GeneratorKnotVector.uniform(1, 5)
+    knotvector = pynurbs.GeneratorKnotVector.uniform(1, 5)
     vertices = [[3, 3], [-3, 3], [-3, -3], [3, -3], [3, 3]]
     vertices = np.array(vertices, dtype="float64")
-    curve_ext = nurbs.Curve(knotvector, vertices)
+    curve_ext = pynurbs.Curve(knotvector, vertices)
     curve_ext = NurbsCurve(curve_ext)
 
     vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1], [1, 1]]
     vertices = np.array(vertices, dtype="float64")
-    curve_int = nurbs.Curve(knotvector, vertices)
+    curve_int = pynurbs.Curve(knotvector, vertices)
     curve_int = NurbsCurve(curve_int)
 
     geometry = Geometry([curve_ext.label, -curve_int.label])

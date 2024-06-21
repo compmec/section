@@ -152,7 +152,7 @@ class ICurve(ABC):
     Interface abstract curve to be parent of others.
 
     This class serves as interface between the curves from others packaged
-    like nurbs.Curve, to this package, expliciting the minimum requirements
+    like pynurbs.Curve, to this package, expliciting the minimum requirements
     of a curve must have.
     With this, it's possible to implement your own type of parametric curve
     """

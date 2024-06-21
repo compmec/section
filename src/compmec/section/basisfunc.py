@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Tuple
 
 import numpy as np
-from compmec.nurbs import Function, KnotVector
+from pynurbs import Function, KnotVector
 
 from .abcs import IBasisFunc
 

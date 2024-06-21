@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional, Tuple
 
 import numpy as np
-from compmec.shape.shape import ConnectedShape, DefinedShape, SimpleShape
+from shapepy.shape import ConnectedShape, DefinedShape, SimpleShape
 
 from .abcs import NamedTracker
 from .curve import Curve, NurbsCurve
