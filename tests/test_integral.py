@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from compmec.section.curve import PolygonCurve
 from compmec.section.integral import Integration, Polynomial, comb
 
 
@@ -262,6 +263,28 @@ def test_integral_polygon():
 @pytest.mark.order(1)
 @pytest.mark.timeout(10)
 @pytest.mark.dependency(depends=["test_begin"])
+def test_integral_polygon_adaptative():
+    """
+    Tests the polynomial integrals of polygons
+    """
+    vertices = ((1, 1), (-1, 1), (-1, -1), (1, -1))
+    curve = PolygonCurve(vertices)
+    geomprops = Polynomial.adaptative(curve)
+    assert geomprops[0] == 4  # area
+    assert geomprops[1] == 0  # Qx
+    assert geomprops[2] == 0  # Qy
+    assert abs(geomprops[3] - 4 / 3) < 1e-9  # Ixx
+    assert abs(geomprops[4]) < 1e-9  # Ixy
+    assert abs(geomprops[5] - 4 / 3) < 1e-9  # Iyy
+    assert abs(geomprops[6]) < 1e-9  # Ixxx
+    assert abs(geomprops[7]) < 1e-9  # Ixxy
+    assert abs(geomprops[8]) < 1e-9  # Ixyy
+    assert abs(geomprops[9]) < 1e-9  # Iyyy
+
+
+@pytest.mark.order(1)
+@pytest.mark.timeout(10)
+@pytest.mark.dependency(depends=["test_begin"])
 def test_fail():
     """
     Tests the fail cases
@@ -288,6 +311,7 @@ def test_fail():
         "test_gauss",
         "test_singular_logarithm",
         "test_integral_polygon",
+        "test_integral_polygon_adaptative",
         "test_fail",
     ]
 )

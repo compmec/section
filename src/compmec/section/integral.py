@@ -14,6 +14,7 @@ Integration.chebyshev: Polynomial integration at chebyshev nodes
 
 import math
 from typing import Tuple
+from .abcs import ICurve
 
 import numpy as np
 
@@ -403,9 +404,10 @@ class Polynomial:
         return geomprops
 
     @staticmethod
-    def adaptative(curve, tolerance: float = 1e-9) -> Tuple[float]:
+    def adaptative(curve: ICurve, tolerance: float = 1e-9) -> Tuple[float]:
         """
-        Computes the polynomials integrals over the area defined by the curve
+        Computes the polynomials integrals over the area defined by the curve.
+        It's function is suitable for non-polygonal curves
 
         It uses an adaptative algorithm that allows computing the integrals
         over smooth curves using milne's (open newton quadrature 3 points)
@@ -418,6 +420,7 @@ class Polynomial:
         :rtype: float
 
         """
+        assert isinstance(curve, ICurve)
         expoents = Polynomial.expoents
         integrals = np.zeros(len(expoents), dtype="float64")
         integrator = AdaptativePolynomialIntegrator(curve, tolerance=tolerance)
