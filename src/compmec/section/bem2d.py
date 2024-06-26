@@ -13,8 +13,7 @@ from typing import Tuple
 
 import numpy as np
 
-from .abcs import IBasisFunc, ISection
-from .curve import Curve
+from .abcs import IBasisFunc, ICurve, ISection
 from .integral import Integration
 
 
@@ -30,7 +29,7 @@ class ComputeMatrix:
     int u * (dv/dn) ds
     """
 
-    def __init__(self, curve: Curve, basis: IBasisFunc):
+    def __init__(self, curve: ICurve, basis: IBasisFunc):
         self.curve = curve
         self.basis = basis
 
@@ -114,6 +113,87 @@ class ComputeMatrix:
         :rtype: Tuple[Tuple[float]]
         """
         raise NotImplementedError
+
+
+class TorsionEvaluator:
+
+    def __init__(self, curve: ICurve, basis: IBasisFunc):
+        assert curve.knots[0] == basis.knots[0]
+        assert curve.knots[-1] == basis.knots[-1]
+        self.curve = curve
+        self.basis = basis
+
+    def torsion_center_matrix(self) -> Tuple[Tuple[float]]:
+        """
+        Computes the matrix used to compute the torsion center
+
+                            [1] 
+        B = int_{Omega} w * [x] dOmega
+                            [y]
+
+        Where w is the warping function.
+
+        This function returns a matrix [M], of shape (n, 3), such
+
+        M_{i0} = int_{Omega} w*1 dOmega
+        M_{i1} = int_{Omega} w*x dOmega
+        M_{i2} = int_{Omega} w*y dOmega
+
+        """
+        raise NotImplementedError
+
+    def torsion_constant_vector(self) -> Tuple[float]:
+        """
+        Computes the vector used to compute the torsion constant
+
+        It's interested to compute J:
+        
+        J = int_{tmin}^{tmax} w * <p, p'> dt
+
+        Where w(t) is the warping function on the boundary of the curve.
+        This function, on the boundary is defined as
+
+        w(t) = sum_{i} F_{i}(t) * W_{i}
+
+        This function returns a vector [V], of lenght 'n', such
+
+        V_i = int_{tmin}^{tmax} F_{i}(t) * <p, p'> dt
+
+        .. note:
+            We suppose the curve is a polygon
+
+        """
+        ndofs = self.basis.ndofs
+        result = np.zeros(ndofs, dtype="float64")
+        vertices = self.curve.eval(self.curve.knots[:-1])
+        vectors = np.roll(vertices, shift=-1, axis=0) - vertices
+        alphas = np.einsum("ij,ij->i", vertices, vectors)
+        betas = np.einsum("ij,ij->i", vectors, vectors)
+
+        cknots = np.array(self.curve.knots, dtype="float64")
+        tknots = np.array(sorted(set(self.curve.knots) | set(self.basis.knots)))
+        nodes, weights = Integration.opened(3)
+        
+        for i, (alpha, beta) in enumerate(zip(alphas, betas)):
+            tva, tvb = cknots[i], cknots[i + 1]
+            diff = tvb - tva
+            mask = (tva <= tknots) * (tknots <= tvb)
+            tmesh = tknots[mask]
+            for tk0, tk1 in zip(tmesh, tmesh[1:]):
+                tvals = tk0 + nodes * (tk1 - tk0)
+                phis = self.basis.eval(tvals)
+                phis *= (tk1 - tk0) / (tvb - tva)
+                result += diff * alpha * np.einsum("i,ji->j", weights, phis)
+                result += diff * beta * np.einsum("i,i,ji->j", weights, tvals, phis)
+        return result
+
+
+
+
+class ShearVector:
+
+    def __init__(self, curve: ICurve):
+        self.curve = curve
 
 
 class BEMModel:

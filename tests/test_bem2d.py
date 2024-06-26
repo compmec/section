@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from compmec.section.basisfunc import BasisFunc
-from compmec.section.bem2d import ComputeMatrix
+from compmec.section.bem2d import ComputeMatrix, TorsionEvaluator
 from compmec.section.curve import PolygonCurve
 
 
@@ -183,6 +183,93 @@ class TestComputeMatrix:
             "TestComputeMatrix::test_square_middle",
             "TestComputeMatrix::test_hexagon_corner",
             "TestComputeMatrix::test_hexagon_middle",
+        ]
+    )
+    def test_end(self):
+        pass
+
+
+
+class TestTorsionVectors:
+    @pytest.mark.order(8)
+    @pytest.mark.dependency(depends=["test_begin"])
+    def test_begin(self):
+        pass
+
+    @pytest.mark.order(8)
+    @pytest.mark.timeout(10)
+    @pytest.mark.dependency(depends=["TestComputeMatrix::test_begin"])
+    def test_square1_tensor_const_vector(self):
+        vertices = [(0, 0), (1, 0), (1, 1), (0, 1)]
+        vertices = np.array(vertices, dtype="float64")
+        good_vector = np.array([0, 1/2, 0, -1/2])
+
+        curve = PolygonCurve(vertices)
+        basis = BasisFunc.cyclic(curve.knots)
+        computer = TorsionEvaluator(curve, basis)
+        test_vector = computer.torsion_constant_vector()
+
+        assert len(test_vector) == len(good_vector)
+        np.testing.assert_allclose(test_vector, good_vector)
+
+    
+    @pytest.mark.order(8)
+    @pytest.mark.timeout(10)
+    @pytest.mark.dependency(depends=["TestComputeMatrix::test_begin"])
+    def test_square2_tensor_const_vector(self):
+        vertices = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
+        vertices = np.array(vertices, dtype="float64")
+        good_vector = np.array([0, 0, 0, 0])
+
+        curve = PolygonCurve(vertices)
+        basis = BasisFunc.cyclic(curve.knots)
+        computer = TorsionEvaluator(curve, basis)
+        test_vector = computer.torsion_constant_vector()
+
+        assert len(test_vector) == len(good_vector)
+        np.testing.assert_allclose(test_vector, good_vector)
+
+    @pytest.mark.order(8)
+    @pytest.mark.timeout(10)
+    @pytest.mark.dependency(depends=["TestComputeMatrix::test_begin"])
+    def test_square3_tensor_const_vector(self):
+        vertices = [(1, 0), (0, 1), (-1, 0), (0, -1)]
+        vertices = np.array(vertices, dtype="float64")
+        good_vector = np.array([0, 0, 0, 0])
+
+        curve = PolygonCurve(vertices)
+        basis = BasisFunc.cyclic(curve.knots)
+        computer = TorsionEvaluator(curve, basis)
+        test_vector = computer.torsion_constant_vector()
+
+        assert len(test_vector) == len(good_vector)
+        np.testing.assert_allclose(test_vector, good_vector)
+
+
+    @pytest.mark.order(8)
+    @pytest.mark.timeout(10)
+    @pytest.mark.dependency(depends=["TestComputeMatrix::test_begin"])
+    def test_square3_tensor_const_vector(self):
+        vertices = [(3, 2), (2, 3), (1, 2), (2, 1)]
+        vertices = np.array(vertices, dtype="float64")
+        good_vector = np.array([0, 0, 0, 0])
+
+        curve = PolygonCurve(vertices)
+        basis = BasisFunc.cyclic(curve.knots)
+        computer = TorsionEvaluator(curve, basis)
+        test_vector = computer.torsion_constant_vector()
+
+        assert len(test_vector) == len(good_vector)
+        np.testing.assert_allclose(test_vector, good_vector)
+
+
+
+    @pytest.mark.order(8)
+    @pytest.mark.dependency(
+        depends=[
+            "TestComputeMatrix::test_square1_tensor_const_vector",
+            "TestComputeMatrix::test_square2_tensor_const_vector",
+            "TestComputeMatrix::test_square3_tensor_const_vector",
         ]
     )
     def test_end(self):
