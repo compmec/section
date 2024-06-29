@@ -33,5 +33,5 @@ repos:
     rev: v2.14.5
     hooks:
     - id: pylint
-      additional_dependencies: [numpy, compmec-nurbs, compmec-shape, jsonschema]
+      additional_dependencies: [numpy, pynurbs, shapepy, jsonschema]
       exclude: "(tests|docs)/.*"  # Prevent files in tests/ and /docs to be passed in to pylint.
