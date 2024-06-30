@@ -127,7 +127,7 @@ class TorsionEvaluator:
         """
         Computes the matrix used to compute the torsion center
 
-                            [1] 
+                            [1]
         B = int_{Omega} w * [x] dOmega
                             [y]
 
@@ -147,7 +147,7 @@ class TorsionEvaluator:
         Computes the vector used to compute the torsion constant
 
         It's interested to compute J:
-        
+
         J = int_{tmin}^{tmax} w * <p, p'> dt
 
         Where w(t) is the warping function on the boundary of the curve.
@@ -171,23 +171,25 @@ class TorsionEvaluator:
         betas = np.einsum("ij,ij->i", vectors, vectors)
 
         cknots = np.array(self.curve.knots, dtype="float64")
-        tknots = np.array(sorted(set(self.curve.knots) | set(self.basis.knots)))
-        nodes, weights = Integration.opened(3)
-        
+        tknots = np.array(
+            sorted(set(self.curve.knots) | set(self.basis.knots))
+        )
+        nodes, weights = Integration.closed(2)
+
         for i, (alpha, beta) in enumerate(zip(alphas, betas)):
             tva, tvb = cknots[i], cknots[i + 1]
-            diff = tvb - tva
             mask = (tva <= tknots) * (tknots <= tvb)
             tmesh = tknots[mask]
             for tk0, tk1 in zip(tmesh, tmesh[1:]):
-                tvals = tk0 + nodes * (tk1 - tk0)
+                diff = tk1 - tk0
+                tvals = tk0 + nodes * diff
+                zvals = (tvals - tva) / (tvb - tva)
                 phis = self.basis.eval(tvals)
-                phis *= (tk1 - tk0) / (tvb - tva)
-                result += diff * alpha * np.einsum("i,ji->j", weights, phis)
-                result += diff * beta * np.einsum("i,i,ji->j", weights, tvals, phis)
+                result += diff * alpha * np.einsum("ij,j->i", phis, weights)
+                result += (
+                    diff * beta * np.einsum("ij,j,j->i", phis, weights, zvals)
+                )
         return result
-
-
 
 
 class ShearVector:

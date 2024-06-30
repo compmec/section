@@ -189,7 +189,6 @@ class TestComputeMatrix:
         pass
 
 
-
 class TestTorsionVectors:
     @pytest.mark.order(8)
     @pytest.mark.dependency(depends=["test_begin"])
@@ -198,11 +197,11 @@ class TestTorsionVectors:
 
     @pytest.mark.order(8)
     @pytest.mark.timeout(10)
-    @pytest.mark.dependency(depends=["TestComputeMatrix::test_begin"])
+    @pytest.mark.dependency(depends=["TestTorsionVectors::test_begin"])
     def test_square1_tensor_const_vector(self):
         vertices = [(0, 0), (1, 0), (1, 1), (0, 1)]
         vertices = np.array(vertices, dtype="float64")
-        good_vector = np.array([0, 1/2, 0, -1/2])
+        good_vector = np.array([0, 1 / 2, 0, -1 / 2])
 
         curve = PolygonCurve(vertices)
         basis = BasisFunc.cyclic(curve.knots)
@@ -212,10 +211,9 @@ class TestTorsionVectors:
         assert len(test_vector) == len(good_vector)
         np.testing.assert_allclose(test_vector, good_vector)
 
-    
     @pytest.mark.order(8)
     @pytest.mark.timeout(10)
-    @pytest.mark.dependency(depends=["TestComputeMatrix::test_begin"])
+    @pytest.mark.dependency(depends=["TestTorsionVectors::test_begin"])
     def test_square2_tensor_const_vector(self):
         vertices = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
         vertices = np.array(vertices, dtype="float64")
@@ -231,7 +229,7 @@ class TestTorsionVectors:
 
     @pytest.mark.order(8)
     @pytest.mark.timeout(10)
-    @pytest.mark.dependency(depends=["TestComputeMatrix::test_begin"])
+    @pytest.mark.dependency(depends=["TestTorsionVectors::test_begin"])
     def test_square3_tensor_const_vector(self):
         vertices = [(1, 0), (0, 1), (-1, 0), (0, -1)]
         vertices = np.array(vertices, dtype="float64")
@@ -245,14 +243,19 @@ class TestTorsionVectors:
         assert len(test_vector) == len(good_vector)
         np.testing.assert_allclose(test_vector, good_vector)
 
-
     @pytest.mark.order(8)
     @pytest.mark.timeout(10)
-    @pytest.mark.dependency(depends=["TestComputeMatrix::test_begin"])
-    def test_square3_tensor_const_vector(self):
-        vertices = [(3, 2), (2, 3), (1, 2), (2, 1)]
+    @pytest.mark.dependency(depends=["TestTorsionVectors::test_begin"])
+    def test_square4_tensor_const_vector(self):
+        a, b = 7, 13
+        vertices = [
+            (a - 1, b - 1),
+            (a + 1, b - 1),
+            (a + 1, b + 1),
+            (a - 1, b + 1),
+        ]
         vertices = np.array(vertices, dtype="float64")
-        good_vector = np.array([0, 0, 0, 0])
+        good_vector = np.array([a - b, a + b, b - a, -b - a])
 
         curve = PolygonCurve(vertices)
         basis = BasisFunc.cyclic(curve.knots)
@@ -262,14 +265,13 @@ class TestTorsionVectors:
         assert len(test_vector) == len(good_vector)
         np.testing.assert_allclose(test_vector, good_vector)
 
-
-
     @pytest.mark.order(8)
     @pytest.mark.dependency(
         depends=[
-            "TestComputeMatrix::test_square1_tensor_const_vector",
-            "TestComputeMatrix::test_square2_tensor_const_vector",
-            "TestComputeMatrix::test_square3_tensor_const_vector",
+            "TestTorsionVectors::test_square1_tensor_const_vector",
+            "TestTorsionVectors::test_square2_tensor_const_vector",
+            "TestTorsionVectors::test_square3_tensor_const_vector",
+            "TestTorsionVectors::test_square4_tensor_const_vector",
         ]
     )
     def test_end(self):
@@ -277,6 +279,8 @@ class TestTorsionVectors:
 
 
 @pytest.mark.order(8)
-@pytest.mark.dependency(depends=["TestComputeMatrix::test_end"])
+@pytest.mark.dependency(
+    depends=["TestComputeMatrix::test_end", "TestTorsionVectors::test_end"]
+)
 def test_end():
     pass
