@@ -10,9 +10,8 @@ from collections import OrderedDict
 from typing import Dict, Optional, Tuple
 
 import numpy as np
-from shapepy import JordanCurve
-
 import pynurbs
+from shapepy import JordanCurve
 
 from . import integral
 from .abcs import ICurve, ISegment, LabeledTracker

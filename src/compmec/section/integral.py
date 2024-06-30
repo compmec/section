@@ -14,9 +14,10 @@ Integration.chebyshev: Polynomial integration at chebyshev nodes
 
 import math
 from typing import Tuple
-from .abcs import ICurve
 
 import numpy as np
+
+from .abcs import ICurve
 
 
 # pylint: disable=invalid-name

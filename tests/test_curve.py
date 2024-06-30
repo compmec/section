@@ -1,7 +1,7 @@
 import numpy as np
+import pynurbs
 import pytest
 
-import pynurbs
 from compmec.section.curve import NurbsCurve, PolygonCurve
 
 

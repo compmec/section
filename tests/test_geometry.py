@@ -3,9 +3,9 @@ File to test src/compmec/section/geometry.py module
 """
 
 import numpy as np
+import pynurbs
 import pytest
 
-import pynurbs
 from compmec.section.curve import NurbsCurve
 from compmec.section.geometry import Geometry
 
