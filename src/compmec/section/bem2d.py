@@ -117,13 +117,10 @@ class ComputeMatrix:
 
 class TorsionEvaluator:
 
-    def __init__(self, curve: ICurve, basis: IBasisFunc):
-        assert curve.knots[0] == basis.knots[0]
-        assert curve.knots[-1] == basis.knots[-1]
+    def __init__(self, curve: ICurve):
         self.curve = curve
-        self.basis = basis
 
-    def torsion_center_matrix(self) -> Tuple[Tuple[float]]:
+    def torsion_center_matrix(self, basis: IBasisFunc) -> Tuple[Tuple[float]]:
         """
         Computes the matrix used to compute the torsion center
 
@@ -142,7 +139,7 @@ class TorsionEvaluator:
         """
         raise NotImplementedError
 
-    def torsion_constant_vector(self) -> Tuple[float]:
+    def torsion_constant_vector(self, basis: IBasisFunc) -> Tuple[float]:
         """
         Computes the vector used to compute the torsion constant
 
@@ -163,17 +160,14 @@ class TorsionEvaluator:
             We suppose the curve is a polygon
 
         """
-        ndofs = self.basis.ndofs
-        result = np.zeros(ndofs, dtype="float64")
+        result = np.zeros(basis.ndofs, dtype="float64")
         vertices = self.curve.eval(self.curve.knots[:-1])
         vectors = np.roll(vertices, shift=-1, axis=0) - vertices
         alphas = np.einsum("ij,ij->i", vertices, vectors)
         betas = np.einsum("ij,ij->i", vectors, vectors)
 
         cknots = np.array(self.curve.knots, dtype="float64")
-        tknots = np.array(
-            sorted(set(self.curve.knots) | set(self.basis.knots))
-        )
+        tknots = np.array(sorted(set(self.curve.knots) | set(basis.knots)))
         nodes, weights = Integration.closed(2)
 
         for i, (alpha, beta) in enumerate(zip(alphas, betas)):
@@ -184,7 +178,7 @@ class TorsionEvaluator:
                 diff = tk1 - tk0
                 tvals = tk0 + nodes * diff
                 zvals = (tvals - tva) / (tvb - tva)
-                phis = self.basis.eval(tvals)
+                phis = basis.eval(tvals)
                 result += diff * alpha * np.einsum("ij,j->i", phis, weights)
                 result += (
                     diff * beta * np.einsum("ij,j,j->i", phis, weights, zvals)
