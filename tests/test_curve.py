@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from compmec import nurbs
-from compmec.section.curve import NurbsCurve
+from compmec.section.curve import Curve
 
 
 @pytest.mark.order(1)
@@ -15,11 +15,8 @@ def test_begin():
 @pytest.mark.timeout(10)
 @pytest.mark.dependency(depends=["test_begin"])
 def test_winding_square():
-    knotvector = nurbs.GeneratorKnotVector.uniform(1, 5)
-    vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1], [1, 1]]
-    vertices = np.array(vertices, dtype="float64")
-    curve = nurbs.Curve(knotvector, vertices)
-    curve = NurbsCurve(curve)
+    vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1]]
+    curve = Curve.from_vertices(vertices)
 
     assert curve.winding((0, 0)) == 1
     assert curve.winding((1, 0)) == 0.5

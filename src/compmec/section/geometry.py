@@ -10,7 +10,7 @@ import numpy as np
 from compmec.shape.shape import ConnectedShape, DefinedShape, SimpleShape
 
 from .abcs import NamedTracker
-from .curve import Curve, NurbsCurve
+from .curve import Curve
 
 
 class Geometry(NamedTracker):
@@ -73,7 +73,7 @@ def shapes2geometries(shapes: Tuple[DefinedShape]) -> Tuple[Geometry]:
             signal = 1 if float(jordan) > 0 else -1
             if signal < 0:
                 jordan = ~jordan
-            curve = NurbsCurve.from_jordan(jordan)
+            curve = Curve.from_jordan(jordan)
             curve_labels.append(signal * curve.label)
         geometry = Geometry(curve_labels)
         geometries.append(geometry)

@@ -7,12 +7,11 @@ deal with the boundary curves.
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import Dict, Optional, Tuple
+from typing import Optional, Tuple
 
 import numpy as np
+import pynurbs
 from compmec.shape import JordanCurve
-
-from compmec import nurbs
 
 from . import integral
 from .abcs import ICurve, LabeledTracker
@@ -77,44 +76,21 @@ class Curve(LabeledTracker, ICurve):
 
     instances = OrderedDict()
 
-    @staticmethod
-    def new_instance(tipo: str, dictionary: Dict) -> Curve:
-        """
-        Creates a new instance of Curve depending on
-        the 'tipo' and the informations from the dictionary
-
-        :param tipo: The curve-subclass to be called, in ["nurbs"]
-        :type tipo: str
-        :return: The created curve instance
-        :rtype: Curve
-        """
-        tipo2class = {"nurbs": NurbsCurve}
-        if tipo not in tipo2class:
-            raise NotImplementedError
-        return tipo2class[tipo].from_dict(dictionary)
-
-
-class NurbsCurve(Curve):
-    """
-    Nurbs Curve instance, a child of "Curve" that serves as interface
-    and uses the functions/methods from compmec-nurbs package
-    """
-
     @classmethod
-    def from_jordan(cls, jordan: JordanCurve) -> NurbsCurve:
+    def from_jordan(cls, jordan: JordanCurve) -> Curve:
         """
-        Converts a jordan curve into a NurbsCurve instance
+        Converts a jordan curve into a Curve instance
 
         :param jordan: A jordan curve from compmec-shape packaged
         :type jordan: compmec.shape.JordanCurve
-        :return: A NurbsCurve instance
-        :rtype: NurbsCurve
+        :return: A Curve instance
+        :rtype: Curve
         """
         bezier_curves = []
         for i, segment in enumerate(jordan.segments):
-            knotvector = nurbs.GeneratorKnotVector.bezier(segment.degree)
+            knotvector = pynurbs.GeneratorKnotVector.bezier(segment.degree)
             knotvector.shift(i)
-            new_bezier = nurbs.Curve(knotvector)
+            new_bezier = pynurbs.Curve(knotvector)
             new_bezier.ctrlpoints = segment.ctrlpoints
             bezier_curves.append(new_bezier)
 
@@ -126,72 +102,47 @@ class NurbsCurve(Curve):
             np.array(tuple(point), dtype="float64")
             for point in curve.ctrlpoints
         )
-        curve.ctrlpoints = ctrlpoints
-        return cls(curve)
+        return cls(curve.knotvector, ctrlpoints, weights = curve.weights)
 
     @classmethod
-    def from_dict(cls, dictionary: Dict) -> NurbsCurve:
-        degree = dictionary["degree"] if "degree" in dictionary else None
-        knotvector = nurbs.KnotVector(dictionary["knotvector"], degree)
-        nurbs_curve = nurbs.Curve(knotvector)
-        if "ctrllabels" in dictionary:
-            labels = tuple(dictionary["ctrllabels"])
-            ctrlpoints = Node.from_labels(labels)
-        else:
-            ctrlpoints = dictionary["ctrlpoints"]
-        nurbs_curve.ctrlpoints = np.array(ctrlpoints, dtype="float64")
-        if "weights" in dictionary:
-            nurbs_curve.weights = dictionary["weights"]
-        return cls(nurbs_curve)
+    def from_vertices(cls, vertices: Tuple[Tuple[float]]) -> Curve:
+        """
+        Creates a Curve instance based on given vertices
 
-    def to_dict(self) -> Dict:
-        dictionary = OrderedDict()
-        dictionary["degree"] = self.internal.degree
-        dictionary["knotvector"] = self.internal.knotvector
-        dictionary["ctrlpoints"] = self.internal.ctrlpoints
-        weights = self.internal.weights
-        if weights is not None:
-            dictionary["weights"] = weights
-        return dictionary
+        :param vertices: The polygon vertices
+        :type vertices: tuple[tuple[float]]
+        :return: A Curve instance
+        :rtype: Curve
+        """
+        npts = len(vertices)
+        ctrlpoints = np.array(vertices + [vertices[0]], dtype="float64")
+        knotvector = [0] + list(range(npts + 1)) + [npts]
+        knotvector = pynurbs.KnotVector(knotvector)
+        return cls(knotvector, ctrlpoints)
 
-    def __new__(cls, nurbs_curve: nurbs.Curve, label: Optional[int] = None):
-        if not isinstance(nurbs_curve, nurbs.Curve):
-            msg = "Invalid internal curve"
-            raise TypeError(msg)
-        instance = super().__new__(cls)
-        instance.label = label
-        instance.internal = nurbs_curve
-        return instance
+    def __init__(
+        self,
+        knotvector: Tuple[float],
+        ctrlpoints: Tuple[Tuple[float]],
+        *,
+        weights: Tuple[float] = None,
+        label: Optional[int] = None,
+    ):
+        self.__internal = pynurbs.Curve(knotvector, ctrlpoints, weights)
+        self.__dinternal = pynurbs.Derivate(self.__internal)
+        self.label = label
 
     def eval(self, parameters: Tuple[float]) -> Tuple[Tuple[float]]:
-        values = self.internal.eval(parameters)
+        values = self.__internal.eval(parameters)
+        return np.array(values, dtype="float64")
+
+    def deval(self, parameters: Tuple[float]) -> Tuple[Tuple[float]]:
+        values = self.__dinternal.eval(parameters)
         return np.array(values, dtype="float64")
 
     @property
     def knots(self) -> Tuple[float]:
-        return self.internal.knotvector.knots
-
-    @property
-    def limits(self) -> Tuple[float]:
-        return self.internal.knotvector.limits
-
-    @property
-    def internal(self) -> nurbs.Curve:
-        """
-        Gives the internal nurbs.Curve object
-
-        :getter: Returns the curve's label
-        :setter: Sets the new curve instance
-        :type: compmec.nurbs.Curve
-        """
-        return self.__internal
-
-    @internal.setter
-    def internal(self, new_curve: nurbs.Curve):
-        if not isinstance(new_curve, nurbs.Curve):
-            msg = "Invalid internal curve"
-            raise TypeError(msg)
-        self.__internal = new_curve
+        return self.__internal.knotvector.knots
 
     def winding(self, point: Tuple[float]) -> float:
         # Verify if the point is at any vertex

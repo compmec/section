@@ -157,33 +157,6 @@ class ICurve(ABC):
     With this, it's possible to implement your own type of parametric curve
     """
 
-    @classmethod
-    @abstractmethod
-    def from_dict(cls, dictionary: Dict) -> ICurve:
-        """
-        Gives a curve instance based on the given parameters
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def to_dict(self) -> Dict:
-        """
-        Transforms a curve instance into a dictionary
-        """
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def limits(self) -> Tuple[float]:
-        """
-        Gives the curve's parametric interval
-
-        :getter: Returns the pair [a, b] in which curve is parametric defined
-        :type: Tuple[float]
-
-        """
-        raise NotImplementedError
-
     @property
     @abstractmethod
     def knots(self) -> Tuple[float]:
@@ -200,6 +173,18 @@ class ICurve(ABC):
     def eval(self, parameters: Tuple[float]) -> Tuple[Tuple[float]]:
         """
         Evaluates the curves at given parameters.
+
+        :param parameters: A vector-like of lenght n
+        :type parameters: Tuple[float]
+        :return: A matrix of shape (n, 2)
+        :rtype: Tuple[Tuple[float]]
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def deval(self, parameters: Tuple[float]) -> Tuple[Tuple[float]]:
+        """
+        Evaluates the derivative of curve at given parameters.
 
         :param parameters: A vector-like of lenght n
         :type parameters: Tuple[float]
