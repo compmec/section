@@ -12,7 +12,7 @@ from collections import OrderedDict
 from typing import Iterable, Optional, Tuple, Union
 
 import numpy as np
-from compmec.shape.shape import DefinedShape, DisjointShape
+from shapepy.shape import DefinedShape, DisjointShape
 
 from .abcs import ISection, NamedTracker
 from .curve import Curve
@@ -77,7 +77,7 @@ class BaseSection(ISection, NamedTracker):
     ) -> BaseSection:
         """
         Creates an Section instance based on given shapes and materials
-        It's used along the compmec-shape packaged
+        It's used along the shapepy packaged
 
         :param name: The section's name, defaults to "custom-section"
         :type name: str, optional

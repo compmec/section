@@ -4,7 +4,7 @@ File to tests cases when only axial forces are applied
 
 import numpy as np
 import pytest
-from compmec.shape import Primitive
+from shapepy import Primitive
 
 from compmec.section import Section
 from compmec.section.material import Isotropic

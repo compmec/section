@@ -8,7 +8,7 @@ This file tests the basic geometry properties, such as
 import math
 
 import pytest
-from compmec.shape import Primitive
+from shapepy import Primitive
 
 from compmec.section.dataio import JsonIO
 from compmec.section.material import Isotropic

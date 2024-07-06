@@ -11,7 +11,7 @@ from typing import Optional, Tuple
 
 import numpy as np
 import pynurbs
-from compmec.shape import JordanCurve
+from shapepy import JordanCurve
 
 from . import integral
 from .abcs import ICurve, LabeledTracker
@@ -81,8 +81,8 @@ class Curve(LabeledTracker, ICurve):
         """
         Converts a jordan curve into a Curve instance
 
-        :param jordan: A jordan curve from compmec-shape packaged
-        :type jordan: compmec.shape.JordanCurve
+        :param jordan: A jordan curve from shapepy packaged
+        :type jordan: shapepy.JordanCurve
         :return: A Curve instance
         :rtype: Curve
         """
