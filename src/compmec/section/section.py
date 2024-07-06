@@ -138,68 +138,17 @@ class GeometricSection(BaseSection):
         self.__geomintegs = geomintegs
 
     def area(self) -> float:
-        """
-        Gives the cross-section area
-
-        A = int 1 dx dy
-
-        :return: The value of cross-section area
-        :rtype: float
-
-        Example use
-        -----------
-
-        >>> section.area()
-        1.0
-
-        """
         if self.__geomintegs is None:
             self.__compute_geomintegs()
         return self.__geomintegs[0]
 
     def first_moment(self) -> Tuple[float]:
-        """Gives the first moments of area
-
-        Qx = int y dx dy
-        Qy = int x dx dy
-
-        :return: The first moment of inertia (Qx, Qy)
-        :rtype: tuple[float, float]
-
-        Example use
-        -----------
-
-        >>> section.first_moment()
-        (0., 0.)
-
-        """
         if self.__geomintegs is None:
             self.__compute_geomintegs()
         iqx, iqy = self.__geomintegs[1:3]
         return iqx, iqy
 
     def second_moment(self, center: Tuple[float] = (0, 0)) -> Tuple[float]:
-        """Gives the second moment of inertia with respect to ``center``
-
-        Ixx = int (y-cy)^2 dx dy
-        Ixy = int (x-cx)*(y-cy) dx dy
-        Iyy = int (x-cx)^2 dx dy
-
-        If no ``center`` is given, it assumes the origin (0, 0) and
-        returns the global second moment of inertia
-
-        :param center: The center to compute second moment, default (0, 0)
-        :type center: tuple[float, float]
-        :return: The values of Ixx, Ixy, Iyy
-        :rtype: tuple[float, float, float]
-
-        Example use
-        -----------
-
-        >>> section.second_moment()
-        (1., 0., 1.)
-
-        """
         if self.__geomintegs is None:
             self.__compute_geomintegs()
         area = self.area()
@@ -210,27 +159,6 @@ class GeometricSection(BaseSection):
         return ixx, ixy, iyy
 
     def third_moment(self, center: Tuple[float] = (0, 0)) -> Tuple[float]:
-        """Gives the third moment of inertia with respect to ``center``
-
-        Ixxx = int (y-cy)^3 dx dy
-        Ixxy = int (x-cx)*(y-cy)^2 dx dy
-        Ixyy = int (x-cx)^2*(y-cy) dx dy
-        Iyyy = int (x-cx)^3 dx dy
-
-        If no ``center`` is given, it assumes the origin (0, 0)
-
-        :param center: The center to compute second moment, default (0, 0)
-        :type center: tuple[float, float]
-        :return: The values of Ixxx, Ixxy, Ixyy, Iyyy
-        :rtype: tuple[float, float, float, float]
-
-        Example use
-        -----------
-
-        >>> section.second_moment()
-        (0., 0., 0., 0.)
-
-        """
         if self.__geomintegs is None:
             self.__compute_geomintegs()
         area = self.area()
@@ -242,68 +170,19 @@ class GeometricSection(BaseSection):
         return ixxx, ixxy, ixyy, iyyy
 
     def geometric_center(self) -> Tuple[float]:
-        """Gives the geometric center G
-
-        G = (x_gc, y_gc)
-        x_gc = (1/A) * Qy
-        y_gc = (1/A) * Qx
-
-        This center depends only on the geometry,
-        not on the material
-
-        :return: The value of geometric center G
-        :rtype: tuple[float, float]
-
-        Example use
-        -----------
-
-        >>> section = Section(shapes, materials)
-        >>> section.geometric_center()
-        (0., 0.)
-
-        """
         iqx, iqy = self.first_moment()
         area = self.area()
         return iqx / area, iqy / area
 
     def bending_center(self) -> Tuple[float]:
-        """Gives the bendin center B
-
-        The bending center is the point of the
-        intersection of two neutral lines, where
-        the stress and strain are always zero
-
-        :return: The value of bending center B
-        :rtype: tuple[float, float]
-
-        Example use
-        -----------
-
-        >>> section = Section(shapes, materials)
-        >>> section.bending_center()
-        (0., 0.)
-
-        """
         return self.geometric_center()
 
     def gyradius(self) -> Tuple[float]:
-        """Gives the gyradius (radii of gyration)
-
-        R = (sqrt(Ixx/A), sqrt(Iyy/A))
-
-        """
         area = self.area()
         ixx, _, iyy = self.second_moment()
         return np.sqrt(iyy / area), np.sqrt(ixx / area)
 
     def charged_field(self) -> ChargedField:
-        """
-        Gives the charged field instance to evaluate stresses
-
-        :return: The field evaluator
-        :rtype: ChargedField
-
-        """
         return ChargedField(self)
 
 
@@ -314,56 +193,10 @@ class Section(GeometricSection):
     """
 
     def torsion_center(self) -> Tuple[float]:
-        """Gives the torsion center T
-
-        :return: The value of torsion center T
-        :rtype: tuple[float, float]
-
-        Example use
-        -----------
-
-        >>> section = Section(shapes, materials)
-        >>> section.torsion_center()
-        (0., 0.)
-
-        """
         raise NotImplementedError
 
     def torsion_constant(self) -> float:
-        """Gives the torsion constant J
-
-        J = Ixx + Iyy - Jw
-
-        Careful: This function solves a linear system
-
-        :return: The value of torsion constant J
-        :rtype: float
-
-        Example use
-        -----------
-
-        >>> section = Section(shapes, materials)
-        >>> section.torsion_constant()
-        1.
-
-        """
         raise NotImplementedError
 
     def shear_center(self) -> Tuple[float]:
-        """Gives the shear center S
-
-        The shear center is the point which,
-        when applied a transverse force, this
-        force doesn't cause torsion
-
-        :return: The value of shear center S
-        :rtype: tuple[float, float]
-
-        Example use
-        -----------
-
-        >>> section.shear_center()
-        (0., 0.)
-
-        """
         raise NotImplementedError
