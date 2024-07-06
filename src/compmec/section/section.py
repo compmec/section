@@ -12,12 +12,12 @@ from collections import OrderedDict
 from typing import Iterable, Optional, Tuple, Union
 
 import numpy as np
-from compmec.shape.shape import DefinedShape
+from compmec.shape.shape import DefinedShape, DisjointShape
 
 from .abcs import ISection, NamedTracker
 from .curve import Curve
 from .field import ChargedField
-from .geometry import Geometry, shapes2geometries
+from .geometry import Geometry
 from .integral import Polynomial
 from .material import Material
 
@@ -88,8 +88,18 @@ class BaseSection(ISection, NamedTracker):
             shapes = [shapes]
         if isinstance(materials, Material):
             materials = [materials]
-        geome_names = tuple(geom.name for geom in shapes2geometries(shapes))
-        mater_names = tuple(material.name for material in materials)
+        geome_names = []
+        mater_names = []
+        for shape, material in zip(shapes, materials):
+            if not isinstance(shape, DisjointShape):
+                geometrie = Geometry.from_shape(shape)
+                geome_names.append(geometrie.name)
+                mater_names.append(material.name)
+                continue
+            for subshape in shape.__subshapes:
+                geometrie = GeometricSection.from_shapes(subshape)
+                geome_names.append(geometrie.name)
+                mater_names.append(material.name)
         return cls(geome_names, mater_names)
 
 

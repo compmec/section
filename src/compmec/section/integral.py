@@ -13,9 +13,11 @@ Integration.chebyshev: Polynomial integration at chebyshev nodes
 """
 
 import math
-from typing import Tuple
+from typing import Optional, Tuple
 
 import numpy as np
+
+from .abcs import ICurve
 
 
 # pylint: disable=invalid-name
@@ -361,6 +363,18 @@ class Polynomial:
         (3, 0),
     ]
 
+    @staticmethod
+    def curve_area(curve: ICurve, tolerance: Optional[float] = 1e-9) -> float:
+        """
+        Computes the area inside the curve
+
+        Can be negative if the curve is clockwise
+
+        II_{a, b} = int_D dx dy
+        """
+        integrator = AdaptativePolynomialIntegrator(curve, tolerance=tolerance)
+        return integrator.integrate(0, 0) / 2
+
     # pylint: disable=invalid-name
     @staticmethod
     def polygon(vertices: Tuple[Tuple[float]]) -> Tuple[float]:
@@ -403,7 +417,7 @@ class Polynomial:
         return geomprops
 
     @staticmethod
-    def adaptative(curve, tolerance: float = 1e-9) -> Tuple[float]:
+    def adaptative(curve: ICurve, tolerance: float = 1e-9) -> Tuple[float]:
         """
         Computes the polynomials integrals over the area defined by the curve
 

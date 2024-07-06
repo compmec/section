@@ -9,7 +9,12 @@ from compmec.section.geometry import Geometry
 
 
 @pytest.mark.order(1)
-@pytest.mark.dependency()
+@pytest.mark.dependency(
+    depends=[
+        "tests/test_curve.py::test_end",
+    ],
+    scope="session",
+)
 def test_begin():
     pass
 
@@ -42,20 +47,20 @@ def test_hollow_square():
     vertices = [[3, 3], [-3, 3], [-3, -3], [3, -3]]
     curve_ext = Curve.from_vertices(vertices)
 
-    vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1]]
+    vertices = [[-1, -1], [-1, 1], [1, 1], [1, -1]]
     curve_int = Curve.from_vertices(vertices)
 
-    geometry = Geometry([curve_ext.label, -curve_int.label])
+    geometry = Geometry([curve_ext, curve_int])
 
     assert geometry.winding((0, 0)) == 0
     assert geometry.winding((1, 0)) == 0.5
-    assert geometry.winding((1, 1)) == 0.25
+    assert geometry.winding((1, 1)) == 0.75
     assert geometry.winding((0, 1)) == 0.5
-    assert geometry.winding((-1, 1)) == 0.25
+    assert geometry.winding((-1, 1)) == 0.75
     assert geometry.winding((-1, 0)) == 0.5
-    assert geometry.winding((-1, -1)) == 0.25
+    assert geometry.winding((-1, -1)) == 0.75
     assert geometry.winding((0, -1)) == 0.5
-    assert geometry.winding((1, -1)) == 0.25
+    assert geometry.winding((1, -1)) == 0.75
     assert geometry.winding((1, 0)) == 0.5
 
     assert geometry.winding((2, 0)) == 1

@@ -47,7 +47,7 @@ class Node(LabeledTracker):
         for line in matrix:
             label = int(line[0])
             assert label not in Node.instances
-            point = tuple(map(float, line[1:3]))
+            point = np.array(line[1:3], dtype="float64")
             Node.instances[label] = point
 
     @staticmethod
@@ -102,7 +102,7 @@ class Curve(LabeledTracker, ICurve):
             np.array(tuple(point), dtype="float64")
             for point in curve.ctrlpoints
         )
-        return cls(curve.knotvector, ctrlpoints, weights = curve.weights)
+        return cls(curve.knotvector, ctrlpoints, weights=curve.weights)
 
     @classmethod
     def from_vertices(cls, vertices: Tuple[Tuple[float]]) -> Curve:
@@ -128,8 +128,11 @@ class Curve(LabeledTracker, ICurve):
         weights: Tuple[float] = None,
         label: Optional[int] = None,
     ):
+        knotvector = pynurbs.KnotVector(knotvector)
+        ctrlpoints = tuple(map(np.array, ctrlpoints))
         self.__internal = pynurbs.Curve(knotvector, ctrlpoints, weights)
-        self.__dinternal = pynurbs.Derivate(self.__internal)
+        self.__dinternal = None
+        self.__area = float(integral.Polynomial.curve_area(self))
         self.label = label
 
     def eval(self, parameters: Tuple[float]) -> Tuple[Tuple[float]]:
@@ -140,9 +143,16 @@ class Curve(LabeledTracker, ICurve):
         values = self.__dinternal.eval(parameters)
         return np.array(values, dtype="float64")
 
+    def __float__(self) -> float:
+        return self.__area
+
     @property
     def knots(self) -> Tuple[float]:
         return self.__internal.knotvector.knots
+
+    @property
+    def degree(self) -> int:
+        return self.__internal.knotvector.degree
 
     def winding(self, point: Tuple[float]) -> float:
         # Verify if the point is at any vertex
@@ -152,7 +162,7 @@ class Curve(LabeledTracker, ICurve):
                 vec_left = vertices[(i - 1) % len(vertices)] - point
                 vec_righ = vertices[(i + 1) % len(vertices)] - point
                 wind = 0.5 * np.arccos(np.inner(vec_left, vec_righ)) / np.pi
-                return wind
+                return wind if float(self) > 0 else 1 - wind
 
         wind = 0
         for vertexa, vertexb in zip(vertices, np.roll(vertices, -1, axis=0)):
@@ -161,4 +171,18 @@ class Curve(LabeledTracker, ICurve):
                 wind = 0.5
                 break
             wind += sub_wind
-        return wind
+        if float(self) > 0:
+            return wind
+        return 0 if wind == -1 else 1 - wind
+
+    def __invert__(self):
+        internal = self.__internal
+        knotvector = internal.knotvector
+        minknot, maxknot = min(knotvector), max(knotvector)
+        knotvector = [minknot + maxknot - knot for knot in knotvector[::-1]]
+        ctrlpoints = tuple(internal.ctrlpoints[::-1])
+        if internal.weights is None:
+            weights = None
+        else:
+            weights = internal.weights[::-1]
+        return self.__class__(knotvector, ctrlpoints, weights=weights)
