@@ -96,8 +96,8 @@ class BaseSection(ISection, NamedTracker):
                 geome_names.append(geometrie.name)
                 mater_names.append(material.name)
                 continue
-            for subshape in shape.__subshapes:
-                geometrie = GeometricSection.from_shapes(subshape)
+            for subshape in shape.subshapes:
+                geometrie = Geometry.from_shape(subshape)
                 geome_names.append(geometrie.name)
                 mater_names.append(material.name)
         return cls(geome_names, mater_names)

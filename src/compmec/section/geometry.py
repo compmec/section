@@ -22,6 +22,9 @@ class Geometry(NamedTracker):
 
     @classmethod
     def from_shape(cls, shape: Union[SimpleShape, ConnectedShape]):
+        """
+        Creates a Geometry instance from a shape of shapepy package
+        """
         assert isinstance(shape, (SimpleShape, ConnectedShape))
         curves = []
         for jordan in shape.jordans:
@@ -38,12 +41,12 @@ class Geometry(NamedTracker):
                 continue
             if not isinstance(curve, int):
                 raise NotImplementedError
-            if curve in Curve.instances:
-                curves[i] = Curve.instances[curve]
-            elif (-curve) in Curve.instances:
-                curves[i] = ~Curve.instances[-curve]
-            else:
+            if abs(curve) not in Curve.instances:
                 raise NotImplementedError
+            if curve > 0:
+                curves[i] = Curve.instances[curve]
+            else:
+                curves[i] = ~Curve.instances[-curve]
         self.__curves = tuple(curves)
         self.name = name
 

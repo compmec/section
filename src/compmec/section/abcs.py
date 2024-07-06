@@ -169,6 +169,20 @@ class ICurve(ABC):
         """
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def degree(self) -> int:
+        """
+        Gives the curve's polynomial degree
+
+        Degree 1 means the curve is linear/polygonal
+
+        :getter: Returns the curve's polynomial degree
+        :type: int
+
+        """
+        raise NotImplementedError
+
     @abstractmethod
     def eval(self, parameters: Tuple[float]) -> Tuple[Tuple[float]]:
         """
