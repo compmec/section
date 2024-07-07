@@ -9,8 +9,7 @@ The main sources of theories, hypothesis and equations are both books:
 * Analysis and Design of Elastic Beams, from Walter D. Pilkey
 * The Boundary Element Method for Engineers and Scientists, from John T. Katsikadelis
 
-The interest is to compute the section properties and it's needed to solve a Poisson's equation.
-Hence, the used theory can be divided in three parts:
+The used theory can be divided in three parts:
 
 * Section properties
     * :ref:`geometric_properties`
@@ -21,6 +20,9 @@ Hence, the used theory can be divided in three parts:
     * :ref:`boundary_element_method`
 * Mathematics
     * :ref:`numerical_integration`
+    * :ref:`polygonal_domains`
+    * :ref:`domain_to_boundary`
+    * :ref:`multiple_curves`
 
 The geometric properties, like computing momentum of inertias, are easy developed.
 But solving the linear PDE, to use in torsion and shear, is more challenging and more described through this page. 
@@ -143,12 +145,13 @@ Radius of Gyration
 ------------------
 
 The radius of gyration is one mesure of spread the body is.
-For a ring, the radius of gyration matches its radius
 
 .. math::
     r_{x} := \sqrt{\dfrac{I_{xx}}{A}}
 .. math::
     r_{y} := \sqrt{\dfrac{I_{yy}}{A}}
+
+For a ring, the radius of gyration matches its radius
 
 
 Principal Axis Properties
@@ -186,7 +189,7 @@ The bending center :math:`\mathbf{B}` is defined as the point such, when any ben
 .. math::
     \mathbf{B} := \left(x_{bc}, \ y_{bc}\right)
 
-From construction, it's the same as the :ref:`geometric_center` :math:`\mathbf{G}`
+For non-composite sections, it's the same as the :ref:`geometric_center` :math:`\mathbf{G}`
 
 .. math::
     \mathbf{B} = \mathbf{G}
@@ -218,8 +221,6 @@ The :math:`\mathbf{n}` is the normal vector at a point :math:`\mathbf{p} = (x, \
 
 This warping function is found by :ref:`boundary_element_method`.
 
-From now on, we suppose it's already known.
-
 .. _torsion_constant:
 
 Torsion constant
@@ -230,15 +231,11 @@ The torsion constant can be computed
 .. math::
     J := I_{xx} + I_{yy} - \mathbb{J}_{\omega}
 
-With
+With :math:`I_{xx}` and :math:`I_{yy}` found in :ref:`global_second_moment_area` and
 
 .. math::
     \mathbb{J}_{\omega} := \int_{\Omega} y \dfrac{\partial \omega}{\partial x} - x \dfrac{\partial \omega}{\partial y} \ dx \ dy
 
-This integral is transformed into a boundary one
-
-.. math::
-    \mathbb{J}_{\omega} = \int_{t_{min}}^{t_{max}} \omega \cdot \left\langle \mathbf{p}, \ \mathbf{p}'\right\rangle \ dt
 
 .. _torsion_center:
 
@@ -250,10 +247,10 @@ The torsion center :math:`\mathbf{T}` is defined as the point such, when a torsi
 .. math::
     \mathbf{T} := \left(x_{tc}, \ y_{tc}\right)
 
-The quantities :math:`x_{tc}`, :math:`y_{tc}` and :math:`c_0` by solving the linear system.
+The quantities :math:`x_{tc}`, :math:`y_{tc}` and :math:`c_{tc}` by solving the linear system.
 
 .. math::
-    \left(\int_{\Omega} \begin{bmatrix}1 & x & y \\ x & x^2 & xy \\ y & xy & y^2 \end{bmatrix} \ d\Omega\right) \begin{bmatrix}c_0 \\ y_0 \\ -x_0\end{bmatrix} = \int_{\Omega} \omega\begin{bmatrix}1 \\ x \\ y\end{bmatrix} \ d\Omega
+    \left(\int_{\Omega} \begin{bmatrix}1 & x & y \\ x & x^2 & xy \\ y & xy & y^2 \end{bmatrix} \ d\Omega\right) \begin{bmatrix}c_{tc} \\ y_{tc} \\ -x_{tc}\end{bmatrix} = \int_{\Omega} \omega\begin{bmatrix}1 \\ x \\ y\end{bmatrix} \ d\Omega
 
 The matrix on the left side is already computed in
 
@@ -261,7 +258,7 @@ The matrix on the left side is already computed in
 * :ref:`first_moment_area`
 * :ref:`global_second_moment_area`
 
-while the values on the right side are computed later
+while the values on the right side are computed
 
 .. math::
     Q_{\omega} := \int_{\Omega} \omega \ dx \ dy
@@ -281,10 +278,10 @@ while the values on the right side are computed later
 Shear properties
 ================
 
-Functions
-----------------
+Shearing Functions
+------------------
 
-From Saint-venant theory, the functions :math:`\Psi` and :math:`\Phi` are fundamental to compute shear properties.
+From Saint-venant theory, the shearing functions :math:`\Psi` and :math:`\Phi` are fundamental to compute shear properties.
 They satisfy the Poisson's equation
 
 .. math::
@@ -499,6 +496,36 @@ For computations of these shear stresses, we suppose both shear forces pass thro
 
 TODO
 
+
+.. _scalar_transformations:
+
+Scalar transformations
+----------------------
+
+To evaluate if a material will fail under a certain load condition, criterias are used to transform transform the tensor of stress :math:`\mathbb{\sigma}` into a scalar value :math:`\sigma_{eq}`.
+
+.. math::
+    \mathbb{\sigma} = \begin{bmatrix}0 & 0 & \sigma_{xz} \\ 0 & 0 & \sigma_{yz} \\ \sigma_{xz} & \sigma_{yz} & \sigma_{zz} \end{bmatrix} \Rightarrow \sigma_{eq}
+
+A material will not fail if the criteria is satisfied, for the yield strength :math:`S_{y}` obtained from a tensile test. 
+
+.. math::
+    \sigma_{eq} < S_{y}
+
+The most used criterias are **Von Mises** and **Tresca**:
+
+* Von Mises
+
+.. math::
+    \sigma_{eq} = \sqrt{\sigma_{zz}^2 + 3\left(\sigma_{xz}^2 + \sigma_{yz}^2\right)}
+
+* Tresca
+
+.. math::
+    \sigma_{eq} = \sqrt{\dfrac{\sigma_{zz}^2}{4} + \sigma_{xz}^2 + \sigma_{yz}^2}
+
+
+
 -----------------------------------------------------------------
 
 .. _boundary_element_method:
@@ -558,7 +585,7 @@ Set :math:`u(t)` as a linear combination of :math:`n` basis functions :math:`\va
 
     u(t) = \sum_{j=0}^{n-1} \varphi_j(t) \cdot U_j = \langle \mathbf{\varphi}(t), \ \mathbf{U}\rangle
 
-Fix the source point :math:`\mathbf{s}_i = \mathbf{p}(t_i)` at the boundary and
+Fix the source point :math:`\mathbf{s}_i = \mathbf{p}(\hat{t}_i)` at the boundary and
 expand :eq:`eq_bem` by using :eq:`eq_discret_func` to get :eq:`eq_matrix_formula`
 
 .. math::
@@ -569,7 +596,7 @@ expand :eq:`eq_bem` by using :eq:`eq_discret_func` to get :eq:`eq_matrix_formula
 With the auxiliar values which depends only on the geometry, the source point and the basis functions
 
 .. math::
-    A_{ij} = \alpha\left(\mathbf{s}_i\right) \cdot \varphi_j\left(t_i\right)
+    A_{ij} = \alpha\left(\mathbf{s}_i\right) \cdot \varphi_j\left(\hat{t}_i\right)
 
 .. math::
     M_{ij} = \int_{\Gamma} \varphi_j \cdot \dfrac{\partial v_i}{\partial n} \ d\Gamma
@@ -596,21 +623,18 @@ The angle :math:`\alpha` is the mesure for a given point with respect to its pos
 .. math::
     \alpha\left(\mathbf{s}\right) = \begin{cases}\in \left(0, \ 2\pi\right) \ \ \ \ \text{if} \ \mathbf{s} \in \partial \Omega \\ 0 \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \text{if} \ \mathbf{s} \notin \text{closed}\left(\Omega\right) \\   2\pi \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \text{if} \ \mathbf{s} \in \text{open}\left(\Omega\right) \end{cases}
 
-When :math:`\mathbf{s} \in \partial \Omega`, there is a value :math:`\tau` such :math:`\mathbf{p}(\tau) = \mathbf{s}` and the angle :math:`\alpha` is computed by
+When :math:`\mathbf{s}_i \in \partial \Omega`, there is a value :math:`\hat{t}_i` such :math:`\mathbf{p}(\hat{t}_i) = \mathbf{s}_i` and the angle :math:`\alpha` is computed by
 
 .. math::
-    \mathbf{v}_0 = -\lim_{\delta \to 0^{+}} \mathbf{p}'\left(\tau - \delta\right)
+    \mathbf{v}_0 = -\lim_{\delta \to 0^{+}} \mathbf{p}'\left(\hat{t}_i - \delta\right)
 
 .. math::
-    \mathbf{v}_1 = \lim_{\delta \to 0^{+}} \mathbf{p}'\left(\tau + \delta\right)
+    \mathbf{v}_1 = \lim_{\delta \to 0^{+}} \mathbf{p}'\left(\hat{t}_i + \delta\right)
 
 .. math::
     \alpha = \arg\left(\langle\mathbf{v_0}, \ \mathbf{v_1} \rangle + i \cdot \left(\mathbf{v_0} \times \mathbf{v_1}\right)\right)
 
-For smooth regions, the first derivative of :math:`\mathbf{p}` is continuous and therefore then :math:`\alpha = \pi`.
-
-.. note::
-    In python code, it's in fact used ``alpha = arctan2(cross(v0, v1), inner(v0, v1))``
+For smooth regions, :math:`\mathbf{p}'` is continuous and therefore then :math:`\alpha = \pi`.
 
 Matrix :math:`\mathbb{M}`
 -------------------------
@@ -618,7 +642,7 @@ Matrix :math:`\mathbb{M}`
 We use
 
 .. math::
-    \dfrac{\partial v}{\partial n} ds = \dfrac{\mathbf{r} \times \mathbf{p}'}{\left\langle\mathbf{r}, \ \mathbf{r}\right\rangle}
+    \dfrac{\partial v}{\partial n} ds = \dfrac{\mathbf{r} \times \mathbf{p}'}{\left\langle\mathbf{r}, \ \mathbf{r}\right\rangle} \ dt
 
 to write
 
@@ -672,9 +696,12 @@ Although both functions give the same properties cause it envolves only the deri
 .. math::
     \begin{bmatrix}K & \mathbf{C} \\ \mathbf{C}^T & 0\end{bmatrix} \begin{bmatrix}\mathbf{U} \\ \lambda \end{bmatrix} = \begin{bmatrix}\mathbf{F} \\ 0\end{bmatrix}
 
-Which vector :math:`\mathbf{C}` is a vector of ones.
+The matrix :math:`\mathbf{C}` is a matrix obtained from the :ref:`torsion_center` and :ref:`shear_center`.
+It comes from minimizing the total strain energy.
 
-The determination exacly of the constant depends on the problem and are better treated in :ref:`torsion_center` and :ref:`shear_center`.
+Lagrange Multiplier is also used to restrict the solution when there are two boundary curves that touch each other and the expected solution must be equal for all points that both curves touch each other as described in :ref:`multiple_curves`.
+
+
 
 
 -----------------------------------------------------------------
@@ -913,10 +940,10 @@ It's possible to create a quadrature for it:
 TODO
 
 
-.. _polynomial_integrals:
+.. _bidimensional_integrals:
 
-Polynomial integrals
---------------------
+Bidimensional integrals
+-----------------------
 
 To compute area, momentums and inertias, it's needed to compute the integral
 
@@ -954,6 +981,9 @@ Computing it can be done by :ref:`regular_integrals`
 
 -----------------------------------------------------------------
 
+
+.. _polygonal_domains:
+
 =================
 Polygonal domains
 =================
@@ -966,6 +996,8 @@ For an arbitrary interval :math:`\left[t_k, \ t_{k+1}\right]`, :math:`\mathbf{p}
 
 .. math::
     \mathbf{p}(t) = \mathbf{P}_{k} + \tau \cdot \mathbf{V}_k
+.. math::
+    \mathbf{p}'(t) = \mathbf{V}_k
     
 .. math::
     \mathbf{V}_k = \mathbf{P}_{k+1} - \mathbf{P}_{k}
@@ -973,12 +1005,22 @@ For an arbitrary interval :math:`\left[t_k, \ t_{k+1}\right]`, :math:`\mathbf{p}
 .. math::
     \tau = \dfrac{t - t_{k}}{t_{k+1} - t_{k}} \in \left[0, \ 1\right]
 
+For later use, define
 
+.. math::
+    \alpha_k = \left\langle \mathbf{P}_k, \ \mathbf{V}_k\right\rangle
+.. math::
+    \beta_k = \left\langle \mathbf{V}_k, \ \mathbf{V}_k\right\rangle
 
-Polynomial integrals
---------------------
+Bidimensional integrals
+-----------------------
 
-Continuating from :ref:`polynomial_integrals`, it's our objective to compute 
+It's our objective computing
+
+.. math::
+    I_{a, b} = \int_{\Omega} x^a \cdot y^b \ dx \ dy
+
+Continuating from :ref:`bidimensional_integrals`, it was transformed to 
 
 .. math::
     \begin{align*}
@@ -986,7 +1028,7 @@ Continuating from :ref:`polynomial_integrals`, it's our objective to compute
     & = \sum_{k=0}^{m-1} \int_{t_{k}}^{t_{k+1}} x^a \cdot y^b \cdot \mathbf{p} \times \mathbf{p}' \ dt
     \end{align*}
 
-For the segment :math:`k`.
+For the segment :math:`\left[t_{k}, \ t_{k+1}\right]`.
 
 .. math::
     \mathbf{p}(t) \times \mathbf{p}'(t) = \mathbf{P}_{k} \times \mathbf{P}_{k+1}
@@ -997,7 +1039,7 @@ Hence
     (a+b+2) \cdot I_{a, b} = \sum_{k=0}^{m-1} \left(x_{k}y_{k+1}-x_{k+1}y_{k}\right) I_{a, b}^{(k)}
 
 .. math::
-    I_{a, b}^{(k)} = \int_{t_k}^{t_{k+1}} x^a \cdot y^b \ dt
+    I_{a, b}^{(k)} = \int_{0}^{1} x^a \cdot y^b \ dt
 
 The integral can be computed by expanding it and using the beta function:
 
@@ -1009,23 +1051,6 @@ Leading to
 .. math::
     (a+b+1)\binom{a+b}{a} I_{a, b}^{(k)} = \sum_{i=0}^{a}\sum_{j=0}^{b}\binom{i+j}{j}\binom{a+b-i-j}{b-j}x_{k}^{a-i}x_{k+1}^{i}y_{k}^{b-j}y_{k+1}^{j}
 
-For special cases that :math:`a=0` or :math:`b=0`, we get
-
-.. math::
-    (a+2)(a+1)I_{a,0} = \sum_{k=0}^{n-1} \left(x_{k}y_{k+1}-x_{k+1}y_{k}\right)\dfrac{x_{k+1}^{a+1}-x_{k}^{a+1}}{x_{k+1}-x_{k}}
-
-.. math::
-    (b+2)(b+1)I_{0,b} = \sum_{k=0}^{n-1} \left(x_{k}y_{k+1}-x_{k+1}y_{k}\right)\dfrac{y_{k+1}^{b+1}-y_{k}^{b+1}}{y_{k+1}-y_{k}}
-
-.. note::
-    It's possible to have :math:`x_{k+1} = x_{k}` or :math:`y_{k+1} = y_{k}` in some segment, which leads to divide by zero in :math:`I_{a,0}` and :math:`I_{0,b}`.
-    
-    In that case, the expression is opened:
-
-    .. math::
-        \dfrac{z_{k+1}^{c+1}-z_{k}^{c+1}}{z_{k+1}-z_{k}} = \sum_{i=0}^{c} z_{k}^{c-i}z_{k+1}^{i}
-
-
 
 .. _bem_polygonal_domain:
 
@@ -1034,21 +1059,19 @@ Boundary Element Method
 
 For polygonal domains, when the basis functions :math:`\phi(t)` are piecewise linear, some computations becomes easier. 
 
-Since the source point :math:`\mathbf{s}_i = \mathbf{p}(t_i)`,
+Since the source point :math:`\mathbf{s}_i = \mathbf{p}(\hat{t}_i)`,
 
-* If :math:`t_i \in \left[t_{k}, \ t_{k+1}\right]` then
+* If :math:`\hat{t}_i \notin \left[t_{k}, \ t_{k+1}\right]` then
+    
+    .. math::
+        \mathbf{r}_i(t) = \left(\mathbf{P}_{k}-\mathbf{s}_i\right) + \tau \cdot \mathbf{V}_{k}
+
+* If :math:`\hat{t}_i \in \left[t_{k}, \ t_{k+1}\right]`
+    .. math::
+        \mathbf{r}(t) = \left(\tau-\hat{\tau}_i\right) \cdot \mathbf{V}_{k}
 
     .. math::
-        \mathbf{r}(t) = \left(\tau-\tau_i\right) \cdot \left(\mathbf{P}_{k+1} - \mathbf{P}_{k}\right)
-
-    .. math::
-        \tau_i = \dfrac{t_i - t_{k}}{t_{k+1} - t_{k}}\in \left[0, \ 1\right]
-
-* Else
-
-    .. math::
-        \mathbf{r}(t) = \left(\mathbf{P}_{k}-\mathbf{s}_i\right) + \tau \cdot \left(\mathbf{P}_{k+1} - \mathbf{P}_{k}\right)
-
+        \hat{\tau}_i = \dfrac{\hat{t}_i - t_{k}}{t_{k+1} - t_{k}}\in \left[0, \ 1\right]
 
 Matrix :math:`\mathbb{A}`
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1058,14 +1081,10 @@ If the source point :math:`\mathbf{s}_i` lies in the middle of the segment
 .. math::
     \alpha(\mathbf{s}_i) = \pi
 
-If the source point :math:`s_i` lies in the vertex :math:`P_{k}` then
+If the source point :math:`s_i` lies in the vertex :math:`\mathbf{P}_{k}` then
 
 .. math::
-    \mathbf{v}_0 = \mathbf{P}_{k-1}-\mathbf{P}_{k}
-.. math::
-    \mathbf{v}_1 = \mathbf{P}_{k+1}-\mathbf{P}_{k}
-.. math::
-    \alpha = \arg\left(\langle\mathbf{v}_0, \ \mathbf{v}_1 \rangle + i \cdot \left(\mathbf{v}_0 \times \mathbf{v}_1\right)\right)
+    \alpha = \arg\left(\langle\mathbf{V}_{k-1}, \ \mathbf{V}_{k} \rangle + i \cdot \left(\mathbf{V}_{k-1} \times \mathbf{V}_{k}\right)\right)
 
 
 Matrix :math:`\mathbb{M}`
@@ -1074,20 +1093,18 @@ Matrix :math:`\mathbb{M}`
 .. math::
     M_{ij} = \sum_{k=0}^{m-1} \int_{t_{k}}^{t_{k+1}} \varphi_{j} \cdot \dfrac{\mathbf{r} \times \mathbf{p}'}{\left\langle \mathbf{r}, \mathbf{r}\right\rangle} \ dt
 
-* If :math:`t_i \notin \left[t_k, \ t_{k+1}\right]`, then the evaluation is made by :ref:`regular_integrals`
+* If :math:`\hat{t}_i \notin \left[t_k, \ t_{k+1}\right]`, then the evaluation is made by :ref:`regular_integrals`
 
-* If :math:`t_i \in \left[t_k, \ t_{k+1}\right]`
+* If :math:`\hat{t}_i \in \left[t_k, \ t_{k+1}\right]`
 
     .. math::
-        \mathbf{V}_k = \mathbf{P}_{k+1} - \mathbf{P}_k
+        \mathbf{p}(t) = \mathbf{P}_k + \tau \cdot \mathbf{V}_{k} 
     .. math::
-        \mathbf{p(t)} = \mathbf{P}_k + \tau \cdot \mathbf{V}_{k} 
-    .. math::
-        \mathbf{r(t)} = \left(\tau-\tau_i\right) \cdot \mathbf{V}_{k} 
+        \mathbf{r}(t) = \left(\tau-\hat{\tau}_i\right) \cdot \mathbf{V}_{k} 
     .. math::
         \mathbf{r} \times \mathbf{p}' = 0 
 
-    Therefore, we can ignore the integration over the interval :math:`\left[t_k, \ t_{k+1}\right]`
+    Therefore, the integration over the interval :math:`\left[t_k, \ t_{k+1}\right]` can be skipped
 
 
 Vector :math:`\mathbf{F}` for warping
@@ -1100,43 +1117,28 @@ For warping function, the expression :math:`F_i` is written as
     
 .. math::
     F_{i} = \sum_{k=0}^{m-1} \int_{0}^{1} \left(\alpha_k + \tau \cdot \beta_k \right) \ln\|\mathbf{r}\| \ d\tau
-
-With :math:`\mathbf{P}_k` begin the :math:`k`-vertex and
-
-.. math::
-    \mathbf{V}_k = \mathbf{P}_{k+1} - \mathbf{P}_k
-.. math::
-    \alpha_k = \left\langle \mathbf{P}_k, \ \mathbf{V}_k\right\rangle
-.. math::
-    \beta_k = \left\langle \mathbf{V}_k, \ \mathbf{V}_k\right\rangle
     
-* If  :math:`t_i \notin \left[t_k, \ t_{k+1}\right]`, :ref:`regular_integrals` are used
+* If  :math:`\hat{t}_i \notin \left[t_k, \ t_{k+1}\right]`, :ref:`regular_integrals` are used
 
-* If :math:`t_i \in \left[t_k, \ t_{k+1}\right]`, then
+* If :math:`\hat{t}_i \in \left[t_k, \ t_{k+1}\right]`, then
     .. math::
-        \tau_i = \dfrac{t_i-t_k}{t_{k+1}-t_{k}} \in \left[0, \ 1\right]
+        \mathbf{r}(t) = \left(\tau-\hat{\tau}_i\right) \cdot \mathbf{V}_{k}
     .. math::
-        \mathbf{V}_k = \mathbf{P}_{k+1} - \mathbf{P}_k
-    .. math::
-        \mathbf{p(t)} = \mathbf{P}_k + \tau \cdot \mathbf{V}_{k} 
-    .. math::
-        \mathbf{r(t)} = \left(\tau-\tau_i\right) \cdot \mathbf{V}_{k}
-    .. math::
-        F_{ik} = & \int_{0}^{1} \left(\alpha_k + \tau \beta_k \right) \ln\|\left(\tau-\tau_i\right) \cdot \mathbf{V}_k\| \ d\tau \\
+        F_{ik} = & \int_{0}^{1} \left(\alpha_k + \tau \beta_k \right) \ln\|\left(\tau-\hat{\tau}_i\right) \cdot \mathbf{V}_k\| \ d\tau \\
             = & \left(\alpha_{k} + \dfrac{1}{2}\beta_{k}\right) \cdot \dfrac{1}{2}\ln \beta_k \\
-                & + \alpha_{k} \int_{0}^{1} \ln |\tau-\tau_i| dz \\
-                & + \beta_k \int_{0}^{1} \tau \cdot \ln |\tau-\tau_i| \ dz 
+                & + \alpha_{k} \int_{0}^{1} \ln |\tau-\hat{\tau}_i| dz \\
+                & + \beta_k \int_{0}^{1} \tau \cdot \ln |\tau-\hat{\tau}_i| \ dz 
 
-    These two log integrals are computed analiticaly, the expressions are complicated (`here <https://www.wolframalpha.com/input?i=int_%7B0%7D%5E%7B1%7D+ln%28abs%28x-x_0%29%29+dx%3B+0+%3C%3D+x_0+%3C%3D+1>`_ and `here <https://www.wolframalpha.com/input?i=int_%7B0%7D%5E%7B1%7D+x*ln%28abs%28x-x_0%29%29+dx%3B+0+%3C%3D+x_0+%3C%3D+1>`_) and depends on the value of :math:`\tau_i`. Bellow you find a table with some values
+    These two log integrals are computed analiticaly, the expressions are complicated (`here <https://www.wolframalpha.com/input?i=int_%7B0%7D%5E%7B1%7D+ln%28abs%28x-x_0%29%29+dx%3B+0+%3C%3D+x_0+%3C%3D+1>`_ and `here <https://www.wolframalpha.com/input?i=int_%7B0%7D%5E%7B1%7D+x*ln%28abs%28x-x_0%29%29+dx%3B+0+%3C%3D+x_0+%3C%3D+1>`_) and depends on the value of :math:`\hat{\tau}_i`. Bellow you find a table with some values
 
     .. list-table:: Values of logarithm integrals
         :widths: 20 40 40
         :header-rows: 1
         :align: center
 
-        * - :math:`\tau_i`
-          - :math:`\int_0^1 \ln|\tau-\tau_i| dz`
-          - :math:`\int_0^1 \tau\ln|\tau-\tau_i| dz`
+        * - :math:`\hat{\tau}_i`
+          - :math:`\int_0^1 \ln|\tau-\hat{\tau}_i| dz`
+          - :math:`\int_0^1 \tau\ln|\tau-\hat{\tau}_i| dz`
         * - :math:`0`
           - :math:`-1`
           - :math:`\frac{-1}{4}`
@@ -1147,10 +1149,100 @@ With :math:`\mathbf{P}_k` begin the :math:`k`-vertex and
           - :math:`-1`
           - :math:`\frac{-3}{4}`
 
-    Therefore, the integral over interval which :math:`t_i` lies on is made by using analitic values, and singular integrals are not computed.
+    Therefore, the integral over interval which :math:`\hat{t}_i` lies on is made by using analitic values, and singular integrals are not computed.
 
 
 Vector :math:`\mathbf{F}` for shear
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+TODO
+
+-----------------------------------------------------------------
+
+.. _domain_to_boundary:
+
+==================
+Domain to boundary
+==================
+
+
+In this section we develop the expressions that transform the domain integrals over :math:`\Omega` to the boundary integrals over :math:`\Gamma`
+
+One example is used in :ref:`bidimensional_integrals`
+
+Torsion constant
+----------------
+
+The expression used in :ref:`torsion_constant` is
+
+.. math::
+    \mathbb{J}_{\omega} := \int_{\Omega} y \dfrac{\partial \omega}{\partial x} - x \dfrac{\partial \omega}{\partial y} \ dx \ dy
+
+Which is manipulated to
+
+.. math::
+    \mathbb{J}_{\omega} = \int_{\Omega} \nabla \omega \times \mathbf{p}  \ dx \ dy
+
+Therefore
+
+.. math::
+    \mathbb{J}_{\omega} = \int_{t_{min}}^{t_{max}} \omega \cdot \left\langle \mathbf{p}, \ \mathbf{p}'\right\rangle \ dt
+
+
+Torsion center
+--------------
+
+The used quantities to evaluate the torsion center are
+
+.. math::
+    Q_{\omega} := \int_{\Omega} \omega \ dx \ dy
+.. math::
+    I_{x\omega} := \int_{\Omega} x \omega \ dx \ dy
+.. math::
+    I_{y\omega} := \int_{\Omega} y \omega \ dx \ dy
+
+To develop the expression, we develop arbitrary expression for :math:`g`:
+
+.. math::
+    I_{g\omega} := \int_{\Omega} g \cdot \omega \ dx \ dy
+
+Say there's a function :math:`q` such
+
+.. math::
+    \nabla^2 q = g
+
+Since :math:`\nabla^2 \omega = 0` and using Green's identity
+
+.. math::
+    \begin{align*}
+    I_{g\omega} & = \int_{\Omega} g \cdot \omega \ dx \ dy \\
+    & = \int_{\Omega} \omega \cdot \nabla^2 q \ dx \ dy \\
+    & = \int_{\Omega} \omega \cdot \nabla^2 q - q \cdot \nabla^2 \omega \ dx \ dy \\
+    & = \int_{\Gamma} \omega \cdot \dfrac{\partial q}{\partial n} - q \cdot \dfrac{\partial \omega}{\partial n} \ d\Gamma \\
+    & = \int_{t_{min}}^{t_{max}} \omega \cdot \left(\nabla q \times \mathbf{p}'\right) dt - \int_{t_{min}}^{t_{max}} q \cdot \langle \mathbf{p}, \ \mathbf{p}'\rangle \ dt
+    \end{align*}
+
+By selecting :math:`q` we can get the expressions:
+
+.. math::
+    \begin{align*}
+    q = \dfrac{1}{4}\left(x^2+y^2\right) & \Rightarrow g = 1 \\
+    q = \dfrac{x}{12}\left(x^2+3y^2\right) & \Rightarrow g = x \\
+    q = \dfrac{y}{12}\left(3x^2+y^2\right) & \Rightarrow g = y
+    \end{align*}
+
+
+
+-----------------------------------------------------------------
+
+.. _multiple_curves:
+
+===============
+Multiple curves
+===============
+
+So far the developed expressions considered only one curve.
+
+Although it's enough for most cases, it's possible to have hollowed domains or with multiple materials
 
 TODO
