@@ -35,17 +35,38 @@ class BaseSection(ISection, NamedTracker):
 
     def __init__(
         self,
-        geome_names: Tuple[str],
-        mater_names: Tuple[str],
+        geometries: Union[str, Geometry, Tuple[Union[str, Geometry]]],
+        materials: Union[str, Material, Tuple[Union[str, Material]]],
+        *,
         name: Optional[str] = None,
     ):
-        for geo_name in geome_names:
-            assert geo_name in Geometry.instances
-        for mat_name in mater_names:
-            assert mat_name in Material.instances
+        if isinstance(geometries, (str, Geometry)):
+            geometries = [geometries]
+        else:
+            geometries = list(geometries)
+        if isinstance(materials, (str, Material)):
+            materials = [materials]
+        else:
+            materials = list(materials)
+        for i, geometry in enumerate(geometries):
+            if isinstance(geometry, Geometry):
+                continue
+            if not isinstance(geometry, str):
+                raise NotImplementedError
+            if geometry not in Geometry.instances:
+                raise NotImplementedError
+            geometries[i] = Geometry.instances[geometry]
+        for i, material in enumerate(materials):
+            if isinstance(material, Material):
+                continue
+            if not isinstance(material, str):
+                raise NotImplementedError
+            if material not in Material.instances:
+                raise NotImplementedError
+            materials[i] = Material.instances[material]
         self.name = name
-        self.__geome_names = tuple(geome_names)
-        self.__mater_names = tuple(mater_names)
+        self.__geometries = tuple(geometries)
+        self.__materials = tuple(materials)
 
     @property
     def geometries(self) -> Iterable[Geometry]:
@@ -55,8 +76,7 @@ class BaseSection(ISection, NamedTracker):
         :getter: Returns the curve labels
         :type: Tuple[Tuple[int]]
         """
-        for name in self.__geome_names:
-            yield Geometry.instances[name]
+        return self.__geometries
 
     @property
     def materials(self) -> Iterable[Material]:
@@ -66,8 +86,7 @@ class BaseSection(ISection, NamedTracker):
         :getter: Returns the used materials, in the shapes' order
         :type: Tuple[Material]
         """
-        for name in self.__mater_names:
-            yield Material.instances[name]
+        return self.__materials
 
     @classmethod
     def from_shapes(
