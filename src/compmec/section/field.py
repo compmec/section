@@ -6,9 +6,11 @@ For example, ChargedField is responsible to compute the
 stress and strain of the section for every
 """
 
-from typing import Tuple
+from typing import Optional, Tuple, Union
 
 import numpy as np
+from matplotlib import pyplot as plt
+from matplotlib.collections import LineCollection
 
 from .abcs import IField, ISection
 
@@ -21,12 +23,8 @@ class Field(IField):
     inside/outside of given section.
     """
 
-    def __call__(self, points: Tuple[Tuple[float]]) -> Tuple[Tuple[float]]:
-        try:
-            return self.eval(points)
-        except TypeError:
-            stress, strain = self.eval([points])
-            return stress[0], strain[0]
+    def __init__(self, section: ISection):
+        self.section = section
 
 
 class ChargedField(Field):
@@ -39,7 +37,7 @@ class ChargedField(Field):
     """
 
     def __init__(self, section: ISection):
-        self.section = section
+        super().__init__(section)
         self.__charges = np.zeros(6, dtype="float64")
 
     @property
@@ -195,9 +193,174 @@ class ChargedField(Field):
         :type points: Tuple[Tuple[float]]
         :return: The pair (stress, strain)
         :rtype: Tuple[Tuple[Tuple[float]]]
+
+        Example
+        -------
+
+        >>> points = [(0, 0), (1, 0)]
+        >>> stress, strain = field.eval(points)
+
         """
         points = np.array(points, dtype="float64")
         winds = self.__winding_numbers(points)
         stress = self.__stress_eval(points, winds)
         strain = self.__strain_eval(winds, stress)
         return stress, strain
+
+
+def field_scalar_values(
+    field: IField, points: Tuple[Tuple[float]], subfield_name: Union[str, None]
+):
+    if not isinstance(field, ChargedField):
+        raise NotImplementedError
+    if subfield_name is None:
+        raise NotImplementedError
+    if subfield_name in ("Sxx", "Syy", "Sxy", "Exy"):
+        return (0,) * len(points)
+
+    stress, strain = field.eval(points)
+    if subfield_name == "Sxz":
+        return stress[:, 0]
+    if subfield_name == "Syz":
+        return stress[:, 1]
+    if subfield_name == "Szz":
+        return stress[:, 2]
+    if subfield_name in ("Exx", "Eyy"):
+        return strain[:, 0]
+    if subfield_name == "Ezz":
+        return strain[:, 1]
+    if subfield_name == "Exz":
+        return strain[:, 2]
+    if subfield_name == "Eyz":
+        return strain[:, 3]
+    Sxz = stress[:, 0]
+    Syz = stress[:, 1]
+    Szz = stress[:, 2]
+    if subfield_name == "VM":
+        return np.sqrt(Szz**2 + 3 * (Sxz**2 + Syz**2))
+    if subfield_name == "TR":
+        return np.sqrt((0.5 * Szz) ** 2 + Sxz**2 + Syz**2)
+    raise NotImplementedError(f"{subfield_name} is unknown")
+
+
+def plot_section(section: ISection, *, axes: Optional[plt.Axes] = None):
+    if not isinstance(section, ISection):
+        raise NotImplementedError
+    if axes is None:
+        axes = plt.gca()
+    bending_center = section.bending_center()
+    geometric_center = section.geometric_center()
+    torsion_center = section.torsion_center()
+    shear_center = section.shear_center()
+    axes.scatter(
+        geometric_center[0], geometric_center[1], label="G", marker="1"
+    )
+    axes.scatter(bending_center[0], bending_center[1], label="B", marker="2")
+    axes.scatter(torsion_center[0], torsion_center[1], label="T", marker="3")
+    axes.scatter(shear_center[0], shear_center[1], label="S", marker="4")
+
+    usample = np.linspace(0, 1, 17)
+    for geometry in section.geometries:
+        for curve in geometry.curves:
+            knots = curve.knots
+            tsample = set(knots)
+            for ta, tb in zip(knots, knots[1:]):
+                tsample |= set(ta + (tb - ta) * usample)
+            tsample = tuple(sorted(tsample))
+            points = curve.eval(tsample)
+            axes.plot(points[:, 0], points[:, 1], color="k")
+
+    axes.legend()
+
+
+def plot_field(
+    field: IField,
+    *,
+    subfield_name: Optional[str] = None,
+    axes: Optional[plt.Axes] = None,
+):
+    if not isinstance(field, IField):
+        raise NotImplementedError
+    if axes is None:
+        axes = plt.gca()
+    valid_subfield_names = ["Sxx", "Syy", "Szz", "Sxy", "Sxz", "Syz"]
+    valid_subfield_names += ["Exx", "Eyy", "Ezz", "Exy", "Exz", "Eyz"]
+    valid_subfield_names += ["VM", "TR"]
+    if subfield_name is None:
+        subfield_name = "VM"
+    elif subfield_name not in valid_subfield_names:
+        raise NotImplementedError
+    if axes is None:
+        axes = plt.gca()
+
+    section = field.section
+
+    # First plot internal nodes
+
+    if np.any(field.momentums[:2] != 0):  # Plot bending neutral line
+        bending_center = section.bending_center()
+        Ixx, Ixy, Iyy = section.second_moment(bending_center)
+        vector = np.dot([[Ixx, Ixy], [Ixy, Iyy]], field.momentums[:2])
+        axes.axline(
+            bending_center, bending_center + vector, color="k", ls="dotted"
+        )
+        axes.scatter(
+            bending_center[0], bending_center[1], label="B", marker="x"
+        )
+
+    # Second, plot the countour values
+    curves = {}
+    for geometry in section.geometries:
+        for curve in geometry.curves:
+            if curve.label not in curves:
+                curves[curve.label] = curve
+
+    xmin, xmax = float("inf"), -float("inf")
+    ymin, ymax = xmin, xmax
+    usample = np.linspace(0, 1, 17)
+    for _, curve in curves.items():
+        knots = curve.knots
+        tsample = set(knots)
+        for ta, tb in zip(knots, knots[1:]):
+            tsample |= set(ta + (tb - ta) * usample)
+        tsample = tuple(sorted(tsample))
+        points = curve.eval(tsample)
+        scalars = field_scalar_values(field, points, subfield_name)
+
+        xvals = points[:, 0]
+        yvals = points[:, 1]
+        xmin = min(xmin, min(xvals))
+        xmax = max(xmax, max(xvals))
+        ymin = min(ymin, min(yvals))
+        ymax = max(ymax, max(yvals))
+        x_midpts = np.hstack(
+            (xvals[0], 0.5 * (xvals[1:] + xvals[:-1]), xvals[-1])
+        )
+        y_midpts = np.hstack(
+            (yvals[0], 0.5 * (yvals[1:] + yvals[:-1]), yvals[-1])
+        )
+        coord_start = np.column_stack((x_midpts[:-1], y_midpts[:-1]))[
+            :, np.newaxis, :
+        ]
+        coord_mid = np.column_stack((xvals, yvals))[:, np.newaxis, :]
+        coord_end = np.column_stack((x_midpts[1:], y_midpts[1:]))[
+            :, np.newaxis, :
+        ]
+        segments = np.concatenate((coord_start, coord_mid, coord_end), axis=1)
+
+        default_kwargs = {"capstyle": "butt"}
+        lc = LineCollection(segments, **default_kwargs)
+        lc.set_array(scalars)  # set the colors of each segment
+        lines = axes.add_collection(lc)
+
+    dx = xmax - xmin
+    dy = ymax - ymin
+    xmin -= 0.1 * dx
+    xmax += 0.1 * dx
+    ymin -= 0.1 * dy
+    ymax += 0.1 * dy
+    axes.set_xlim(xmin, xmax)
+    axes.set_ylim(ymin, ymax)
+    fig = plt.gcf()
+    fig.colorbar(lines)  # add a color legend
+    axes.legend()

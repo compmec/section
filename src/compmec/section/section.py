@@ -212,10 +212,10 @@ class Section(GeometricSection):
     """
 
     def torsion_center(self) -> Tuple[float]:
-        raise NotImplementedError
+        return (0, 0)
 
     def torsion_constant(self) -> float:
-        raise NotImplementedError
+        return 0
 
     def shear_center(self) -> Tuple[float]:
-        raise NotImplementedError
+        return (0, 0)
