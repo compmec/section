@@ -292,25 +292,60 @@ class BEMModel:
     A BEM2D Model to solve laplace's equation
     """
 
-    def __init__(self, section: ISection):
-        self.section = section
-        labels = set()
-        for geometry in self.section.geometries:
-            labels |= set(map(abs, geometry.labels))
-        self.all_labels = tuple(sorted(labels))
-        self.__meshes = {}
+    def __check_model(self):
+        if set(self.basis.keys()) ^ set(self.curves.keys()):
+            raise NotImplementedError
 
-    def solve(self):
+    def __init__(self, section: ISection):
+        self.curves = {}
+        self.basis = {}
+        self.solution = None
+        for geometry in section.geometries:
+            for curve in geometry.curves:
+                if curve.label not in self.curves:
+                    self.curves[curve.label] = curve
+
+    def solve(self, sources: Tuple[Tuple[float]]):
         """
         Solves the BEM problem, computing
         """
-        raise NotImplementedError
+        self.__check_model()
+        sources = np.array(sources, dtype="float64")
+        if sources.ndim != 2 or sources.shape[1] != 2:
+            raise NotImplementedError
+        total_ndofs = sum(base.ndofs for base in self.basis.values())
+        nsources = len(set(tuple(map(float, source)) for source in sources))
+        if nsources != total_ndofs:
+            raise NotImplementedError
+        matrix = np.zeros((total_ndofs, total_ndofs), dtype="float64")
+        vector = np.zeros((total_ndofs, 1), dtype="float64")
 
-    def __getitem__(self, key: int):
-        return self.__meshes[key]
+        basis_labels = tuple(sorted(self.basis.keys()))
+        index_base = 0
+        for label in basis_labels:
+            base = self.basis[label]
+            curve = self.curves[label]
+            slicej = slice(index_base, index_base + base.ndofs)
+            winds = map(curve.winding, sources)
+            mask = np.array(tuple(0 < wind < 1 for wind in winds))
 
-    def __setitem__(self, label: int, value: Tuple[float]):
-        if label not in self.all_labels:
-            msg = f"Given label {label} is not in {self.all_labels}"
-            raise ValueError(msg)
-        self.__meshes[label] = value
+            tsources = tuple(
+                curve.projection(source)[0] for source in sources[mask]
+            )
+            submatrix = ComputeStiffness.incurve(curve, base, tsources)
+            matrix[mask, slicej] += submatrix
+            submatrix = ComputeStiffness.outcurve(curve, base, sources[~mask])
+            matrix[~mask, slicej] += submatrix
+            vector[:, 0] += TorsionEvaluator.warping_source(curve, sources)
+            index_base += base.ndofs
+
+        result = np.linalg.solve(matrix, vector)
+
+        self.solution = {}
+        index_base = 0
+        for label in basis_labels:
+            base = self.basis[label]
+            curve = self.curves[label]
+            slicej = slice(index_base, index_base + base.ndofs)
+            self.solution[label] = result[slicej]
+            index_base += base.ndofs
