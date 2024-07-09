@@ -1,8 +1,6 @@
-import numpy as np
-import pynurbs
 import pytest
 
-from compmec.section.curve import NurbsCurve, PolygonCurve
+from compmec.section.curve import Curve
 
 
 @pytest.mark.order(1)
@@ -14,12 +12,9 @@ def test_begin():
 @pytest.mark.order(1)
 @pytest.mark.timeout(10)
 @pytest.mark.dependency(depends=["test_begin"])
-def test_winding_square():
-    knotvector = pynurbs.GeneratorKnotVector.uniform(1, 5)
-    vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1], [1, 1]]
-    vertices = np.array(vertices, dtype="float64")
-    curve = pynurbs.Curve(knotvector, vertices)
-    curve = NurbsCurve(curve)
+def test_winding_square_counterclock():
+    vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1]]
+    curve = Curve.from_vertices(vertices)
 
     assert curve.winding((0, 0)) == 1
     assert curve.winding((1, 0)) == 0.5
@@ -36,37 +31,28 @@ def test_winding_square():
 @pytest.mark.order(1)
 @pytest.mark.timeout(10)
 @pytest.mark.dependency(depends=["test_begin"])
-def test_square_polygon():
-    vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1]]
-    vertices = np.array(vertices, dtype="float64")
-    curve = PolygonCurve(vertices)
+def test_winding_square_clockwise():
+    vertices = [[1, 1], [1, -1], [-1, -1], [-1, 1]]
+    curve = Curve.from_vertices(vertices)
 
-    parameters = (0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4)
-    points = curve.eval(parameters)
-
-    assert np.all(points[0] == (1.0, 1.0))
-    assert np.all(points[1] == (0.0, 1.0))
-    assert np.all(points[2] == (-1.0, 1.0))
-    assert np.all(points[3] == (-1.0, 0.0))
-    assert np.all(points[4] == (-1.0, -1.0))
-    assert np.all(points[5] == (0.0, -1.0))
-    assert np.all(points[6] == (1.0, -1.0))
-    assert np.all(points[7] == (1.0, 0.0))
-    assert np.all(points[8] == (1.0, 1.0))
-
-    assert curve.winding((0, 0)) == 1
+    assert curve.winding((0, 0)) == 0
     assert curve.winding((1, 0)) == 0.5
-    assert curve.winding((1, 1)) == 0.25
+    assert curve.winding((1, 1)) == 0.75
     assert curve.winding((0, 1)) == 0.5
-    assert curve.winding((-1, 1)) == 0.25
+    assert curve.winding((-1, 1)) == 0.75
     assert curve.winding((-1, 0)) == 0.5
-    assert curve.winding((-1, -1)) == 0.25
+    assert curve.winding((-1, -1)) == 0.75
     assert curve.winding((0, -1)) == 0.5
-    assert curve.winding((1, -1)) == 0.25
+    assert curve.winding((1, -1)) == 0.75
     assert curve.winding((1, 0)) == 0.5
 
 
 @pytest.mark.order(1)
-@pytest.mark.dependency(depends=["test_winding_square", "test_square_polygon"])
+@pytest.mark.dependency(
+    depends=[
+        "test_winding_square_counterclock",
+        "test_winding_square_clockwise",
+    ]
+)
 def test_end():
     pass

@@ -153,8 +153,14 @@ class JsonIO(FileIO):
             Curve.clear(labels)
         for label, infos in curves.items():
             label = int(label)
-            curve = Curve.new_instance("nurbs", infos)
-            curve.label = label
+            knotvector = infos["knotvector"]
+            if "ctrllabels" in infos:
+                ctrllabels = infos["ctrllabels"]
+                ctrlpoints = Node.from_labels(ctrllabels)
+            else:
+                ctrlpoints = infos["ctrlpoints"]
+            weights = None if "weights" not in infos else infos["weights"]
+            Curve(knotvector, ctrlpoints, weights=weights, label=label)
 
     def load_materials(self):
         """

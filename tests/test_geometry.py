@@ -2,16 +2,19 @@
 File to test src/compmec/section/geometry.py module
 """
 
-import numpy as np
-import pynurbs
 import pytest
 
-from compmec.section.curve import NurbsCurve
+from compmec.section.curve import Curve
 from compmec.section.geometry import Geometry
 
 
 @pytest.mark.order(1)
-@pytest.mark.dependency()
+@pytest.mark.dependency(
+    depends=[
+        "tests/test_curve.py::test_end",
+    ],
+    scope="session",
+)
 def test_begin():
     pass
 
@@ -20,11 +23,8 @@ def test_begin():
 @pytest.mark.timeout(10)
 @pytest.mark.dependency(depends=["test_begin"])
 def test_full_square():
-    knotvector = pynurbs.GeneratorKnotVector.uniform(1, 5)
-    vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1], [1, 1]]
-    vertices = np.array(vertices, dtype="float64")
-    curve = pynurbs.Curve(knotvector, vertices)
-    curve = NurbsCurve(curve)
+    vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1]]
+    curve = Curve.from_vertices(vertices)
 
     geometry = Geometry([curve.label])
 
@@ -44,28 +44,23 @@ def test_full_square():
 @pytest.mark.timeout(10)
 @pytest.mark.dependency(depends=["test_begin"])
 def test_hollow_square():
-    knotvector = pynurbs.GeneratorKnotVector.uniform(1, 5)
-    vertices = [[3, 3], [-3, 3], [-3, -3], [3, -3], [3, 3]]
-    vertices = np.array(vertices, dtype="float64")
-    curve_ext = pynurbs.Curve(knotvector, vertices)
-    curve_ext = NurbsCurve(curve_ext)
+    vertices = [[3, 3], [-3, 3], [-3, -3], [3, -3]]
+    curve_ext = Curve.from_vertices(vertices)
 
-    vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1], [1, 1]]
-    vertices = np.array(vertices, dtype="float64")
-    curve_int = pynurbs.Curve(knotvector, vertices)
-    curve_int = NurbsCurve(curve_int)
+    vertices = [[-1, -1], [-1, 1], [1, 1], [1, -1]]
+    curve_int = Curve.from_vertices(vertices)
 
-    geometry = Geometry([curve_ext.label, -curve_int.label])
+    geometry = Geometry([curve_ext, curve_int])
 
     assert geometry.winding((0, 0)) == 0
     assert geometry.winding((1, 0)) == 0.5
-    assert geometry.winding((1, 1)) == 0.25
+    assert geometry.winding((1, 1)) == 0.75
     assert geometry.winding((0, 1)) == 0.5
-    assert geometry.winding((-1, 1)) == 0.25
+    assert geometry.winding((-1, 1)) == 0.75
     assert geometry.winding((-1, 0)) == 0.5
-    assert geometry.winding((-1, -1)) == 0.25
+    assert geometry.winding((-1, -1)) == 0.75
     assert geometry.winding((0, -1)) == 0.5
-    assert geometry.winding((1, -1)) == 0.25
+    assert geometry.winding((1, -1)) == 0.75
     assert geometry.winding((1, 0)) == 0.5
 
     assert geometry.winding((2, 0)) == 1

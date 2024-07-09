@@ -5,6 +5,7 @@ It uses mainly curves as boundary to compute the elements.
 
 from .curve import Curve
 from .dataio import JsonIO
+from .field import plot_field, plot_section
 from .geometry import Geometry
 from .material import Isotropic, Material
 from .section import Section

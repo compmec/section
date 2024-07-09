@@ -13,7 +13,7 @@ Integration.chebyshev: Polynomial integration at chebyshev nodes
 """
 
 import math
-from typing import Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 
@@ -362,6 +362,18 @@ class Polynomial:
         (1, 2),
         (3, 0),
     ]
+
+    @staticmethod
+    def curve_area(curve: ICurve, tolerance: Optional[float] = 1e-9) -> float:
+        """
+        Computes the area inside the curve
+
+        Can be negative if the curve is clockwise
+
+        II_{a, b} = int_D dx dy
+        """
+        integrator = AdaptativePolynomialIntegrator(curve, tolerance=tolerance)
+        return integrator.integrate(0, 0) / 2
 
     # pylint: disable=invalid-name
     @staticmethod
