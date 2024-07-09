@@ -6,8 +6,8 @@ import numpy as np
 import pytest
 
 from compmec.section.basisfunc import BasisFunc
-from compmec.section.bem2d import ComputeMatrix, TorsionEvaluator
-from compmec.section.curve import PolygonCurve
+from compmec.section.bem2d import ComputeStiffness, TorsionEvaluator
+from compmec.section.curve import Curve
 
 
 @pytest.mark.order(8)
@@ -44,10 +44,9 @@ class TestComputeMatrix:
         angles = np.linspace(0, 2 * np.pi, 3, endpoint=False)
         vertices = tuple((np.cos(angle), np.sin(angle)) for angle in angles)
         tsources = (0, 1, 2)
-        curve = PolygonCurve(vertices)
+        curve = Curve.from_vertices(vertices)
         basis = BasisFunc.cyclic(curve.knots)
-        computer = ComputeMatrix(curve, basis)
-        test_matrix = computer.inpolygon(tsources)
+        test_matrix = ComputeStiffness.incurve(curve, basis, tsources)
 
         assert test_matrix.shape == good_matrix.shape
         np.testing.assert_allclose(test_matrix, good_matrix)
@@ -64,10 +63,9 @@ class TestComputeMatrix:
         angles = np.linspace(0, 2 * pi, 3, endpoint=False)
         vertices = tuple((np.cos(angle), np.sin(angle)) for angle in angles)
         tsources = (0.5, 1.5, 2.5)
-        curve = PolygonCurve(vertices)
+        curve = Curve.from_vertices(vertices)
         basis = BasisFunc.cyclic(curve.knots)
-        computer = ComputeMatrix(curve, basis)
-        test_matrix = computer.inpolygon(tsources)
+        test_matrix = ComputeStiffness.incurve(curve, basis, tsources)
 
         assert test_matrix.shape == good_matrix.shape
         np.testing.assert_allclose(test_matrix, good_matrix)
@@ -83,10 +81,9 @@ class TestComputeMatrix:
 
         vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1]]
         tsources = (0, 1, 2, 3)
-        curve = PolygonCurve(vertices)
+        curve = Curve.from_vertices(vertices)
         basis = BasisFunc.cyclic(curve.knots)
-        computer = ComputeMatrix(curve, basis)
-        test_matrix = computer.inpolygon(tsources)
+        test_matrix = ComputeStiffness.incurve(curve, basis, tsources)
 
         assert test_matrix.shape == good_matrix.shape
         np.testing.assert_allclose(test_matrix, good_matrix)
@@ -102,10 +99,9 @@ class TestComputeMatrix:
 
         vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1]]
         tsources = (0.5, 1.5, 2.5, 3.5)
-        curve = PolygonCurve(vertices)
+        curve = Curve.from_vertices(vertices)
         basis = BasisFunc.cyclic(curve.knots)
-        computer = ComputeMatrix(curve, basis)
-        test_matrix = computer.inpolygon(tsources)
+        test_matrix = ComputeStiffness.incurve(curve, basis, tsources)
 
         assert test_matrix.shape == good_matrix.shape
         np.testing.assert_allclose(test_matrix, good_matrix)
@@ -131,10 +127,9 @@ class TestComputeMatrix:
         angles = np.linspace(0, 2 * np.pi, 6, endpoint=False)
         vertices = tuple((np.cos(angle), np.sin(angle)) for angle in angles)
         tsources = (0, 1, 2, 3, 4, 5)
-        curve = PolygonCurve(vertices)
+        curve = Curve.from_vertices(vertices)
         basis = BasisFunc.cyclic(curve.knots)
-        computer = ComputeMatrix(curve, basis)
-        test_matrix = computer.inpolygon(tsources)
+        test_matrix = ComputeStiffness.incurve(curve, basis, tsources)
 
         assert test_matrix.shape == good_matrix.shape
         np.testing.assert_allclose(test_matrix, good_matrix)
@@ -166,10 +161,9 @@ class TestComputeMatrix:
         angles = np.linspace(0, 2 * np.pi, 6, endpoint=False)
         vertices = tuple((np.cos(angle), np.sin(angle)) for angle in angles)
         tsources = (0.5, 1.5, 2.5, 3.5, 4.5, 5.5)
-        curve = PolygonCurve(vertices)
+        curve = Curve.from_vertices(vertices)
         basis = BasisFunc.cyclic(curve.knots)
-        computer = ComputeMatrix(curve, basis)
-        test_matrix = computer.inpolygon(tsources)
+        test_matrix = ComputeStiffness.incurve(curve, basis, tsources)
 
         assert test_matrix.shape == good_matrix.shape
         np.testing.assert_allclose(test_matrix, good_matrix)
@@ -203,7 +197,7 @@ class TestTorsionVectors:
         vertices = np.array(vertices, dtype="float64")
         good_vector = np.array([0, 1 / 2, 0, -1 / 2])
 
-        curve = PolygonCurve(vertices)
+        curve = Curve.from_vertices(vertices)
         basis = BasisFunc.cyclic(curve.knots)
         computer = TorsionEvaluator(curve)
         test_vector = computer.torsion_constant_vector(basis)
@@ -219,7 +213,7 @@ class TestTorsionVectors:
         vertices = np.array(vertices, dtype="float64")
         good_vector = np.array([0, 0, 0, 0])
 
-        curve = PolygonCurve(vertices)
+        curve = Curve.from_vertices(vertices)
         basis = BasisFunc.cyclic(curve.knots)
         computer = TorsionEvaluator(curve)
         test_vector = computer.torsion_constant_vector(basis)
@@ -235,7 +229,7 @@ class TestTorsionVectors:
         vertices = np.array(vertices, dtype="float64")
         good_vector = np.array([0, 0, 0, 0])
 
-        curve = PolygonCurve(vertices)
+        curve = Curve.from_vertices(vertices)
         basis = BasisFunc.cyclic(curve.knots)
         computer = TorsionEvaluator(curve)
         test_vector = computer.torsion_constant_vector(basis)
@@ -257,7 +251,7 @@ class TestTorsionVectors:
         vertices = np.array(vertices, dtype="float64")
         good_vector = np.array([a - b, a + b, b - a, -b - a])
 
-        curve = PolygonCurve(vertices)
+        curve = Curve.from_vertices(vertices)
         basis = BasisFunc.cyclic(curve.knots)
         computer = TorsionEvaluator(curve)
         test_vector = computer.torsion_constant_vector(basis)

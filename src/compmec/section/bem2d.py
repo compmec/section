@@ -17,7 +17,7 @@ from .abcs import IBasisFunc, ICurve, ISection
 from .integral import Integration
 
 
-class ComputeMatrix:
+class ComputeStiffness:
     """
     This class is resposible to compute the matrix [M]
     made by the following integral
@@ -29,23 +29,9 @@ class ComputeMatrix:
     int u * (dv/dn) ds
     """
 
-    def __init__(self, curve: ICurve, basis: IBasisFunc):
-        self.curve = curve
-        self.basis = basis
-
-    @property
-    def tmesh(self) -> Tuple[float]:
-        """
-        The subdivisions of parametric space
-
-        :getter: Returns the union of curve and base knots
-        :type: Tuple[float]
-        """
-        tmesh = set(self.curve.knots) | set(self.basis.knots)
-        return np.array(sorted(tmesh))
-
     # pylint: disable=too-many-locals
-    def inpolygon(self, tsources: Tuple[float]):
+    @staticmethod
+    def incurve(curve: ICurve, basis: IBasisFunc, tsources: Tuple[float]):
         """
         Computes the integral when the sources are placed at the curve.
         The emplacement of these sources are given by parameter 'tsources'
@@ -60,16 +46,22 @@ class ComputeMatrix:
         :return: The output matrix, integral of UVn
         :rtype: Tuple[Tuple[float]]
         """
-        ndofs = self.basis.ndofs
-        assert ndofs == len(tsources)
-        cknots = np.array(self.curve.knots, dtype="float64")
-        tknots = np.array(sorted(set(self.tmesh) | set(tsources)))
-        matrix = np.zeros((ndofs, ndofs), dtype="float64")
+        if not isinstance(curve, ICurve):
+            raise NotImplementedError
+        if not isinstance(basis, IBasisFunc):
+            raise NotImplementedError
+        if curve.degree != 1:
+            raise NotImplementedError
+        nsources = len(tsources)
+        cknots = np.array(curve.knots, dtype="float64")
+        tknots = set(curve.knots) | set(basis.knots) | set(tsources)
+        tknots = np.array(sorted(tknots))
+        matrix = np.zeros((nsources, basis.ndofs), dtype="float64")
         nodes, weights = Integration.gauss(10)
 
-        vertices = self.curve.eval(cknots[:-1])
+        vertices = curve.eval(cknots[:-1])
         vectors = np.roll(vertices, shift=-1, axis=0) - vertices
-        sources = self.curve.eval(tsources)
+        sources = curve.eval(tsources)
 
         for i, vector in enumerate(vectors):
             tva, tvb = cknots[i], cknots[i + 1]
@@ -79,7 +71,7 @@ class ComputeMatrix:
             for tk0, tk1 in zip(tmesh, tmesh[1:]):
                 tvals = tk0 + nodes * (tk1 - tk0)
                 taus = (tvals - tva) / (tvb - tva)
-                phis = self.basis.eval(tvals)
+                phis = basis.eval(tvals)
                 points = vertex + np.tensordot(taus, vector, axes=0)
                 for i, (tsi, source) in enumerate(zip(tsources, sources)):
                     if tsi in (tk0, tk1):
@@ -266,26 +258,6 @@ class BEMModel:
             labels |= set(map(abs, geometry.labels))
         self.all_labels = tuple(sorted(labels))
         self.__meshes = {}
-
-    def make_mesh(self, distance: float):
-        """
-        Create the mesh on the boundary for every curve
-
-        :param distance: The maximum distance to compute mesh
-        :type distance: float
-        """
-        assert distance > 0
-        for label in self.all_labels:
-            curve = Curve.instances[label]
-            knots = curve.knots
-            new_mesh = set(knots)
-            vertices = curve.eval(knots)
-            vectors = vertices[1:] - vertices[:-1]
-            for i, vector in enumerate(vectors):
-                ndiv = np.linalg.norm(vector) / distance
-                ndiv = max(2, int(np.ceil(ndiv)))
-                new_mesh |= set(np.linspace(knots[i], knots[i + 1], ndiv))
-            self[label] = tuple(sorted(new_mesh))
 
     def solve(self):
         """
