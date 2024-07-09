@@ -52,11 +52,10 @@ class ComputeStiffness:
             raise NotImplementedError
         if curve.degree != 1:
             raise NotImplementedError
-        nsources = len(tsources)
         cknots = np.array(curve.knots, dtype="float64")
         tknots = set(curve.knots) | set(basis.knots) | set(tsources)
         tknots = np.array(sorted(tknots))
-        matrix = np.zeros((nsources, basis.ndofs), dtype="float64")
+        matrix = np.zeros((len(tsources), basis.ndofs), dtype="float64")
         nodes, weights = Integration.gauss(10)
 
         vertices = curve.eval(cknots[:-1])
@@ -90,7 +89,9 @@ class ComputeStiffness:
         return matrix / math.tau
 
     @staticmethod
-    def outcurve(curve: ICurve, sources: Tuple[Tuple[float]]):
+    def outcurve(
+        curve: ICurve, basis: IBasisFunc, sources: Tuple[Tuple[float]]
+    ):
         """
         Computes the integral when the sources are placed outside (or not)
         of the curve.
@@ -105,7 +106,40 @@ class ComputeStiffness:
         :return: The output matrix, integral of UVn
         :rtype: Tuple[Tuple[float]]
         """
-        raise NotImplementedError
+        matrix = np.zeros((len(sources), basis.ndofs), dtype="float64")
+
+        tknots = set(curve.knots) | set(basis.knots)
+        for source in sources:
+            tknots |= set(curve.projection(source))
+        tknots = np.array(sorted(tknots), dtype="float64")
+
+        nodes, weights = Integration.gauss(10)
+        vertices = curve.eval(curve.knots[:-1])
+        vectors = np.roll(vertices, shift=-1, axis=0) - vertices
+
+        for i, vector in enumerate(vectors):
+            tva, tvb = curve.knots[i], curve.knots[i + 1]
+            vertex = vertices[i]
+            mask = (tva <= tknots) * (tknots <= tvb)
+            tmesh = tknots[mask]
+            for tk0, tk1 in zip(tmesh, tmesh[1:]):
+                tvals = tk0 + nodes * (tk1 - tk0)
+                taus = (tvals - tva) / (tvb - tva)
+                phis = basis.eval(tvals)
+                points = vertex + np.tensordot(taus, vector, axes=0)
+                for i, source in enumerate(sources):
+                    radius = tuple(point - source for point in points)
+                    radius = np.array(radius, dtype="float64")
+                    rcrossdp = vector[1] * radius[:, 0]
+                    rcrossdp -= vector[0] * radius[:, 1]
+                    rcrossdp *= (tk1 - tk0) / (tvb - tva)
+                    rinnerr = np.einsum("ij,ij->i", radius, radius)  # <r, r>
+                    funcvals = rcrossdp / rinnerr
+                    matrix[i] += np.einsum(
+                        "ij,j,j->i", phis, weights, funcvals
+                    )
+        matrix[np.abs(matrix) < 1e-9] = 0
+        return matrix
 
 
 class TorsionEvaluator:
