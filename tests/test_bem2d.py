@@ -199,8 +199,7 @@ class TestTorsionVectors:
 
         curve = Curve.from_vertices(vertices)
         basis = BasisFunc.cyclic(curve.knots)
-        computer = TorsionEvaluator(curve)
-        test_vector = computer.torsion_constant_vector(basis)
+        test_vector = TorsionEvaluator.constant_vector(curve, basis)
 
         assert len(test_vector) == len(good_vector)
         np.testing.assert_allclose(test_vector, good_vector)
@@ -215,8 +214,7 @@ class TestTorsionVectors:
 
         curve = Curve.from_vertices(vertices)
         basis = BasisFunc.cyclic(curve.knots)
-        computer = TorsionEvaluator(curve)
-        test_vector = computer.torsion_constant_vector(basis)
+        test_vector = TorsionEvaluator.constant_vector(curve, basis)
 
         assert len(test_vector) == len(good_vector)
         np.testing.assert_allclose(test_vector, good_vector)
@@ -231,8 +229,7 @@ class TestTorsionVectors:
 
         curve = Curve.from_vertices(vertices)
         basis = BasisFunc.cyclic(curve.knots)
-        computer = TorsionEvaluator(curve)
-        test_vector = computer.torsion_constant_vector(basis)
+        test_vector = TorsionEvaluator.constant_vector(curve, basis)
 
         assert len(test_vector) == len(good_vector)
         np.testing.assert_allclose(test_vector, good_vector)
@@ -253,8 +250,7 @@ class TestTorsionVectors:
 
         curve = Curve.from_vertices(vertices)
         basis = BasisFunc.cyclic(curve.knots)
-        computer = TorsionEvaluator(curve)
-        test_vector = computer.torsion_constant_vector(basis)
+        test_vector = TorsionEvaluator.constant_vector(curve, basis)
 
         assert len(test_vector) == len(good_vector)
         np.testing.assert_allclose(test_vector, good_vector)

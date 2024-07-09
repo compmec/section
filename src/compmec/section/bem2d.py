@@ -89,7 +89,8 @@ class ComputeStiffness:
         matrix[np.abs(matrix) < 1e-9] = 0
         return matrix / math.tau
 
-    def outcurve(self, sources: Tuple[Tuple[float]]):
+    @staticmethod
+    def outcurve(curve: ICurve, sources: Tuple[Tuple[float]]):
         """
         Computes the integral when the sources are placed outside (or not)
         of the curve.
@@ -109,10 +110,10 @@ class ComputeStiffness:
 
 class TorsionEvaluator:
 
-    def __init__(self, curve: ICurve):
-        self.curve = curve
-
-    def torsion_center_matrix(self, basis: IBasisFunc) -> Tuple[Tuple[float]]:
+    @staticmethod
+    def torsion_center_matrix(
+        curve: ICurve, basis: IBasisFunc
+    ) -> Tuple[Tuple[float]]:
         """
         Computes the matrix used to compute the torsion center
 
@@ -131,7 +132,8 @@ class TorsionEvaluator:
         """
         raise NotImplementedError
 
-    def torsion_constant_vector(self, basis: IBasisFunc) -> Tuple[float]:
+    @staticmethod
+    def constant_vector(curve: ICurve, basis: IBasisFunc) -> Tuple[float]:
         """
         Computes the vector used to compute the torsion constant
 
@@ -152,14 +154,16 @@ class TorsionEvaluator:
             We suppose the curve is a polygon
 
         """
+        if curve.degree != 1:
+            raise NotImplementedError
         result = np.zeros(basis.ndofs, dtype="float64")
-        vertices = self.curve.eval(self.curve.knots[:-1])
+        vertices = curve.eval(curve.knots[:-1])
         vectors = np.roll(vertices, shift=-1, axis=0) - vertices
         alphas = np.einsum("ij,ij->i", vertices, vectors)
         betas = np.einsum("ij,ij->i", vectors, vectors)
 
-        cknots = np.array(self.curve.knots, dtype="float64")
-        tknots = np.array(sorted(set(self.curve.knots) | set(basis.knots)))
+        cknots = np.array(curve.knots, dtype="float64")
+        tknots = np.array(sorted(set(curve.knots) | set(basis.knots)))
         nodes, weights = Integration.closed(2)
 
         for i, (alpha, beta) in enumerate(zip(alphas, betas)):
@@ -177,7 +181,8 @@ class TorsionEvaluator:
                 )
         return result
 
-    def warping_source(self, source: Tuple[float]) -> float:
+    @staticmethod
+    def warping_source(curve: ICurve, source: Tuple[float]) -> float:
         """
         Computes the integral
 
@@ -191,7 +196,9 @@ class TorsionEvaluator:
 
         I = sum_{k} dt_k * int_{0}^{1} (alpha + z * beta) * ln |r| dz
         """
-        vertices = self.curve.eval(self.curve.knots[:-1])
+        if curve.degree != 1:
+            raise NotImplementedError
+        vertices = curve.eval(curve.knots[:-1])
         vectors = np.roll(vertices, shift=-1, axis=0) - vertices
         alphas = np.einsum("ij,ij->i", vertices, vectors)
         betas = np.einsum("ij,ij->i", vectors, vectors)
@@ -201,7 +208,7 @@ class TorsionEvaluator:
 
         result = 0
         for i, (alpha, beta) in enumerate(zip(alphas, betas)):
-            tva, tvb = self.curve.knots[i], self.curve.knots[i + 1]
+            tva, tvb = curve.knots[i], curve.knots[i + 1]
             projection = np.inner(vertices[i], vectors[i]) / beta
             projection = min(1, max(0, projection))
 
@@ -238,12 +245,6 @@ class TorsionEvaluator:
                     * np.einsum("i,i,i", znodes, weights, logvals)
                 )
         return result
-
-
-class ShearVector:
-
-    def __init__(self, curve: ICurve):
-        self.curve = curve
 
 
 class BEMModel:
