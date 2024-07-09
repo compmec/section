@@ -216,7 +216,9 @@ class TorsionEvaluator:
         return result
 
     @staticmethod
-    def warping_source(curve: ICurve, source: Tuple[float]) -> float:
+    def warping_source(
+        curve: ICurve, sources: Tuple[Tuple[float]]
+    ) -> Tuple[float]:
         """
         Computes the integral
 
@@ -232,53 +234,57 @@ class TorsionEvaluator:
         """
         if curve.degree != 1:
             raise NotImplementedError
+        sources = np.array(sources, dtype="float64")
         vertices = curve.eval(curve.knots[:-1])
         vectors = np.roll(vertices, shift=-1, axis=0) - vertices
         alphas = np.einsum("ij,ij->i", vertices, vectors)
         betas = np.einsum("ij,ij->i", vectors, vectors)
-        vertices[:, 0] -= source[0]
-        vertices[:, 1] -= source[1]
+
         nodes, weights = Integration.chebyshev(4)
+        results = np.zeros(len(sources), dtype="float64")
+        for k, source in enumerate(sources):
+            for i, (alpha, beta) in enumerate(zip(alphas, betas)):
+                tva, tvb = curve.knots[i], curve.knots[i + 1]
+                projection = np.inner(vertices[i] - source, vectors[i]) / beta
+                projection = min(1, max(0, projection))
 
-        result = 0
-        for i, (alpha, beta) in enumerate(zip(alphas, betas)):
-            tva, tvb = curve.knots[i], curve.knots[i + 1]
-            projection = np.inner(vertices[i], vectors[i]) / beta
-            projection = min(1, max(0, projection))
-
-            gamma = np.inner(vertices[i], vertices[i])
-            delta = np.inner(vertices[i], vectors[i])
-            if projection != 0:
-                znodes = projection * nodes
-                logvals = np.log(gamma + 2 * delta * znodes + beta * znodes**2)
-                result += (
-                    (tvb - tva)
-                    * alpha
-                    * projection
-                    * np.inner(weights, logvals)
-                )
-                result += (
-                    (tvb - tva)
-                    * beta
-                    * projection
-                    * np.einsum("i,i,i", znodes, weights, logvals)
-                )
-            if projection != 1:
-                znodes = projection + (1 - projection) * nodes
-                logvals = np.log(gamma + 2 * delta * znodes + beta * znodes**2)
-                result += (
-                    (tvb - tva)
-                    * alpha
-                    * (1 - projection)
-                    * np.inner(weights, logvals)
-                )
-                result += (
-                    (tvb - tva)
-                    * beta
-                    * (1 - projection)
-                    * np.einsum("i,i,i", znodes, weights, logvals)
-                )
-        return result
+                gamma = np.inner(vertices[i] - source, vertices[i] - source)
+                delta = np.inner(vertices[i] - source, vectors[i])
+                if projection != 0:
+                    znodes = projection * nodes
+                    logvals = np.log(
+                        gamma + 2 * delta * znodes + beta * znodes**2
+                    )
+                    results[k] += (
+                        (tvb - tva)
+                        * alpha
+                        * projection
+                        * np.inner(weights, logvals)
+                    )
+                    results[k] += (
+                        (tvb - tva)
+                        * beta
+                        * projection
+                        * np.einsum("i,i,i", znodes, weights, logvals)
+                    )
+                if projection != 1:
+                    znodes = projection + (1 - projection) * nodes
+                    logvals = np.log(
+                        gamma + 2 * delta * znodes + beta * znodes**2
+                    )
+                    results[k] += (
+                        (tvb - tva)
+                        * alpha
+                        * (1 - projection)
+                        * np.inner(weights, logvals)
+                    )
+                    results[k] += (
+                        (tvb - tva)
+                        * beta
+                        * (1 - projection)
+                        * np.einsum("i,i,i", znodes, weights, logvals)
+                    )
+        return results
 
 
 class BEMModel:
