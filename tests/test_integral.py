@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from compmec.section.curve import PolygonCurve
+from compmec.section.curve import Curve
 from compmec.section.integral import Integration, Polynomial, comb
 
 
@@ -268,7 +268,7 @@ def test_integral_polygon_adaptative():
     Tests the polynomial integrals of polygons
     """
     vertices = ((1, 1), (-1, 1), (-1, -1), (1, -1))
-    curve = PolygonCurve(vertices)
+    curve = Curve.from_vertices(vertices)
     geomprops = Polynomial.adaptative(curve)
     assert geomprops[0] == 4  # area
     assert geomprops[1] == 0  # Qx

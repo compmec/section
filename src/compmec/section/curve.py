@@ -14,7 +14,7 @@ import pynurbs
 from shapepy import JordanCurve
 
 from . import integral
-from .abcs import ICurve, ISegment, LabeledTracker
+from .abcs import ICurve, LabeledTracker
 
 
 class Node(LabeledTracker):
@@ -69,38 +69,6 @@ class Node(LabeledTracker):
         return tuple(Node.instances[label] for label in labels)
 
 
-class LinearSegment(ISegment):
-    """
-    Defines a Linear segment, that connects two points.
-
-    The parametric space is defined as [0, 1]
-
-    """
-
-    def __init__(self, pointa: Tuple[float], pointb: Tuple[float]):
-        self.pointa = np.array(pointa, dtype="float64")
-        self.pointb = np.array(pointb, dtype="float64")
-
-    @property
-    def vector(self) -> Tuple[float]:
-        """
-        Gives the directional vector V = B - A
-
-        :getter: Returns the vector V = B - A
-        :type: Tuple[float]
-        """
-        return self.pointb - self.pointa
-
-    def eval(self, parameters: Tuple[float]) -> Tuple[Tuple[float]]:
-        return self.pointa + np.tensordot(parameters, self.vector, axes=0)
-
-    def projection(self, point: Tuple[float]) -> float:
-        vector = self.vector
-        parameter = np.inner(point - self.pointa, vector)
-        parameter /= np.inner(vector, vector)
-        return max(0, min(1, parameter))
-
-
 class Curve(LabeledTracker, ICurve):
     """
     Base class that tracks the instances
@@ -147,7 +115,8 @@ class Curve(LabeledTracker, ICurve):
         :rtype: Curve
         """
         npts = len(vertices)
-        ctrlpoints = np.array(vertices + [vertices[0]], dtype="float64")
+        vertices = list(vertices) + [vertices[0]]
+        ctrlpoints = np.array(vertices, dtype="float64")
         knotvector = [0] + list(range(npts + 1)) + [npts]
         knotvector = pynurbs.KnotVector(knotvector)
         return cls(knotvector, ctrlpoints)
@@ -218,3 +187,6 @@ class Curve(LabeledTracker, ICurve):
         else:
             weights = internal.weights[::-1]
         return self.__class__(knotvector, ctrlpoints, weights=weights)
+
+    def projection(self, point: Tuple[float]) -> Tuple[float]:
+        return pynurbs.Projection.point_on_curve(point, self.__internal)
