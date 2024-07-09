@@ -339,6 +339,9 @@ class BEMModel:
             vector[:, 0] += TorsionEvaluator.warping_source(curve, sources)
             index_base += base.ndofs
 
+        # Constraint solution
+        matrix = np.pad(matrix, ((0, 1), (0, 1)), constant_values=1)
+        vector = np.pad(vector, ((0, 1), (0, 0)), constant_values=0)
         result = np.linalg.solve(matrix, vector)
 
         self.solution = {}
