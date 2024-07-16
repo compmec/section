@@ -611,3 +611,15 @@ class IBasisFunc(ABC):
         :rtype: Tuple[Tuple[float]]
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def deval(self, parameters: Tuple[float]) -> Tuple[Tuple[float]]:
+        """
+        Evaluate the (m, ) derivative basis functions at given parameters
+
+        :param parameters: The (n, ) parameter values to be evaluated
+        :type parameters: Tuple[float]
+        :return: The results in a matrix of shape (m, n)
+        :rtype: Tuple[Tuple[float]]
+        """
+        raise NotImplementedError

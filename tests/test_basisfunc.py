@@ -29,16 +29,45 @@ class TestCyclic:
     def test_linear(self):
         knots = (0, 0.5, 1)
         basis = BasisFunc.cyclic(knots, degree=1)
+        assert basis.ndofs == 2
+
         umesh = (0, 0.25, 0.5, 0.75, 1)
         valus = basis.eval(umesh)
         assert valus.shape == (basis.ndofs, len(umesh))
         assert np.all(valus[0] == (1, 0.5, 0, 0.5, 1))
         assert np.all(valus[1] == (0, 0.5, 1, 0.5, 0))
 
+        umesh = (0.1, 0.49, 0.51, 0.99)
+        valus = basis.deval(umesh)
+        assert valus.shape == (basis.ndofs, len(umesh))
+        assert np.all(valus[0] == (-2.0, -2.0, 2.0, 2.0))
+        assert np.all(valus[1] == (2.0, 2.0, -2.0, -2.0))
+
+    @pytest.mark.order(1)
+    @pytest.mark.timeout(10)
+    @pytest.mark.dependency(depends=["TestCyclic::test_begin"])
+    def test_linear2(self):
+        knots = (0, 1, 3)
+        basis = BasisFunc.cyclic(knots, degree=1)
+        assert basis.ndofs == 2
+
+        umesh = (0, 0.5, 1, 2, 3)
+        valus = basis.eval(umesh)
+        assert valus.shape == (basis.ndofs, len(umesh))
+        assert np.all(valus[0] == (1, 0.5, 0, 0.5, 1))
+        assert np.all(valus[1] == (0, 0.5, 1, 0.5, 0))
+
+        umesh = (0.1, 0.99, 1.01, 2.99)
+        valus = basis.deval(umesh)
+        assert valus.shape == (basis.ndofs, len(umesh))
+        assert np.all(valus[0] == (-1.0, -1.0, 0.5, 0.5))
+        assert np.all(valus[1] == (1.0, 1.0, -0.5, -0.5))
+
     @pytest.mark.order(1)
     @pytest.mark.dependency(
         depends=[
             "TestCyclic::test_linear",
+            "TestCyclic::test_linear2",
         ]
     )
     def test_end(self):

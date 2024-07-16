@@ -8,6 +8,7 @@ from typing import Tuple
 
 import numpy as np
 from pynurbs import Function, KnotVector
+from pynurbs.heavy import Calculus, ImmutableKnotVector
 
 from .abcs import IBasisFunc
 
@@ -39,8 +40,13 @@ class BasisFunc(IBasisFunc):
         return cls(knotvector)
 
     def __init__(self, knotvector: Tuple[float]):
-        knotvector = KnotVector(knotvector)
+        if isinstance(knotvector, (KnotVector, ImmutableKnotVector)):
+            degree = knotvector.degree
+        else:
+            degree = None
+        knotvector = ImmutableKnotVector(knotvector, degree)
         self.basis = Function(knotvector)
+        self.derivate_matrix = Calculus.difference_matrix(knotvector)
 
     @property
     def knots(self):
@@ -59,4 +65,12 @@ class BasisFunc(IBasisFunc):
         values = self.basis.eval(parameters)
         values = np.array(values)
         values[:start] += values[ndofs:]
+        return values[:ndofs]
+
+    def deval(self, parameters):
+        ndofs = self.ndofs
+        degree = self.basis.degree
+        values = self.basis[:, degree - 1](parameters)
+        values = np.dot(self.derivate_matrix, values)
+        values[:degree] += values[ndofs:]
         return values[:ndofs]
