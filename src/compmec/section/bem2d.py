@@ -68,6 +68,7 @@ class ComputeStiffness:
             mask = (tva <= tknots) * (tknots <= tvb)
             tmesh = tknots[mask]
             for tk0, tk1 in zip(tmesh, tmesh[1:]):
+                jacobin = (tk1 - tk0) / (tvb - tva)
                 tvals = tk0 + nodes * (tk1 - tk0)
                 taus = (tvals - tva) / (tvb - tva)
                 phis = basis.eval(tvals)
@@ -79,11 +80,9 @@ class ComputeStiffness:
                     radius = np.array(radius, dtype="float64")
                     rcrossdp = vector[1] * radius[:, 0]
                     rcrossdp -= vector[0] * radius[:, 1]
-                    rcrossdp *= (tk1 - tk0) / (tvb - tva)
-                    rinnerr = np.einsum("ij,ij->i", radius, radius)  # <r, r>
-                    funcvals = rcrossdp / rinnerr
-                    matrix[i] += np.einsum(
-                        "ij,j,j->i", phis, weights, funcvals
+                    over_rinr = 1 / np.einsum("ij,ij->i", radius, radius)
+                    matrix[i] += jacobin * np.einsum(
+                        "ij,j,j,j->i", phis, weights, rcrossdp, over_rinr
                     )
         matrix[np.abs(matrix) < 1e-9] = 0
         return matrix / math.tau
@@ -123,6 +122,7 @@ class ComputeStiffness:
             mask = (tva <= tknots) * (tknots <= tvb)
             tmesh = tknots[mask]
             for tk0, tk1 in zip(tmesh, tmesh[1:]):
+                jacobin = (tk1 - tk0) / (tvb - tva)
                 tvals = tk0 + nodes * (tk1 - tk0)
                 taus = (tvals - tva) / (tvb - tva)
                 phis = basis.eval(tvals)
@@ -132,12 +132,81 @@ class ComputeStiffness:
                     radius = np.array(radius, dtype="float64")
                     rcrossdp = vector[1] * radius[:, 0]
                     rcrossdp -= vector[0] * radius[:, 1]
-                    rcrossdp *= (tk1 - tk0) / (tvb - tva)
-                    rinnerr = np.einsum("ij,ij->i", radius, radius)  # <r, r>
-                    funcvals = rcrossdp / rinnerr
-                    matrix[i] += np.einsum(
-                        "ij,j,j->i", phis, weights, funcvals
+                    over_rinr = 1 / np.einsum("ij,ij->i", radius, radius)
+                    matrix[i] += jacobin * np.einsum(
+                        "ij,j,j,j->i", phis, weights, rcrossdp, over_rinr
                     )
+        matrix[np.abs(matrix) < 1e-9] = 0
+        return matrix
+
+    @staticmethod
+    def gradoutcurve(
+        curve: ICurve, basis: IBasisFunc, sources: Tuple[Tuple[float]]
+    ):
+        """
+        Computes the gradient
+
+        Parameters
+        ----------
+
+        :param curve: The boundary curve
+        :type curve: ICurve
+        :param basis: The basis functions, with (n, ) degrees of freedom
+        :type basis: IBasisFunc
+        :param sources: The (m, ) source points, a matrix of shape (m, 2)
+        :type sources: Tuple[Tuple[float]]
+        :return: A 3D matrix of shape (m, 2, n)
+        :rtype: Tuple[Tuple[Tuple[float]]]
+        """
+        matrix = np.zeros((len(sources), 2, basis.ndofs), dtype="float64")
+
+        tknots = set(curve.knots) | set(basis.knots)
+        for source in sources:
+            tknots |= set(curve.projection(source))
+        tknots = np.array(sorted(tknots), dtype="float64")
+
+        nodes, weights = Integration.gauss(10)
+        vertices = curve.eval(curve.knots[:-1])
+        vectors = np.roll(vertices, shift=-1, axis=0) - vertices
+
+        for i, vector in enumerate(vectors):
+            tva, tvb = curve.knots[i], curve.knots[i + 1]
+            vertex = vertices[i]
+            mask = (tva <= tknots) * (tknots <= tvb)
+            tmesh = tknots[mask]
+            for tk0, tk1 in zip(tmesh, tmesh[1:]):
+                jacobin = (tk1 - tk0) / (tvb - tva)
+                tvals = tk0 + nodes * (tk1 - tk0)
+                taus = (tvals - tva) / (tvb - tva)
+                phis = basis.eval(tvals)
+                points = vertex + np.tensordot(taus, vector, axes=0)
+                for i, source in enumerate(sources):
+                    radius = tuple(point - source for point in points)
+                    radius = np.array(radius, dtype="float64")
+                    rcrossdp = vector[1] * radius[:, 0]
+                    rcrossdp -= vector[0] * radius[:, 1]
+                    over_rinnerr = 1 / np.einsum("ij,ij->i", radius, radius)
+                    temp = np.einsum(
+                        "ij,j,j,j,j->i",
+                        phis,
+                        weights,
+                        radius[:, 0],
+                        rcrossdp,
+                        over_rinnerr,
+                    )
+                    matrix[i, 0] += 2 * jacobin * temp
+                    temp = np.einsum(
+                        "ij,j,j,j,j->i",
+                        phis,
+                        weights,
+                        radius[:, 1],
+                        rcrossdp,
+                        over_rinnerr,
+                    )
+                    matrix[i, 1] += 2 * jacobin * temp
+                    temp = np.einsum("ij,j,j->i", phis, weights, over_rinnerr)
+                    matrix[i, 0] -= jacobin * vector[1] * temp
+                    matrix[i, 1] += jacobin * vector[0] * temp
         matrix[np.abs(matrix) < 1e-9] = 0
         return matrix
 

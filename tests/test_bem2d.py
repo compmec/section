@@ -283,6 +283,47 @@ class TestComputeMatrixOutcurve:
         pass
 
 
+class TestComputeMatrixGradoutcurve:
+    """
+    Test the values of the integrals:
+
+    int_{Gamma}
+    """
+
+    @pytest.mark.order(8)
+    @pytest.mark.dependency(depends=["test_begin"])
+    def test_begin(self):
+        pass
+
+    @pytest.mark.order(8)
+    @pytest.mark.timeout(10)
+    @pytest.mark.dependency(
+        depends=["TestComputeMatrixGradoutcurve::test_begin"]
+    )
+    def test_square(self):
+        good_matrix = np.zeros((1, 2, 4), dtype="float64")
+
+        vertices = [(-2, -2), (2, -2), (2, 2), (-2, 2)]
+        sources = [(0, 0)]
+        curve = Curve.from_vertices(vertices)
+        basis = BasisFunc.cyclic(curve.knots)
+        test_matrix = ComputeStiffness.gradoutcurve(curve, basis, sources)
+
+        assert test_matrix.shape == good_matrix.shape
+        np.testing.assert_allclose(test_matrix[:, 0, :], good_matrix[:, 0, :])
+        np.testing.assert_allclose(test_matrix[:, 1, :], good_matrix[:, 1, :])
+
+    @pytest.mark.order(8)
+    @pytest.mark.dependency(
+        depends=[
+            "TestComputeMatrixGradoutcurve::test_begin",
+            "TestComputeMatrixGradoutcurve::test_square",
+        ]
+    )
+    def test_end(self):
+        pass
+
+
 class TestTorsionVectors:
     @pytest.mark.order(8)
     @pytest.mark.dependency(depends=["test_begin"])
@@ -373,6 +414,7 @@ class TestTorsionVectors:
     depends=[
         "TestComputeMatrixIncurve::test_end",
         "TestComputeMatrixOutcurve::test_end",
+        "TestComputeMatrixGradoutcurve::test_end"
         "TestTorsionVectors::test_end",
     ]
 )
