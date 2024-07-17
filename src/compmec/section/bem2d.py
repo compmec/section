@@ -165,48 +165,42 @@ class ComputeStiffness:
             tknots |= set(curve.projection(source))
         tknots = np.array(sorted(tknots), dtype="float64")
 
-        nodes, weights = Integration.gauss(10)
-        vertices = curve.eval(curve.knots[:-1])
-        vectors = np.roll(vertices, shift=-1, axis=0) - vertices
+        nodes, weights = Integration.chebyshev(5)
+        for ta, tb in zip(tknots, tknots[1:]):
+            diff = tb - ta
+            tvals = ta + nodes * diff
+            phis = basis.eval(tvals)
 
-        for i, vector in enumerate(vectors):
-            tva, tvb = curve.knots[i], curve.knots[i + 1]
-            vertex = vertices[i]
-            mask = (tva <= tknots) * (tknots <= tvb)
-            tmesh = tknots[mask]
-            for tk0, tk1 in zip(tmesh, tmesh[1:]):
-                jacobin = (tk1 - tk0) / (tvb - tva)
-                tvals = tk0 + nodes * (tk1 - tk0)
-                taus = (tvals - tva) / (tvb - tva)
-                phis = basis.eval(tvals)
-                points = vertex + np.tensordot(taus, vector, axes=0)
-                for i, source in enumerate(sources):
-                    radius = tuple(point - source for point in points)
-                    radius = np.array(radius, dtype="float64")
-                    rcrossdp = vector[1] * radius[:, 0]
-                    rcrossdp -= vector[0] * radius[:, 1]
-                    over_rinnerr = 1 / np.einsum("ij,ij->i", radius, radius)
-                    temp = np.einsum(
-                        "ij,j,j,j,j->i",
+            points = curve.eval(tvals)
+            points = np.array(points, dtype="float64")
+            dpoints = curve.deval(tvals)
+            dpoints = np.array(dpoints, dtype="float64")
+            for i, source in enumerate(sources):
+                radius = tuple(point - source for point in points)
+                radius = np.array(radius, dtype="float64")
+                rcrossdp = tuple(
+                    np.cross(rad, der) for rad, der in zip(radius, dpoints)
+                )
+                over_rinnerr = 1 / np.einsum("ij,ij->i", radius, radius)
+                matrix[i, 0] -= diff * np.einsum(
+                    "ij,j,j,j->i", phis, weights, over_rinnerr, dpoints[:, 1]
+                )
+                matrix[i, 1] += diff * np.einsum(
+                    "ij,j,j,j->i", phis, weights, over_rinnerr, dpoints[:, 0]
+                )
+                matrix[i] += (
+                    2
+                    * diff
+                    * np.einsum(
+                        "ij,j,jk,j,j,j->ki",
                         phis,
                         weights,
-                        radius[:, 0],
+                        radius,
                         rcrossdp,
                         over_rinnerr,
-                    )
-                    matrix[i, 0] += 2 * jacobin * temp
-                    temp = np.einsum(
-                        "ij,j,j,j,j->i",
-                        phis,
-                        weights,
-                        radius[:, 1],
-                        rcrossdp,
                         over_rinnerr,
                     )
-                    matrix[i, 1] += 2 * jacobin * temp
-                    temp = np.einsum("ij,j,j->i", phis, weights, over_rinnerr)
-                    matrix[i, 0] -= jacobin * vector[1] * temp
-                    matrix[i, 1] += jacobin * vector[0] * temp
+                )
         matrix[np.abs(matrix) < 1e-9] = 0
         return matrix
 

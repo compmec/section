@@ -132,7 +132,7 @@ class Curve(LabeledTracker, ICurve):
         knotvector = pynurbs.KnotVector(knotvector)
         ctrlpoints = tuple(map(np.array, ctrlpoints))
         self.__internal = pynurbs.Curve(knotvector, ctrlpoints, weights)
-        self.__dinternal = None
+        self.__dinternal = pynurbs.Derivate.curve(self.__internal)
         self.__area = float(integral.Polynomial.curve_area(self))
         self.label = label
 
