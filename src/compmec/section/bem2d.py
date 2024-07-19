@@ -424,6 +424,10 @@ class ScalarFunction:
         self.basis = basisfunc
         self.ctrlpoints = ctrlpoints
 
+    @property
+    def knots(self) -> Tuple[float]:
+        return self.basis.knots
+
     def eval(self, parameters: Tuple[float]) -> Tuple[float]:
         matrix = self.basis.eval(parameters)
         return np.dot(np.transpose(matrix), self.ctrlpoints)
@@ -463,18 +467,138 @@ class PoissonEvaluator:
         self.bound = boundary
         self.normal = normal
 
+    def __integrate_eval(
+        self, source: Tuple[float], ta: float, tb: float
+    ) -> float:
+        """
+        Direct integral for
+
+            int_{ta}^{tb} u * (r x p')/<r, r> - du/dn * |p'| * ln |r| * dt
+        """
+        nodes, weights = Integration.chebyshev(5)
+        tvals = ta + (tb - ta) * nodes
+        boundvals = self.bound.eval(tvals)
+        normavals = self.normal.eval(tvals)
+        points = self.curve.eval(tvals)
+        dpoints = self.curve.deval(tvals)
+        radius = tuple(point - source for point in points)
+        rinnerr = np.einsum("ij,ij->i", radius, radius)
+        rcrossdp = tuple(np.cross(r, dp) for r, dp in zip(radius, dpoints))
+        logradius = tuple(np.log(rinr) / 2 for rinr in rinnerr)
+        absdpts = tuple(map(np.linalg.norm, dpoints))
+        result = np.einsum(
+            "i,i,i,i", weights, boundvals, rcrossdp, 1 / rinnerr
+        )
+        result -= np.einsum("i,i,i,i", weights, normavals, logradius, absdpts)
+        return (tb - ta) * result
+
+    def __integrate_grad(
+        self, source: Tuple[float], ta: float, tb: float
+    ) -> float:
+        """
+        Direct integral for
+
+            int_{ta}^{tb} u * (r x p')/<r, r> - du/dn * |p'| * ln |r| * dt
+        """
+        nodes, weights = Integration.chebyshev(5)
+        tvals = ta + (tb - ta) * nodes
+        boundvals = self.bound.eval(tvals)
+        normavals = self.normal.eval(tvals)
+        points = self.curve.eval(tvals)
+        dpoints = self.curve.deval(tvals)
+        radius = tuple(point - source for point in points)
+        rinnerr = np.einsum("ij,ij->i", radius, radius)
+        over_rinr = 1 / rinnerr
+        rcrossdp = tuple(np.cross(r, dp) for r, dp in zip(radius, dpoints))
+        absdpts = tuple(map(np.linalg.norm, dpoints))
+        result = 2 * np.einsum(
+            "i,i,i,i,i,ij->j",
+            weights,
+            boundvals,
+            rcrossdp,
+            over_rinr,
+            over_rinr,
+            radius,
+        )
+        result[0] -= np.einsum(
+            "i,i,i,i", weights, boundvals, dpoints[:, 1], over_rinr
+        )
+        result[1] += np.einsum(
+            "i,i,i,i", weights, boundvals, dpoints[:, 0], over_rinr
+        )
+        result += np.einsum(
+            "i,i,i,i,ij->j", weights, normavals, over_rinr, absdpts, radius
+        )
+        return (tb - ta) * result
+
+    def __eval_adapt(
+        self,
+        source: Tuple[float],
+        ta: float,
+        tb: float,
+        tolerance: float = 1e-9,
+    ) -> float:
+        """
+        Adapdative integral for
+
+            int_{ta}^{tb} u * (r x p')/<r, r> - du/dn * |p'| * ln |r| * dt
+        """
+        tm = (ta + tb) / 2
+        midd = self.__integrate_eval(source, ta, tb)
+        left = self.__integrate_eval(source, ta, tm)
+        righ = self.__integrate_eval(source, tm, tb)
+        if abs(left + righ - midd) > tolerance:
+            left = self.__eval_adapt(source, ta, tm, tolerance / 2)
+            righ = self.__eval_adapt(source, tm, tb, tolerance / 2)
+        return left + righ
+
+    def __grad_adapt(
+        self,
+        source: Tuple[float],
+        ta: float,
+        tb: float,
+        tolerance: float = 1e-9,
+    ) -> float:
+        """
+        Adapdative integral for
+
+            int_{ta}^{tb} u * (r x p')/<r, r> - du/dn * |p'| * ln |r| * dt
+        """
+        tm = (ta + tb) / 2
+        middx, middy = self.__integrate_grad(source, ta, tb)
+        leftx, lefty = self.__integrate_grad(source, ta, tm)
+        righx, righy = self.__integrate_grad(source, tm, tb)
+        diffx = abs(leftx + righx - middx)
+        diffy = abs(lefty + righy - middy)
+        if diffx > tolerance or diffy > tolerance:
+            leftx, lefty = self.__grad_adapt(source, ta, tm, tolerance / 2)
+            righx, righy = self.__grad_adapt(source, tm, tb, tolerance / 2)
+        return (leftx + righx, lefty + righy)
+
     def eval(self, point: Tuple[float]) -> float:
         wind = self.curve.winding(point)
-        if wind == 0:  # Outside
+        if abs(wind) < 1e-9:  # Outside
             return 0
         if wind < 1:  # At boundary
             param = self.curve.projection(point)[0]
             return self.bound.eval(param)
-        raise NotImplementedError
+
+        tknots = set(self.curve.projection(point))
+        tknots |= set(self.curve.knots)
+        tknots |= set(self.bound.knots)
+        tknots |= set(self.normal.knots)
+        tknots = sorted(tknots)
+        tknots += [(ta + tb) / 2 for ta, tb in zip(tknots, tknots[1:])]
+        tknots = sorted(tknots)
+
+        result = 0
+        for ta, tb in zip(tknots, tknots[1:]):
+            result += self.__eval_adapt(point, ta, tb)
+        return result / (2 * np.pi)
 
     def grad(self, point: Tuple[float]) -> Tuple[float]:
         wind = self.curve.winding(point)
-        if wind == 0:  # Outside
+        if abs(wind) < 1e-9:  # Outside
             return (0, 0)
         if wind < 1:  # At boundary
             param = self.curve.projection(point)[0]
@@ -486,4 +610,14 @@ class PoissonEvaluator:
             matrix = ((tx, ty), (ty, -tx))
             vector = (dudt, dudn)
             return tuple(np.dot(matrix, vector))
-        raise NotImplementedError
+
+        tknots = set(self.curve.projection(point))
+        tknots |= set(self.curve.knots)
+        tknots |= set(self.bound.knots)
+        tknots |= set(self.normal.knots)
+        tknots = tuple(sorted(tknots))
+
+        result = np.zeros(2, dtype="float64")
+        for ta, tb in zip(tknots, tknots[1:]):
+            result += self.__grad_adapt(point, ta, tb)
+        return result / (2 * np.pi)

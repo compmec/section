@@ -6,7 +6,12 @@ import numpy as np
 import pytest
 
 from compmec.section.basisfunc import BasisFunc
-from compmec.section.bem2d import ComputeStiffness, TorsionEvaluator
+from compmec.section.bem2d import (
+    ComputeStiffness,
+    PoissonEvaluator,
+    ScalarFunction,
+    TorsionEvaluator,
+)
 from compmec.section.curve import Curve
 
 
@@ -335,11 +340,11 @@ class TestComputeMatrixGradoutcurve:
         good_matrix[1, 1, 0] = 0
         good_matrix[1, 1, 1] = log(3 / 5) + pi
         good_matrix[1, 1, 2] = 0
-        good_matrix[1, 1, 3] = log(5/3) - pi
+        good_matrix[1, 1, 3] = log(5 / 3) - pi
 
-        good_matrix[2, 0, 0] = pi - log(5/3)
+        good_matrix[2, 0, 0] = pi - log(5 / 3)
         good_matrix[2, 0, 1] = 0
-        good_matrix[2, 0, 2] = log(5/3) - pi
+        good_matrix[2, 0, 2] = log(5 / 3) - pi
         good_matrix[2, 0, 3] = 0
         good_matrix[2, 1, 0] = -atan(3) - log(3) + atan(1 / 3)
         good_matrix[2, 1, 1] = -atan(1 / 3) + atan(3) + log(5) + pi
@@ -466,6 +471,71 @@ class TestTorsionVectors:
         pass
 
 
+class TestPoissonEvaluator:
+    @pytest.mark.order(8)
+    @pytest.mark.dependency(depends=["test_begin"])
+    def test_begin(self):
+        pass
+
+    @pytest.mark.order(8)
+    @pytest.mark.timeout(10)
+    @pytest.mark.dependency(depends=["TestPoissonEvaluator::test_begin"])
+    def test_square(self):
+        a, b, c = np.random.uniform(-1, 1, 3)
+        a, b, c = 1, 0, 0
+        a, b, c = 0, 1, 0
+        a, b, c = 0.5, 2, 3
+        funct = lambda x, y: a * x + b * y + c
+        gradi = lambda x, y: (a, b)
+
+        vertices = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
+        vertices = np.array(vertices, dtype="float64")
+        curve = Curve.from_vertices(vertices)
+        basis = BasisFunc.cyclic(curve.knots, degree=1)
+        ctrlpoints = tuple(funct(x, y) for x, y in vertices)
+        bound = ScalarFunction(basis, ctrlpoints)
+        basis = BasisFunc.cyclic(curve.knots, degree=0)
+        ctrlpoints = (-b, a, b, -a)
+        normal = ScalarFunction(basis, ctrlpoints)
+        evaluator = PoissonEvaluator(curve, bound, normal)
+
+        # At boundary
+        sources = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
+        sources += [(0, -1), (1, 0), (0, 1), (-1, 0)]
+        for source in sources:
+            x, y = source
+            assert evaluator.eval(source) == funct(x, y)
+            assert evaluator.grad(source) == gradi(x, y)
+
+        # Exterior
+        sources = [(-2, -2), (2, -2), (2, 2), (-2, 2)]
+        sources += [(0, -2), (2, 0), (0, 2), (-2, 0)]
+        for source in sources:
+            x, y = source
+            assert evaluator.eval(source) == 0
+            assert evaluator.grad(source) == (0, 0)
+
+        # Interior
+        sources = [(0, 0), (0, -0.5), (0.5, 0), (0, 0.5), (-0.5, 0)]
+        sources += [(-0.5, -0.5), (0.5, -0.5), (0.5, 0.5), (-0.5, 0.5)]
+        for source in sources:
+            x, y = source
+            assert abs(evaluator.eval(source) - funct(x, y)) < 1e-9
+            grad_test = evaluator.grad(source)
+            grad_good = gradi(x, y)
+            assert abs(grad_test[0] - grad_good[0]) < 1e-9
+            assert abs(grad_test[1] - grad_good[1]) < 1e-9
+
+    @pytest.mark.order(8)
+    @pytest.mark.dependency(
+        depends=[
+            "TestPoissonEvaluator::test_square",
+        ]
+    )
+    def test_end(self):
+        pass
+
+
 @pytest.mark.order(8)
 @pytest.mark.dependency(
     depends=[
@@ -473,6 +543,7 @@ class TestTorsionVectors:
         "TestComputeMatrixOutcurve::test_end",
         "TestComputeMatrixGradoutcurve::test_end",
         "TestTorsionVectors::test_end",
+        "PoissonEvaluator::test_end",
     ]
 )
 def test_end():
