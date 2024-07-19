@@ -261,7 +261,7 @@ def plot_section(section: ISection, *, axes: Optional[plt.Axes] = None):
 
     usample = np.linspace(0, 1, 17)
     for geometry in section.geometries:
-        for curve in geometry.curves:
+        for curve in geometry:
             knots = curve.knots
             tsample = set(knots)
             for ta, tb in zip(knots, knots[1:]):
@@ -311,7 +311,7 @@ def plot_field(
     # Second, plot the countour values
     curves = {}
     for geometry in section.geometries:
-        for curve in geometry.curves:
+        for curve in geometry:
             if curve.label not in curves:
                 curves[curve.label] = curve
 

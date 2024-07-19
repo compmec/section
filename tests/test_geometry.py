@@ -5,7 +5,7 @@ File to test src/compmec/section/geometry.py module
 import pytest
 
 from compmec.section.curve import Curve
-from compmec.section.geometry import Geometry
+from compmec.section.geometry import ConnectedGeometry
 
 
 @pytest.mark.order(1)
@@ -26,7 +26,7 @@ def test_full_square():
     vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1]]
     curve = Curve.from_vertices(vertices)
 
-    geometry = Geometry([curve.label])
+    geometry = ConnectedGeometry([curve.label])
 
     assert geometry.winding((0, 0)) == 1
     assert geometry.winding((1, 0)) == 0.5
@@ -50,7 +50,7 @@ def test_hollow_square():
     vertices = [[-1, -1], [-1, 1], [1, 1], [1, -1]]
     curve_int = Curve.from_vertices(vertices)
 
-    geometry = Geometry([curve_ext, curve_int])
+    geometry = ConnectedGeometry([curve_ext, curve_int])
 
     assert geometry.winding((0, 0)) == 0
     assert geometry.winding((1, 0)) == 0.5

@@ -13,7 +13,7 @@ import jsonschema
 
 from .abcs import IFileIO
 from .curve import Curve, Node
-from .geometry import Geometry
+from .geometry import ConnectedGeometry
 from .material import Material
 from .section import HomogeneousSection
 
@@ -204,7 +204,7 @@ class JsonIO(FileIO):
         for name, info in sections.items():
             geome_labels = info["geom_labels"]
             mater_names = tuple(info["materials"])
-            geometries = map(Geometry, geome_labels)
+            geometries = map(ConnectedGeometry, geome_labels)
             materials = (Material.instances[name] for name in mater_names)
             homosections = tuple(
                 HomogeneousSection(geom, mater)

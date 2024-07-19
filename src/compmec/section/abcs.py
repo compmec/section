@@ -240,6 +240,35 @@ class ICurve(ABC):
         raise NotImplementedError
 
 
+class IGeometry(ABC):
+    """
+    Connected Geometry class that represents a bidimensional region
+    on the plane and has some functions such as to decide if points
+    are inside the region
+    """
+
+    def integrate(
+        self, expx: int, expy: int, tolerance: Optional[float] = 1e-9
+    ) -> float:
+        """
+        Evaluates the integral
+
+        I = int_{Omega} x^expx * y^expy dOmega
+
+
+        """
+        raise NotImplementedError
+
+    def winding(self, point: Tuple[float]) -> float:
+        """
+        Computes the winding number of the giving point
+
+        Normally winding number is one for each curve, but this method gives
+        the overall winding number
+        """
+        raise NotImplementedError
+
+
 class IMaterial(ABC):
     """
     Material abstract class, the parent of other more specific materials

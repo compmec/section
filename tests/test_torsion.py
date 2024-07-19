@@ -7,7 +7,7 @@ import pytest
 from compmec.section.basisfunc import BasisFunc
 from compmec.section.bem2d import BEMModel
 from compmec.section.curve import Curve
-from compmec.section.geometry import Geometry
+from compmec.section.geometry import ConnectedGeometry
 from compmec.section.material import Isotropic
 from compmec.section.section import HomogeneousSection
 
@@ -37,7 +37,7 @@ class TestSolvingSystem:
     def test_full_square(self):
         vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1]]
         curve = Curve.from_vertices(vertices)
-        geometry = Geometry([curve])
+        geometry = ConnectedGeometry([curve])
         material = Isotropic(young_modulus=1, poissons_ratio=0.3)
         square = HomogeneousSection(geometry, material)
 
@@ -57,7 +57,7 @@ class TestSolvingSystem:
         vertices_ext = [[3, 3], [-3, 3], [-3, -3], [3, -3]]
         curve_ext = Curve.from_vertices(vertices_ext)
 
-        geometry = Geometry([curve_ext, curve_int])
+        geometry = ConnectedGeometry([curve_ext, curve_int])
         material = Isotropic(young_modulus=1, poissons_ratio=0.3)
         square = HomogeneousSection(geometry, material)
         model = BEMModel(square)

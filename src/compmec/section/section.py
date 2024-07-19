@@ -14,9 +14,9 @@ from typing import Optional, Tuple, Union
 import numpy as np
 from shapepy.shape import DefinedShape
 
-from .abcs import ISection, NamedTracker
+from .abcs import IGeometry, IMaterial, ISection, NamedTracker
 from .field import ChargedField
-from .geometry import Geometry
+from .geometry import ConnectedGeometry
 from .material import Material
 
 
@@ -30,21 +30,21 @@ class HomogeneousSection(ISection, NamedTracker):
 
     @classmethod
     def from_shape(cls, shape: DefinedShape, material: Material):
-        geometry = Geometry.from_shape(shape)
+        geometry = ConnectedGeometry.from_shape(shape)
         return cls(geometry, material)
 
     def __init__(
         self,
-        geometry: Union[str, Geometry],
-        material: Union[str, Material],
+        geometry: Union[str, IGeometry],
+        material: Union[str, IMaterial],
         *,
         name: Optional[str] = None,
     ):
-        if not isinstance(geometry, Geometry):
+        if not isinstance(geometry, IGeometry):
             if not isinstance(geometry, str):
                 raise NotImplementedError
-            geometry = Geometry.instances[geometry]
-        if not isinstance(material, Material):
+            geometry = ConnectedGeometry.instances[geometry]
+        if not isinstance(material, IMaterial):
             if not isinstance(material, str):
                 raise NotImplementedError
             material = Material.instances[material]
