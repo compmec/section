@@ -103,11 +103,11 @@ class ChargedField(Field):
         for every geometry
 
         """
-        geometries = tuple(self.section.geometries)
-        winds = np.zeros((len(points), len(geometries)), dtype="float64")
+        homosections = tuple(self.section)
+        winds = np.zeros((len(points), len(homosections)), dtype="float64")
         for i, point in enumerate(points):
-            for j, geome in enumerate(geometries):
-                winds[i, j] = geome.winding(point)
+            for j, homosection in enumerate(homosections):
+                winds[i, j] = homosection.geometry.winding(point)
         return winds
 
     def __stress_eval(self, points, winds):
@@ -163,11 +163,11 @@ class ChargedField(Field):
 
         """
         strain = np.zeros((len(winds), 4), dtype="float64")
-        for i, material in enumerate(self.section.materials):
+        for i, homosection in enumerate(self.section):
             subwinds = winds[:, i]
             mask = subwinds != 0
-            young = material.young_modulus
-            poiss = material.poissons_ratio
+            young = homosection.material.young_modulus
+            poiss = homosection.material.poissons_ratio
             fract11 = -poiss / young
             fract13 = (1 + poiss) / young
             strain[mask, 1] += subwinds[mask] * stresses[mask, 2] / young

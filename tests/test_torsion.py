@@ -9,13 +9,15 @@ from compmec.section.bem2d import BEMModel
 from compmec.section.curve import Curve
 from compmec.section.geometry import Geometry
 from compmec.section.material import Isotropic
-from compmec.section.section import Section
+from compmec.section.section import HomogeneousSection
 
 
 @pytest.mark.order(10)
 @pytest.mark.dependency(
     depends=[
         "tests/test_bem2d.py::test_end",
+        "tests/test_axial.py::test_end",
+        "tests/test_bending.py::test_end",
     ],
     scope="session",
 )
@@ -37,7 +39,7 @@ class TestSolvingSystem:
         curve = Curve.from_vertices(vertices)
         geometry = Geometry([curve])
         material = Isotropic(young_modulus=1, poissons_ratio=0.3)
-        square = Section(geometry, material)
+        square = HomogeneousSection(geometry, material)
 
         basis_function = BasisFunc.cyclic(curve.knots)
         model = BEMModel(square)
@@ -57,7 +59,7 @@ class TestSolvingSystem:
 
         geometry = Geometry([curve_ext, curve_int])
         material = Isotropic(young_modulus=1, poissons_ratio=0.3)
-        square = Section(geometry, material)
+        square = HomogeneousSection(geometry, material)
         model = BEMModel(square)
 
         basis_int = BasisFunc.cyclic(curve_int.knots)

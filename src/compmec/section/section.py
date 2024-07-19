@@ -9,151 +9,66 @@ constant, torsion and shear center and others.
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import Iterable, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
 import numpy as np
-from shapepy.shape import DefinedShape, DisjointShape
+from shapepy.shape import DefinedShape
 
 from .abcs import ISection, NamedTracker
-from .curve import Curve
 from .field import ChargedField
 from .geometry import Geometry
-from .integral import Polynomial
 from .material import Material
 
 
-class BaseSection(ISection, NamedTracker):
+class HomogeneousSection(ISection, NamedTracker):
     """
-    BaseSection class that is the base for others section classes
+    HomogeneousSection's class
 
-    Basicaly this class is responsible to construct the initial section,
-    verifying if the inputs are correct, and generate getter only properties
-    such as 'curves', 'geomlabels' and 'materials'.
     """
 
     instances = OrderedDict()
 
+    @classmethod
+    def from_shape(cls, shape: DefinedShape, material: Material):
+        geometry = Geometry.from_shape(shape)
+        return cls(geometry, material)
+
     def __init__(
         self,
-        geometries: Union[str, Geometry, Tuple[Union[str, Geometry]]],
-        materials: Union[str, Material, Tuple[Union[str, Material]]],
+        geometry: Union[str, Geometry],
+        material: Union[str, Material],
         *,
         name: Optional[str] = None,
     ):
-        if isinstance(geometries, (str, Geometry)):
-            geometries = [geometries]
-        else:
-            geometries = list(geometries)
-        if isinstance(materials, (str, Material)):
-            materials = [materials]
-        else:
-            materials = list(materials)
-        for i, geometry in enumerate(geometries):
-            if isinstance(geometry, Geometry):
-                continue
+        if not isinstance(geometry, Geometry):
             if not isinstance(geometry, str):
                 raise NotImplementedError
-            if geometry not in Geometry.instances:
-                raise NotImplementedError
-            geometries[i] = Geometry.instances[geometry]
-        for i, material in enumerate(materials):
-            if isinstance(material, Material):
-                continue
+            geometry = Geometry.instances[geometry]
+        if not isinstance(material, Material):
             if not isinstance(material, str):
                 raise NotImplementedError
-            if material not in Material.instances:
-                raise NotImplementedError
-            materials[i] = Material.instances[material]
-        self.name = name
-        self.__geometries = tuple(geometries)
-        self.__materials = tuple(materials)
-
-    @property
-    def geometries(self) -> Iterable[Geometry]:
-        """
-        Geometric curves labels that defines shapes
-
-        :getter: Returns the curve labels
-        :type: Tuple[Tuple[int]]
-        """
-        return self.__geometries
-
-    @property
-    def materials(self) -> Iterable[Material]:
-        """
-        Used materials for every shape
-
-        :getter: Returns the used materials, in the shapes' order
-        :type: Tuple[Material]
-        """
-        return self.__materials
-
-    @classmethod
-    def from_shapes(
-        cls,
-        shapes: Union[DefinedShape, Tuple[DefinedShape]],
-        materials: Union[Material, Tuple[Material]],
-    ) -> BaseSection:
-        """
-        Creates an Section instance based on given shapes and materials
-        It's used along the shapepy packaged
-
-        :param name: The section's name, defaults to "custom-section"
-        :type name: str, optional
-        :return: The dictionary ready to be saved in JSON file
-        :rtype: Dict[str, Any]
-        """
-        if isinstance(shapes, DefinedShape):
-            shapes = [shapes]
-        if isinstance(materials, Material):
-            materials = [materials]
-        geome_names = []
-        mater_names = []
-        for shape, material in zip(shapes, materials):
-            if not isinstance(shape, DisjointShape):
-                geometrie = Geometry.from_shape(shape)
-                geome_names.append(geometrie.name)
-                mater_names.append(material.name)
-                continue
-            for subshape in shape.subshapes:
-                geometrie = Geometry.from_shape(subshape)
-                geome_names.append(geometrie.name)
-                mater_names.append(material.name)
-        return cls(geome_names, mater_names)
-
-
-class GeometricSection(BaseSection):
-    """
-    GeometricSection's class
-
-    """
-
-    def __init__(
-        self,
-        geome_names: Tuple[Geometry],
-        mater_names: Tuple[Material],
-    ):
-        super().__init__(geome_names, mater_names)
+            material = Material.instances[material]
+        self.geometry = geometry
+        self.material = material
         self.__geomintegs = None
+        self.name = name
 
     def __compute_geomintegs(self):
         """
         Compute the geometric integrals over the domain
         creating the object __geomintegs
         """
-        integrals = {}
-        all_labels = set()
-        for geometry in self.geometries:
-            all_labels |= set(map(abs, geometry.labels))
-        for label in all_labels:
-            curve = Curve.instances[label]
-            integrals[label] = Polynomial.adaptative(curve)
-
         geomintegs = np.zeros(10, dtype="float64")
-        for geometry in self.geometries:
-            for label in geometry.labels:
-                signal = 1 if label > 0 else -1
-                geomintegs += signal * integrals[abs(label)]
+        geomintegs[0] = self.geometry.integrate(0, 0)
+        geomintegs[1] = self.geometry.integrate(0, 1)
+        geomintegs[2] = self.geometry.integrate(1, 0)
+        geomintegs[3] = self.geometry.integrate(0, 2)
+        geomintegs[4] = self.geometry.integrate(1, 1)
+        geomintegs[5] = self.geometry.integrate(2, 0)
+        geomintegs[6] = self.geometry.integrate(0, 3)
+        geomintegs[7] = self.geometry.integrate(1, 2)
+        geomintegs[8] = self.geometry.integrate(2, 1)
+        geomintegs[9] = self.geometry.integrate(3, 0)
         self.__geomintegs = geomintegs
 
     def area(self) -> float:
@@ -204,18 +119,16 @@ class GeometricSection(BaseSection):
     def charged_field(self) -> ChargedField:
         return ChargedField(self)
 
-
-class Section(GeometricSection):
-    """
-    Section's class
-
-    """
-
     def torsion_center(self) -> Tuple[float]:
         return (0, 0)
 
     def torsion_constant(self) -> float:
-        return 0
+        center = self.geometric_center()
+        ixx, _, iyy = self.second_moment(center)
+        return ixx + iyy
 
     def shear_center(self) -> Tuple[float]:
         return (0, 0)
+
+    def __iter__(self):
+        yield self

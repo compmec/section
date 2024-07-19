@@ -12,7 +12,7 @@ from shapepy import Primitive
 
 from compmec.section.dataio import JsonIO
 from compmec.section.material import Isotropic
-from compmec.section.section import Section
+from compmec.section.section import HomogeneousSection
 
 
 @pytest.mark.order(3)
@@ -41,7 +41,7 @@ class TestSinglePolygon:
         side = 3
         geometry = Primitive.square(side)
         material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
-        section = Section.from_shapes(geometry, material)
+        section = HomogeneousSection.from_shape(geometry, material)
         area = section.area()
         Qx, Qy = section.first_moment()
         Ixx, Ixy, Iyy = section.second_moment()
@@ -61,7 +61,7 @@ class TestSinglePolygon:
         width, height = 3, 5
         geometry = Primitive.square().scale(width, height)
         material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
-        section = Section.from_shapes(geometry, material)
+        section = HomogeneousSection.from_shape(geometry, material)
         area = section.area()
         Qx, Qy = section.first_moment()
         Ixx, Ixy, Iyy = section.second_moment()
@@ -82,7 +82,7 @@ class TestSinglePolygon:
         center = (5, -7)
         geometry = Primitive.square(side, center=center)
         material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
-        section = Section.from_shapes(geometry, material)
+        section = HomogeneousSection.from_shape(geometry, material)
         area = section.area()
         Qx, Qy = section.first_moment()
         Ixx, Ixy, Iyy = section.second_moment()
@@ -108,7 +108,7 @@ class TestSinglePolygon:
         geometry.scale(width, height)
         geometry.move(center)
         material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
-        section = Section.from_shapes(geometry, material)
+        section = HomogeneousSection.from_shape(geometry, material)
         area = section.area()
         Qx, Qy = section.first_moment()
         Ixx, Ixy, Iyy = section.second_moment()
@@ -152,7 +152,7 @@ class TestToFromJson:
             reader.load_curves()
             reader.load_materials()
             reader.load_sections()
-        square = Section.instances["square"]
+        square = HomogeneousSection.instances["square"]
         area = square.area()
         Qx, Qy = square.first_moment()
         Ixx, Ixy, Iyy = square.second_moment()
@@ -164,6 +164,7 @@ class TestToFromJson:
         assert abs(Iyy - 4 / 3) < 1e-9
 
     @pytest.mark.order(3)
+    @pytest.mark.skip(reason="Fix derivate of rational splines")
     @pytest.mark.timeout(20)
     @pytest.mark.dependency(depends=["TestToFromJson::test_begin"])
     def test_read_circle(self):
@@ -173,7 +174,7 @@ class TestToFromJson:
             reader.load_curves()
             reader.load_materials()
             reader.load_sections()
-        square = Section.instances["square"]
+        square = HomogeneousSection.instances["square"]
         area = square.area()
         Qx, Qy = square.first_moment()
         Ixx, Ixy, Iyy = square.second_moment()

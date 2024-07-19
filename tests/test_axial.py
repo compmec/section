@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from shapepy import Primitive
 
-from compmec.section import Section
+from compmec.section import HomogeneousSection
 from compmec.section.material import Isotropic
 
 
@@ -35,7 +35,7 @@ class TestSinglePolygon:
         side = 2
         geometry = Primitive.square(side)
         material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
-        section = Section.from_shapes(geometry, material)
+        section = HomogeneousSection.from_shape(geometry, material)
         field = section.charged_field()
 
         points = [(0, 0)]  # origin
@@ -86,7 +86,7 @@ class TestHollowPolygon:
         geometry = Primitive.square(ext_side)
         geometry -= Primitive.square(int_side)
         material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
-        section = Section.from_shapes(geometry, material)
+        section = HomogeneousSection.from_shape(geometry, material)
         field = section.charged_field()
 
         points = [(0, 0)]

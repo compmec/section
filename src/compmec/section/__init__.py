@@ -8,7 +8,7 @@ from .dataio import JsonIO
 from .field import plot_field, plot_section
 from .geometry import Geometry
 from .material import Isotropic, Material
-from .section import Section
+from .section import HomogeneousSection
 
 __version__ = "0.4.0"
 

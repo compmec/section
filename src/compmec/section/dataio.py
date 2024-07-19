@@ -15,7 +15,7 @@ from .abcs import IFileIO
 from .curve import Curve, Node
 from .geometry import Geometry
 from .material import Material
-from .section import Section
+from .section import HomogeneousSection
 
 
 class FileIO(IFileIO):
@@ -200,11 +200,18 @@ class JsonIO(FileIO):
         schema_path = package_dir / "schema" / "section.json"
         sections = self.read_json(str(schema_path))["sections"]
         if self.overwrite:
-            Section.clear(sections.keys())
+            HomogeneousSection.clear(sections.keys())
         for name, info in sections.items():
             geome_labels = info["geom_labels"]
-            geometries = tuple(map(Geometry, geome_labels))
-            geome_names = tuple(geome.name for geome in geometries)
             mater_names = tuple(info["materials"])
-            section = Section(geome_names, mater_names)
+            geometries = map(Geometry, geome_labels)
+            materials = (Material.instances[name] for name in mater_names)
+            homosections = tuple(
+                HomogeneousSection(geom, mater)
+                for geom, mater in zip(geometries, materials)
+            )
+            if len(homosections) == 1:
+                section = homosections[0]
+            else:
+                raise NotImplementedError
             section.name = name

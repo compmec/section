@@ -11,6 +11,7 @@ from shapepy import ConnectedShape, SimpleShape
 
 from .abcs import NamedTracker
 from .curve import Curve
+from .integral import AdaptativePolynomialIntegrator
 
 
 class Geometry(NamedTracker):
@@ -63,6 +64,28 @@ class Geometry(NamedTracker):
         Gives the curves that defines the geometry
         """
         return self.__curves
+
+    def integrate(
+        self, expx: int, expy: int, tolerance: Optional[float] = 1e-9
+    ) -> float:
+        """
+        Evaluates the integral
+
+        I = int_{Omega} x^expx * y^expy dOmega
+
+
+        """
+        assert isinstance(expx, int) and expx >= 0
+        assert isinstance(expy, int) and expy >= 0
+
+        result = 0
+        for curve in self.curves:
+            integrator = AdaptativePolynomialIntegrator(
+                curve, tolerance=tolerance
+            )
+            value = integrator.integrate(expx, expy)
+            result += value / (2 + expx + expy)
+        return result
 
     def winding(self, point: Tuple[float]) -> float:
         """

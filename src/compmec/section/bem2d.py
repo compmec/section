@@ -363,7 +363,8 @@ class BEMModel:
         self.curves = {}
         self.basis = {}
         self.solution = None
-        for geometry in section.geometries:
+        for homosection in section:
+            geometry = homosection.geometry
             for curve in geometry.curves:
                 if curve.label not in self.curves:
                     self.curves[curve.label] = curve
