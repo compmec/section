@@ -416,3 +416,74 @@ class BEMModel:
             slicej = slice(index_base, index_base + base.ndofs)
             self.solution[label] = result[slicej]
             index_base += base.ndofs
+
+
+class ScalarFunction:
+
+    def __init__(self, basisfunc: IBasisFunc, ctrlpoints: Tuple[float]):
+        self.basis = basisfunc
+        self.ctrlpoints = ctrlpoints
+
+    def eval(self, parameters: Tuple[float]) -> Tuple[float]:
+        matrix = self.basis.eval(parameters)
+        return np.dot(np.transpose(matrix), self.ctrlpoints)
+
+    def deval(self, parameters: Tuple[float]) -> Tuple[float]:
+        matrix = self.basis.deval(parameters)
+        return np.dot(np.transpose(matrix), self.ctrlpoints)
+
+
+class PoissonEvaluator:
+    """
+    This class helps evaluating the function 'u' which satisfies
+    the poissons equation:
+
+    nabla^2 u = 0
+
+    For this class, it's required the tangent and normal functions
+    We know if it's on the boundary, we use the directly the function
+    on the boundary.
+    If it's in the interior, we use the equation:
+
+    alpha(s) * u(s) = int_{Gamma} u * dv/dn * dGamma
+                    - int_{Gamma} v * du/dn dGamma
+
+    dv/dn * ds = r x p' / <r, r> * dt
+    v * ds = ln |r| * |p'| * dt
+
+    """
+
+    def __init__(
+        self,
+        curve: ICurve,
+        boundary: ScalarFunction,
+        normal: ScalarFunction,
+    ):
+        self.curve = curve
+        self.bound = boundary
+        self.normal = normal
+
+    def eval(self, point: Tuple[float]) -> float:
+        wind = self.curve.winding(point)
+        if wind == 0:  # Outside
+            return 0
+        if wind < 1:  # At boundary
+            param = self.curve.projection(point)[0]
+            return self.bound.eval(param)
+        raise NotImplementedError
+
+    def grad(self, point: Tuple[float]) -> Tuple[float]:
+        wind = self.curve.winding(point)
+        if wind == 0:  # Outside
+            return (0, 0)
+        if wind < 1:  # At boundary
+            param = self.curve.projection(point)[0]
+            dpdt = self.curve.deval(param)
+            norm = np.linalg.norm(dpdt)
+            tx, ty = dpdt / norm  # tangent
+            dudt = self.bound.deval(param) / norm
+            dudn = self.normal.eval(param)
+            matrix = ((tx, ty), (ty, -tx))
+            vector = (dudt, dudn)
+            return tuple(np.dot(matrix, vector))
+        raise NotImplementedError

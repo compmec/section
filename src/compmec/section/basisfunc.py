@@ -45,8 +45,14 @@ class BasisFunc(IBasisFunc):
         else:
             degree = None
         knotvector = ImmutableKnotVector(knotvector, degree)
+        degree = knotvector.degree
+        npts = knotvector.npts
         self.basis = Function(knotvector)
-        self.derivate_matrix = Calculus.difference_matrix(knotvector)
+        if degree != 0:
+            delta = Calculus.difference_matrix(knotvector)
+        else:
+            delta = np.zeros((npts, npts), dtype="float64")
+        self.derivate_matrix = delta
 
     @property
     def knots(self):
