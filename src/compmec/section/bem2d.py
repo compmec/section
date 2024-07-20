@@ -9,7 +9,7 @@ subject only to neumman's boundary condition
 """
 
 import math
-from typing import Tuple
+from typing import Tuple, Union
 
 import numpy as np
 
@@ -295,6 +295,8 @@ class BEMModel:
             raise NotImplementedError
 
     def __init__(self, section: ISection):
+        if not isinstance(section, ISection):
+            raise TypeError
         self.curves = {}
         self.basis = {}
         self.solution = None
@@ -303,6 +305,17 @@ class BEMModel:
             for curve in geometry:
                 if curve.label not in self.curves:
                     self.curves[curve.label] = curve
+
+    def add_basis(self, curve: Union[int, ICurve], basis: IBasisFunc):
+        if isinstance(curve, int):
+            curve_label = curve
+        elif isinstance(curve, ICurve):
+            curve_label = curve.label
+        else:
+            raise TypeError
+        if not isinstance(basis, IBasisFunc):
+            raise TypeError
+        self.basis[curve_label] = basis
 
     def solve(self, sources: Tuple[Tuple[float]]):
         """

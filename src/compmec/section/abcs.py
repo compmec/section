@@ -247,6 +247,11 @@ class IGeometry(ABC):
     are inside the region
     """
 
+    @property
+    @abstractmethod
+    def curves(self) -> Tuple[ICurve]:
+        raise NotImplementedError
+
     def integrate(
         self, expx: int, expy: int, tolerance: Optional[float] = 1e-9
     ) -> float:

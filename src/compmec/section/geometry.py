@@ -8,7 +8,7 @@ from typing import Optional, Tuple, Union
 
 from shapepy import ConnectedShape, SimpleShape
 
-from .abcs import IGeometry, NamedTracker
+from .abcs import ICurve, IGeometry, NamedTracker
 from .curve import Curve
 from .integral import AdaptativePolynomialIntegrator
 
@@ -50,8 +50,12 @@ class ConnectedGeometry(IGeometry, NamedTracker):
         self.__curves = tuple(curves)
         self.name = name
 
+    @property
+    def curves(self) -> Tuple[ICurve]:
+        return self.__curves
+
     def __iter__(self):
-        yield from self.__curves
+        yield from self.curves
 
     def integrate(
         self, expx: int, expy: int, tolerance: Optional[float] = 1e-9
