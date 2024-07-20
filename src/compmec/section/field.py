@@ -82,18 +82,38 @@ class ChargedField(Field):
     def momentums(self, new_momentums: Tuple[float]):
         self.__charges[3:] = new_momentums
 
-    def __stress_axial(self, winds):
-        sigmazz = self.forces[2] / self.section.area()
-        return np.any(winds, axis=1) * sigmazz
+    def __stress_axial(self):
+        return self.forces[2] / self.section.area()
 
-    def __stress_bending(self, points, winds):
+    def __stress_bending(self, points):
         bend_center = self.section.bending_center()
         ixx, ixy, iyy = self.section.second_moment(bend_center)
         detii = ixx * iyy - ixy**2
         matrix = np.array([[iyy, -ixy], [-ixy, ixx]])
         momx, momy, _ = self.momentums
         vector = np.dot(matrix, [-momy, momx]) / detii
-        return np.dot(points, vector) * np.any(winds, axis=1)
+        points = tuple(point - bend_center for point in points)
+        return np.dot(points, vector)
+
+    def __stress_shear(self, points, winds):
+        raise NotImplementedError
+
+    def __stress_torsion(self, points, winds):
+        sumwinds = np.sum(winds, axis=1)
+        sumwinds[sumwinds == 0] = 1
+        results = np.zeros((len(points), 2), dtype="float64")
+        for j, homosection in enumerate(self.section):
+            subwinds = winds[:, j] / sumwinds
+            mask = subwinds == 0
+            subpoints = points[mask]
+            gradients = tuple(map(homosection.warping.grad, subpoints))
+            gradients = np.array(gradients, dtype="float64")
+            gradients[:, 0] -= subpoints[:, 1]
+            gradients[:, 1] += subpoints[:, 0]
+            results[mask, 0] += subwinds * gradients[:, 0]
+            results[mask, 1] += subwinds * gradients[:, 1]
+        results *= self.momentums[2] / self.section.torsion_constant()
+        return results
 
     def __winding_numbers(
         self, points: Tuple[Tuple[float]]
@@ -103,11 +123,13 @@ class ChargedField(Field):
         for every geometry
 
         """
+        wind_tolerance = 1e-6
         homosections = tuple(self.section)
         winds = np.zeros((len(points), len(homosections)), dtype="float64")
         for i, point in enumerate(points):
             for j, homosection in enumerate(homosections):
                 winds[i, j] = homosection.geometry.winding(point)
+        winds[np.abs(winds) < wind_tolerance] = 0
         return winds
 
     def __stress_eval(self, points, winds):
@@ -115,12 +137,12 @@ class ChargedField(Field):
         Evaluates the stress values
 
         The stress tensor is given by
-            [  0    0  E13]
-        S = [  0    0  E23]
-            [E13  E23  E33]
+            [  0    0  S13]
+        S = [  0    0  S23]
+            [S13  S23  S33]
 
         Returned values are a matrix of shape (n, 3)
-        each line are the stress components: E13, E23, E33
+        each line are the stress components: S13, S23, S33
 
         :param points: The wanted points, a matrix of shape (n, 2)
         :type points: Tuple[Tuple[float]]
@@ -129,14 +151,19 @@ class ChargedField(Field):
 
         """
         results = np.zeros((len(points), 3), dtype="float64")
-        if self.forces[2]:  # Axial force
-            results[:, 2] += self.__stress_axial(winds)
-        if np.any(self.momentums[:2]):  # Bending moments
-            results[:, 2] += self.__stress_bending(points, winds)
-        if np.any(self.forces[:2]):  # Shear force
-            raise NotImplementedError
-        if self.momentums[2]:  # Torsion
-            raise NotImplementedError
+        fx, fy, fz = self.forces
+        mx, my, mz = self.momentums
+        mask = np.any(winds, axis=1)
+        subwinds = winds[mask, :]
+        subpoints = points[mask, :]
+        if fz:  # Axial force
+            results[mask, 2] += self.__stress_axial()
+        if mx or my:  # Bending moments
+            results[mask, 2] += self.__stress_bending(subpoints)
+        if mz:  # Torsion
+            results[mask, :2] += self.__stress_torsion(subpoints, subwinds)
+        if fx or fy:  # Poisson's evaluation
+            results[mask, :2] += self.__stress_shear(subpoints, subwinds)
         return results
 
     def __strain_eval(self, winds, stresses):
@@ -162,9 +189,11 @@ class ChargedField(Field):
         :rtype: Tuple[Tuple[float]]
 
         """
+        sumwinds = np.sum(winds, axis=1)
+        sumwinds[sumwinds == 0] = 1
         strain = np.zeros((len(winds), 4), dtype="float64")
         for i, homosection in enumerate(self.section):
-            subwinds = winds[:, i]
+            subwinds = winds[:, i] / sumwinds
             mask = subwinds != 0
             young = homosection.material.young_modulus
             poiss = homosection.material.poissons_ratio
@@ -201,10 +230,16 @@ class ChargedField(Field):
         >>> stress, strain = field.eval(points)
 
         """
+        wind_tolerance = 1e-6
         points = np.array(points, dtype="float64")
         winds = self.__winding_numbers(points)
-        stress = self.__stress_eval(points, winds)
-        strain = self.__strain_eval(winds, stress)
+        mask = np.any(np.abs(winds) > wind_tolerance, axis=1)
+        subwinds = winds[mask, :]
+        subpoints = points[mask, :]
+        stress = np.zeros((len(points), 3), dtype="float64")
+        strain = np.zeros((len(points), 4), dtype="float64")
+        stress[mask] = self.__stress_eval(subpoints, subwinds)
+        strain[mask] = self.__strain_eval(subwinds, stress[mask])
         return stress, strain
 
 
