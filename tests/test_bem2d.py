@@ -8,7 +8,8 @@ import pytest
 from compmec.section.basisfunc import BasisFunc
 from compmec.section.bem2d import (
     ComputeStiffness,
-    PoissonEvaluator,
+    PoissonEvaluatorCurve,
+    PoissonEvaluatorGeometry,
     ScalarFunction,
     TorsionEvaluator,
 )
@@ -480,7 +481,7 @@ class TestPoissonEvaluator:
     @pytest.mark.order(8)
     @pytest.mark.timeout(10)
     @pytest.mark.dependency(depends=["TestPoissonEvaluator::test_begin"])
-    def test_square(self):
+    def test_solid_square(self):
         a, b, c = np.random.uniform(-1, 1, 3)
         a, b, c = 1, 0, 0
         a, b, c = 0, 1, 0
@@ -497,7 +498,7 @@ class TestPoissonEvaluator:
         basis = BasisFunc.cyclic(curve.knots, degree=0)
         ctrlpoints = (-b, a, b, -a)
         normal = ScalarFunction(basis, ctrlpoints)
-        evaluator = PoissonEvaluator(curve, bound, normal)
+        evaluator = PoissonEvaluatorCurve(curve, bound, normal)
 
         # At boundary
         sources = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
@@ -527,9 +528,76 @@ class TestPoissonEvaluator:
             assert abs(grad_test[1] - grad_good[1]) < 1e-9
 
     @pytest.mark.order(8)
+    @pytest.mark.timeout(10)
+    @pytest.mark.dependency(depends=["TestPoissonEvaluator::test_begin"])
+    def test_hollow_square(self):
+        a, b, c = np.random.uniform(-1, 1, 3)
+        a, b, c = 1, 0, 0
+        a, b, c = 0, 1, 0
+        a, b, c = 0.5, 2, 3
+        funct = lambda x, y: a * x + b * y + c
+        gradi = lambda x, y: (a, b)
+
+        vertices = [(-1, -1), (-1, 1), (1, 1), (1, -1)]
+        vertices = np.array(vertices, dtype="float64")
+        curve_in = Curve.from_vertices(vertices)
+        basis_in = BasisFunc.cyclic(curve_in.knots, degree=1)
+        ctrlpoints = tuple(funct(x, y) for x, y in vertices)
+        bound_in = ScalarFunction(basis_in, ctrlpoints)
+        basis_in = BasisFunc.cyclic(curve_in.knots, degree=0)
+        ctrlpoints = (a, -b, -a, b)
+        normal = ScalarFunction(basis_in, ctrlpoints)
+        evaluator_in = PoissonEvaluatorCurve(curve_in, bound_in, normal)
+
+        vertices = [(-2, -2), (2, -2), (2, 2), (-2, 2)]
+        vertices = np.array(vertices, dtype="float64")
+        curve_out = Curve.from_vertices(vertices)
+        basis_out = BasisFunc.cyclic(curve_out.knots, degree=1)
+        ctrlpoints = tuple(funct(x, y) for x, y in vertices)
+        bound_out = ScalarFunction(basis_out, ctrlpoints)
+        basis_out = BasisFunc.cyclic(curve_out.knots, degree=0)
+        ctrlpoints = (-b, a, b, -a)
+        normal = ScalarFunction(basis_out, ctrlpoints)
+        evaluator_out = PoissonEvaluatorCurve(curve_out, bound_out, normal)
+
+        evaluator = PoissonEvaluatorGeometry([evaluator_in, evaluator_out])
+
+        # At boundary
+        sources = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
+        sources += [(0, -1), (1, 0), (0, 1), (-1, 0)]
+        sources += [(0, -2), (2, 0), (0, 2), (-2, 0)]
+        sources += [(-2, -2), (2, -2), (2, 2), (-2, 2)]
+        for source in sources:
+            x, y = source
+            assert evaluator.eval(source) == funct(x, y)
+            assert evaluator.grad(source) == gradi(x, y)
+
+        # Exterior
+        sources = [(0, 0)]
+        sources += [(-0.5, 0), (0.5, 0), (0, -0.5), (0, 0.5)]
+        sources += [(-3, -3), (3, -3), (3, 3), (-3, 3)]
+        sources += [(0, -3), (3, 0), (0, 3), (-3, 0)]
+        for source in sources:
+            x, y = source
+            assert evaluator.eval(source) == 0
+            assert evaluator.grad(source) == (0, 0)
+
+        # Interior
+        sources = [(0, -1.5), (1.5, 0), (0, 1.5), (-1.5, 0)]
+        sources += [(-1.5, -1.5), (1.5, -1.5), (1.5, 1.5), (-1.5, 1.5)]
+        for source in sources:
+            x, y = source
+            assert abs(evaluator.eval(source) - funct(x, y)) < 1e-9
+            grad_test = evaluator.grad(source)
+            grad_good = gradi(x, y)
+            assert abs(grad_test[0] - grad_good[0]) < 1e-9
+            assert abs(grad_test[1] - grad_good[1]) < 1e-9
+
+    @pytest.mark.order(8)
     @pytest.mark.dependency(
         depends=[
-            "TestPoissonEvaluator::test_square",
+            "TestPoissonEvaluator::test_solid_square",
+            "TestPoissonEvaluator::test_hollow_square",
         ]
     )
     def test_end(self):
@@ -543,7 +611,7 @@ class TestPoissonEvaluator:
         "TestComputeMatrixOutcurve::test_end",
         "TestComputeMatrixGradoutcurve::test_end",
         "TestTorsionVectors::test_end",
-        "PoissonEvaluator::test_end",
+        "TestPoissonEvaluator::test_end",
     ]
 )
 def test_end():

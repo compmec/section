@@ -347,6 +347,52 @@ class IFileIO(ABC):
         raise NotImplementedError
 
 
+class IPoissonEvaluator(ABC):
+    """
+    This class helps evaluating the function 'u' which satisfies
+    the poissons equation:
+
+    nabla^2 u = 0
+
+    For this class, it's required the tangent and normal functions
+    We know if it's on the boundary, we use the directly the function
+    on the boundary.
+    If it's in the interior, we use the equation:
+
+    alpha(s) * u(s) = int_{Gamma} u * dv/dn * dGamma
+                    - int_{Gamma} v * du/dn dGamma
+
+    dv/dn * ds = r x p' / <r, r> * dt
+    v * ds = ln |r| * |p'| * dt
+
+    """
+
+    @classmethod
+    def eval(self, source: Tuple[float]) -> float:
+        """
+        Evaluates the function 'u' at given point
+
+        :param source: The point where to evaluate
+        :type source: Tuple[float]
+        :return: The value of the function at given point
+        :rtype: float
+
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def grad(self, source: Tuple[float]) -> Tuple[float]:
+        """
+        Evaluates the gradient of 'u' at given point
+
+        :param source: The point where to evaluate
+        :type source: Tuple[float]
+        :return: The gradient of the function at given point
+        :rtype: Tuple[float]
+        """
+        raise NotImplementedError
+
+
 class IField(ABC):
     """
     This is a base abstract class parent of others

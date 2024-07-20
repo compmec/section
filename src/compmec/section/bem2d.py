@@ -13,7 +13,7 @@ from typing import Tuple
 
 import numpy as np
 
-from .abcs import IBasisFunc, ICurve, ISection
+from .abcs import IBasisFunc, ICurve, IPoissonEvaluator, ISection
 from .integral import Integration
 
 
@@ -405,6 +405,7 @@ class BEMModel:
 
         # Constraint solution
         matrix = np.pad(matrix, ((0, 1), (0, 1)), constant_values=1)
+        matrix[-1, -1] = 0
         vector = np.pad(vector, ((0, 1), (0, 0)), constant_values=0)
         result = np.linalg.solve(matrix, vector)
 
@@ -437,25 +438,7 @@ class ScalarFunction:
         return np.dot(np.transpose(matrix), self.ctrlpoints)
 
 
-class PoissonEvaluator:
-    """
-    This class helps evaluating the function 'u' which satisfies
-    the poissons equation:
-
-    nabla^2 u = 0
-
-    For this class, it's required the tangent and normal functions
-    We know if it's on the boundary, we use the directly the function
-    on the boundary.
-    If it's in the interior, we use the equation:
-
-    alpha(s) * u(s) = int_{Gamma} u * dv/dn * dGamma
-                    - int_{Gamma} v * du/dn dGamma
-
-    dv/dn * ds = r x p' / <r, r> * dt
-    v * ds = ln |r| * |p'| * dt
-
-    """
+class PoissonEvaluatorCurve(IPoissonEvaluator):
 
     def __init__(
         self,
@@ -575,15 +558,15 @@ class PoissonEvaluator:
             righx, righy = self.__grad_adapt(source, tm, tb, tolerance / 2)
         return (leftx + righx, lefty + righy)
 
-    def eval(self, point: Tuple[float]) -> float:
-        wind = self.curve.winding(point)
+    def eval(self, source: Tuple[float]) -> float:
+        wind = self.curve.winding(source)
         if abs(wind) < 1e-9:  # Outside
             return 0
         if wind < 1:  # At boundary
-            param = self.curve.projection(point)[0]
+            param = self.curve.projection(source)[0]
             return self.bound.eval(param)
 
-        tknots = set(self.curve.projection(point))
+        tknots = set(self.curve.projection(source))
         tknots |= set(self.curve.knots)
         tknots |= set(self.bound.knots)
         tknots |= set(self.normal.knots)
@@ -593,15 +576,15 @@ class PoissonEvaluator:
 
         result = 0
         for ta, tb in zip(tknots, tknots[1:]):
-            result += self.__eval_adapt(point, ta, tb)
+            result += self.__eval_adapt(source, ta, tb)
         return result / (2 * np.pi)
 
-    def grad(self, point: Tuple[float]) -> Tuple[float]:
-        wind = self.curve.winding(point)
+    def grad(self, source: Tuple[float]) -> Tuple[float]:
+        wind = self.curve.winding(source)
         if abs(wind) < 1e-9:  # Outside
             return (0, 0)
         if wind < 1:  # At boundary
-            param = self.curve.projection(point)[0]
+            param = self.curve.projection(source)[0]
             dpdt = self.curve.deval(param)
             norm = np.linalg.norm(dpdt)
             tx, ty = dpdt / norm  # tangent
@@ -611,7 +594,7 @@ class PoissonEvaluator:
             vector = (dudt, dudn)
             return tuple(np.dot(matrix, vector))
 
-        tknots = set(self.curve.projection(point))
+        tknots = set(self.curve.projection(source))
         tknots |= set(self.curve.knots)
         tknots |= set(self.bound.knots)
         tknots |= set(self.normal.knots)
@@ -619,5 +602,39 @@ class PoissonEvaluator:
 
         result = np.zeros(2, dtype="float64")
         for ta, tb in zip(tknots, tknots[1:]):
-            result += self.__grad_adapt(point, ta, tb)
+            result += self.__grad_adapt(source, ta, tb)
         return result / (2 * np.pi)
+
+
+class PoissonEvaluatorGeometry(IPoissonEvaluator):
+
+    def __init__(self, evaluators: Tuple[PoissonEvaluatorCurve]):
+        self.evaluators = evaluators
+
+    def eval(self, source: Tuple[float]) -> float:
+        wind_tolerance = 1e-6
+        winds = np.zeros(len(self.evaluators), dtype="float64")
+        for i, evaluator in enumerate(self.evaluators):
+            winds[i] = evaluator.curve.winding(source)
+            if wind_tolerance < winds[i] < 1 - wind_tolerance:
+                return evaluator.eval(source)
+        if np.any(np.abs(winds) < wind_tolerance):
+            return 0
+        result = 0
+        for evaluator in self.evaluators:
+            result += evaluator.eval(source)
+        return result
+
+    def grad(self, source: Tuple[float]) -> Tuple[float]:
+        wind_tolerance = 1e-6
+        winds = np.zeros(len(self.evaluators), dtype="float64")
+        for i, evaluator in enumerate(self.evaluators):
+            winds[i] = evaluator.curve.winding(source)
+            if wind_tolerance < winds[i] < 1 - wind_tolerance:
+                return evaluator.grad(source)
+        if np.any(np.abs(winds) < wind_tolerance):
+            return (0, 0)
+        result = np.zeros(2, dtype="float64")
+        for evaluator in self.evaluators:
+            result += evaluator.grad(source)
+        return result
