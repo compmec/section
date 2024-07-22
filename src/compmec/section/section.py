@@ -14,7 +14,13 @@ from typing import Optional, Tuple, Union
 import numpy as np
 from shapepy.shape import DefinedShape
 
-from .abcs import IGeometry, IMaterial, ISection, NamedTracker
+from .abcs import (
+    IGeometry,
+    IMaterial,
+    IPoissonEvaluator,
+    ISection,
+    NamedTracker,
+)
 from .field import ChargedField
 from .geometry import ConnectedGeometry
 from .material import Material
@@ -51,6 +57,7 @@ class HomogeneousSection(ISection, NamedTracker):
         self.geometry = geometry
         self.material = material
         self.__geomintegs = None
+        self.__warping = None
         self.name = name
 
     def __compute_geomintegs(self):
@@ -129,6 +136,16 @@ class HomogeneousSection(ISection, NamedTracker):
 
     def shear_center(self) -> Tuple[float]:
         return (0, 0)
+
+    @property
+    def warping(self) -> IPoissonEvaluator:
+        return self.__warping
+
+    @warping.setter
+    def warping(self, new_warping: IPoissonEvaluator):
+        if not isinstance(new_warping, IPoissonEvaluator):
+            raise TypeError
+        self.__warping = new_warping
 
     def __iter__(self):
         yield self

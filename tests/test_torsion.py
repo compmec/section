@@ -3,6 +3,7 @@ File to tests cases when only bending moments are applied
 """
 
 import pytest
+from shapepy import Primitive
 
 from compmec.section.basisfunc import BasisFunc
 from compmec.section.bem2d import BEMModel
@@ -35,39 +36,37 @@ class TestSolvingSystem:
     @pytest.mark.timeout(10)
     @pytest.mark.dependency(depends=["TestSolvingSystem::test_begin"])
     def test_full_square(self):
-        vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1]]
-        curve = Curve.from_vertices(vertices)
-        geometry = ConnectedGeometry([curve])
-        material = Isotropic(young_modulus=1, poissons_ratio=0.3)
-        square = HomogeneousSection(geometry, material)
+        full_square = Primitive.square(side=2, center=(0, 0))
+        steel = Isotropic(young_modulus=210, poissons_ratio=0.3)
+        steel_square = HomogeneousSection.from_shape(full_square, steel)
+        curve = steel_square.geometry.curves[0]
 
-        basis_function = BasisFunc.cyclic(curve.knots)
-        model = BEMModel(square)
-        model.basis[curve.label] = basis_function
+        model = BEMModel(steel_square)
+        knots = (0, 1, 2, 3, 4)
+        basis = BasisFunc.cyclic(knots, degree=1)
+        model.add_basis(curve, basis)
 
-        sources = vertices
+        sources = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
         model.solve(sources)
 
     @pytest.mark.order(10)
     @pytest.mark.timeout(10)
     @pytest.mark.dependency(depends=["TestSolvingSystem::test_begin"])
     def test_hollow_square(self):
-        vertices_int = [[-1, -1], [-1, 1], [1, 1], [1, -1]]
-        curve_int = Curve.from_vertices(vertices_int)
-        vertices_ext = [[3, 3], [-3, 3], [-3, -3], [3, -3]]
-        curve_ext = Curve.from_vertices(vertices_ext)
+        hollow_square = Primitive.square(6) - Primitive.square(2)
+        steel = Isotropic(young_modulus=1, poissons_ratio=0.3)
+        section = HomogeneousSection.from_shape(hollow_square, steel)
 
-        geometry = ConnectedGeometry([curve_ext, curve_int])
-        material = Isotropic(young_modulus=1, poissons_ratio=0.3)
-        square = HomogeneousSection(geometry, material)
-        model = BEMModel(square)
-
+        model = BEMModel(section)
+        curve_int = section.geometry.curves[0]
+        curve_ext = section.geometry.curves[1]
         basis_int = BasisFunc.cyclic(curve_int.knots)
         basis_ext = BasisFunc.cyclic(curve_ext.knots)
-        model.basis[curve_int.label] = basis_int
-        model.basis[curve_ext.label] = basis_ext
+        model.add_basis(curve_int, basis_int)
+        model.add_basis(curve_ext, basis_ext)
 
-        sources = vertices_int + vertices_ext
+        sources = [(-3, -3), (3, -3), (3, 3), (-3, 3)]
+        sources += [(-1, -1), (1, -1), (1, 1), (-1, 1)]
         model.solve(sources)
 
     @pytest.mark.order(10)

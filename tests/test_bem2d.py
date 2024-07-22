@@ -511,7 +511,6 @@ class TestPoissonEvaluator:
     depends=[
         "TestComputeMatrixIncurve::test_end",
         "TestComputeMatrixOutcurve::test_end",
-        "TestComputeMatrixGradoutcurve::test_end",
         "TestTorsionVectors::test_end",
         "TestPoissonEvaluator::test_end",
     ]

@@ -297,22 +297,18 @@ class BEMModel:
     def __init__(self, section: ISection):
         if not isinstance(section, ISection):
             raise TypeError
+        self.section = section
         self.curves = {}
         self.basis = {}
-        self.solution = None
         for homosection in section:
-            geometry = homosection.geometry
-            for curve in geometry:
+            for curve in homosection.geometry.curves:
                 if curve.label not in self.curves:
                     self.curves[curve.label] = curve
 
     def add_basis(self, curve: Union[int, ICurve], basis: IBasisFunc):
-        if isinstance(curve, int):
-            curve_label = curve
-        elif isinstance(curve, ICurve):
-            curve_label = curve.label
-        else:
-            raise TypeError
+        curve_label = curve.label if isinstance(curve, ICurve) else curve
+        if curve_label not in self.curves:
+            raise ValueError
         if not isinstance(basis, IBasisFunc):
             raise TypeError
         self.basis[curve_label] = basis
@@ -357,14 +353,29 @@ class BEMModel:
         vector = np.pad(vector, ((0, 1), (0, 0)), constant_values=0)
         result = np.linalg.solve(matrix, vector)
 
-        self.solution = {}
+        solution = {}
         index_base = 0
         for label in basis_labels:
             base = self.basis[label]
             curve = self.curves[label]
             slicej = slice(index_base, index_base + base.ndofs)
-            self.solution[label] = result[slicej]
+            solution[label] = result[slicej]
             index_base += base.ndofs
+
+        for homosection in self.section:
+            geometry = homosection.geometry
+            evaluators = []
+            for curve in geometry.curves:
+                base = self.basis[curve.label]
+                ctrlpoints = solution[curve.label]
+                warping = ScalarFunction(base, ctrlpoints)
+                ctrlpoints = [0 for _ in range(base.ndofs)]
+                normal = ScalarFunction(base, ctrlpoints)
+                poisson_evalcurve = PoissonEvaluatorCurve(
+                    curve, warping, normal
+                )
+                evaluators.append(poisson_evalcurve)
+            homosection.warping = PoissonEvaluatorGeometry(evaluators)
 
 
 class ScalarFunction:

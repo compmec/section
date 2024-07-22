@@ -652,6 +652,14 @@ class ISection(ABC):  # pylint: disable=too-few-public-methods
         """
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def warping(self) -> IPoissonEvaluator:
+        """
+        Warping Function - Poisson Evaluator
+        """
+        raise NotImplementedError
+
 
 class IBasisFunc(ABC):
     """
