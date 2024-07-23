@@ -51,16 +51,15 @@ class TestSinglePolygon:
         ]
         field.forces = (0, 0, 0)
         field.momentums = (0, 0, 0)
-        stress, strain = field.eval(points)
-        assert np.all(np.abs(stress) < 1e-9)  # no charge, all zero
-        assert np.all(np.abs(strain) < 1e-9)  # no charge, all zero
+        values = field.eval(points)
+        assert np.all(np.abs(values) < 1e-9)  # no charge, all zero
 
         field.forces = (0, 0, 4)
         field.momentums = (0, 0, 0)
-        stress, strain = field.eval(points)
-        assert np.all(np.abs(stress[:, :2]) < 1e-9)  # no shear
-        abs_diff = np.abs(stress[:, 2] - 1)
-        assert np.all(abs_diff < 1e-9)
+        S33, S13, S23 = field.eval(points)[:3]
+        assert np.all(np.abs(S13) < 1e-9)  # no shear
+        assert np.all(np.abs(S23) < 1e-9)  # no shear
+        assert np.all(np.abs(S33 - 1) < 1e-9)
 
     @pytest.mark.order(4)
     @pytest.mark.dependency(
@@ -102,16 +101,18 @@ class TestHollowPolygon:
         ]
         field.forces = (0, 0, 0)
         field.momentums = (0, 0, 0)
-        stress, strain = field.eval(points)
-        assert np.all(np.abs(stress) < 1e-9)  # no charge, all zero
-        assert np.all(np.abs(strain) < 1e-9)  # no charge, all zero
+        S33, S13, S23 = field.eval(points)[:3]
+        assert np.all(np.abs(S33) < 1e-9)
+        assert np.all(np.abs(S13) < 1e-9)
+        assert np.all(np.abs(S23) < 1e-9)
 
         field.forces = (0, 0, 3)
         field.momentums = (0, 0, 0)
-        stress, strain = field.eval(points)
-        assert np.all(np.abs(stress[:, :2]) < 1e-9)  # no shear
+        S33, S13, S23 = field.eval(points)[:3]
+        assert np.all(np.abs(S13) < 1e-9)  # no shear
+        assert np.all(np.abs(S23) < 1e-9)  # no shear
         good_normal_stress = (0, 1, 1, 1, 1, 1, 1, 1, 1)
-        abs_diff = np.abs(stress[:, 2] - good_normal_stress)
+        abs_diff = np.abs(S33 - good_normal_stress)
         assert np.all(abs_diff < 1e-9)
 
     @pytest.mark.order(4)
