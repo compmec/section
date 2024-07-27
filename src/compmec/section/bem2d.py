@@ -290,6 +290,9 @@ class BEMModel:
     A BEM2D Model to solve laplace's equation
     """
 
+    BASIS_DEGREE = 1
+    NDOFS_BY_CURVE = 20
+
     def __check_model(self):
         if set(self.basis.keys()) ^ set(self.curves.keys()):
             raise NotImplementedError
@@ -322,30 +325,44 @@ class BEMModel:
         if sources.ndim != 2 or sources.shape[1] != 2:
             raise NotImplementedError
         total_ndofs = sum(base.ndofs for base in self.basis.values())
-        nsources = len(set(tuple(map(float, source)) for source in sources))
+        nsources = len(sources)
         if nsources != total_ndofs:
-            raise NotImplementedError
+            msg = f"The number of sources ({nsources}) must be"
+            msg += f" equal to the total ndofs ({total_ndofs})"
+            raise ValueError(msg)
         matrix = np.zeros((total_ndofs, total_ndofs), dtype="float64")
         vector = np.zeros((total_ndofs, 1), dtype="float64")
 
-        basis_labels = tuple(sorted(self.basis.keys()))
-        index_base = 0
-        for label in basis_labels:
-            base = self.basis[label]
-            curve = self.curves[label]
-            slicej = slice(index_base, index_base + base.ndofs)
-            winds = map(curve.winding, sources)
-            mask = np.array(tuple(0 < wind < 1 for wind in winds))
+        all_labels = tuple(sorted(self.basis.keys()))
+        all_basis = tuple(self.basis[key] for key in all_labels)
+        all_curves = tuple(self.curves[key] for key in all_labels)
+        all_winds = tuple(
+            tuple(map(curve.winding, sources)) for curve in all_curves
+        )
+        all_winds = np.array(all_winds)
+        if not np.all(np.any((0 < all_winds) * (all_winds < 1), axis=0)):
+            msg = str(all_winds)
+            raise ValueError(msg)
 
-            tsources = tuple(
-                curve.projection(source)[0] for source in sources[mask]
-            )
-            submatrix = ComputeStiffness.incurve(curve, base, tsources)
-            matrix[mask, slicej] += submatrix
-            submatrix = ComputeStiffness.outcurve(curve, base, sources[~mask])
-            matrix[~mask, slicej] += submatrix
+        index_basis = 0
+        for label, basis, curve, winds in zip(
+            all_labels, all_basis, all_curves, all_winds
+        ):
+            mask = np.array(tuple(0 < wind < 1 for wind in winds))
+            slicej = slice(index_basis, index_basis + basis.ndofs)
+            if any(mask):
+                subsources = sources[mask]
+                tsources = tuple(
+                    curve.projection(source)[0] for source in subsources
+                )
+                submatrix = ComputeStiffness.incurve(curve, basis, tsources)
+                matrix[mask, slicej] += submatrix
+            if not all(mask):
+                subsources = sources[~mask]
+                submatrix = ComputeStiffness.outcurve(curve, basis, subsources)
+                matrix[~mask, slicej] += submatrix
             vector[:, 0] += TorsionEvaluator.warping_source(curve, sources)
-            index_base += base.ndofs
+            index_basis += basis.ndofs
 
         # Constraint solution
         matrix = np.pad(matrix, ((0, 1), (0, 1)), constant_values=1)
@@ -355,7 +372,7 @@ class BEMModel:
 
         solution = {}
         index_base = 0
-        for label in basis_labels:
+        for label in all_labels:
             base = self.basis[label]
             curve = self.curves[label]
             slicej = slice(index_base, index_base + base.ndofs)

@@ -660,6 +660,13 @@ class ISection(ABC):  # pylint: disable=too-few-public-methods
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def solve(self):
+        """
+        Solves the poisson problem
+        """
+        raise NotImplementedError
+
 
 class IBasisFunc(ABC):
     """

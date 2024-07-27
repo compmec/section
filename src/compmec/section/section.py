@@ -8,6 +8,7 @@ constant, torsion and shear center and others.
 
 from __future__ import annotations
 
+import math
 from collections import OrderedDict
 from typing import Optional, Tuple, Union
 
@@ -21,6 +22,8 @@ from .abcs import (
     ISection,
     NamedTracker,
 )
+from .basisfunc import BasisFunc, distributed_knots
+from .bem2d import BEMModel
 from .field import ChargedField
 from .geometry import ConnectedGeometry
 from .material import Material
@@ -32,6 +35,7 @@ class HomogeneousSection(ISection, NamedTracker):
 
     """
 
+    AUTO_SOLVE = True
     instances = OrderedDict()
 
     @classmethod
@@ -139,6 +143,10 @@ class HomogeneousSection(ISection, NamedTracker):
 
     @property
     def warping(self) -> IPoissonEvaluator:
+        if self.__warping is None:
+            if not self.AUTO_SOLVE:
+                raise NotImplementedError
+            self.solve()
         return self.__warping
 
     @warping.setter
@@ -149,3 +157,27 @@ class HomogeneousSection(ISection, NamedTracker):
 
     def __iter__(self):
         yield self
+
+    def solve(self):
+        model = BEMModel(self)
+        maxdegree = model.BASIS_DEGREE
+        ndofsbycurve = model.NDOFS_BY_CURVE
+        all_basis = []
+        sources = []
+        for curve in self.geometry.curves:
+            nintervals = len(curve.knots) - 1
+            nsubdiv = int(math.ceil(ndofsbycurve / nintervals))
+            subknots = []
+            for ta, tb in zip(curve.knots, curve.knots[1:]):
+                subknots += [ta] * maxdegree
+                subknots += [
+                    ta + (tb - ta) * i / nsubdiv for i in range(1, nsubdiv)
+                ]
+            subknots += [tb] * maxdegree
+            basis = BasisFunc.cyclic(subknots, degree=maxdegree)
+            model.add_basis(curve, basis)
+            all_basis.append(basis)
+            source_knots = distributed_knots(basis)
+            sources += list(curve.eval(source_knots))
+
+        model.solve(sources)

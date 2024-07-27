@@ -7,8 +7,6 @@ from shapepy import Primitive
 
 from compmec.section.basisfunc import BasisFunc
 from compmec.section.bem2d import BEMModel
-from compmec.section.curve import Curve
-from compmec.section.geometry import ConnectedGeometry
 from compmec.section.material import Isotropic
 from compmec.section.section import HomogeneousSection
 
@@ -75,6 +73,37 @@ class TestSolvingSystem:
             "TestSolvingSystem::test_begin",
             "TestSolvingSystem::test_full_square",
             "TestSolvingSystem::test_hollow_square",
+        ]
+    )
+    def test_end(self):
+        pass
+
+
+class TestAutoSolve:
+    @pytest.mark.order(10)
+    @pytest.mark.dependency(depends=["test_begin"])
+    def test_begin(self):
+        pass
+
+    @pytest.mark.order(10)
+    @pytest.mark.timeout(10)
+    @pytest.mark.dependency(depends=["TestAutoSolve::test_begin"])
+    def test_full_square(self):
+        full_square = Primitive.square(side=2, center=(0, 0))
+        steel = Isotropic(young_modulus=210, poissons_ratio=0.3)
+        steel_square = HomogeneousSection.from_shape(full_square, steel)
+        steel_square.solve()
+
+        sources = [(1, 0), (0, 1), (-1, 0), (0, -1)]
+        sources += [(2, 0), (0, 2), (-2, 0), (0, -2)]
+        for source in sources:
+            steel_square.warping.eval(source)
+
+    @pytest.mark.order(10)
+    @pytest.mark.dependency(
+        depends=[
+            "TestAutoSolve::test_begin",
+            "TestAutoSolve::test_full_square",
         ]
     )
     def test_end(self):

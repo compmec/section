@@ -80,3 +80,15 @@ class BasisFunc(IBasisFunc):
         values = np.dot(self.derivate_matrix, values)
         values[:degree] += values[ndofs:]
         return values[:ndofs]
+
+
+def distributed_knots(basis: BasisFunc):
+    """
+    Find 'n' distributed knots on a cyclic basis functions
+    such 'n' is the number of degrees of freedom of basis
+    and these are knots are not repeted
+    """
+    ndofs = basis.ndofs
+    if len(basis.knots) != ndofs + 1:
+        raise NotImplementedError
+    return basis.knots[:-1]
