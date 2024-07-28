@@ -5,7 +5,7 @@ File to tests the basis functions
 import numpy as np
 import pytest
 
-from compmec.section.basisfunc import BasisFunc, cyclic_knotvector
+from compmec.section.basisfunc import SplineBasisFunction, cyclic_knotvector
 
 
 @pytest.mark.order(1)
@@ -131,7 +131,7 @@ class TestCyclic:
     @pytest.mark.dependency(depends=["TestCyclic::test_begin"])
     def test_linear(self):
         knots = (0, 0.5, 1)
-        basis = BasisFunc.cyclic(knots, degree=1)
+        basis = SplineBasisFunction.cyclic(knots, degree=1)
         assert basis.ndofs == 2
 
         umesh = (0, 0.25, 0.5, 0.75, 1)
@@ -151,7 +151,7 @@ class TestCyclic:
     @pytest.mark.dependency(depends=["TestCyclic::test_begin"])
     def test_linear2(self):
         knots = (0, 1, 3)
-        basis = BasisFunc.cyclic(knots, degree=1)
+        basis = SplineBasisFunction.cyclic(knots, degree=1)
         assert basis.ndofs == 2
 
         umesh = (0, 0.5, 1, 2, 3)
@@ -171,7 +171,7 @@ class TestCyclic:
     @pytest.mark.dependency(depends=["TestCyclic::test_begin"])
     def test_quadratic(self):
         knots = (0, 0.5, 1)
-        basis = BasisFunc.cyclic(knots, degree=2)
+        basis = SplineBasisFunction.cyclic(knots, degree=2)
         assert basis.ndofs == 2
 
         umesh = (0, 0.25, 0.5, 0.75, 1)

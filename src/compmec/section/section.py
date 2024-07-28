@@ -22,7 +22,7 @@ from .abcs import (
     ISection,
     NamedTracker,
 )
-from .basisfunc import BasisFunc, distributed_knots
+from .basisfunc import SplineBasisFunction, distributed_knots
 from .bem2d import BEMModel
 from .field import ChargedField
 from .geometry import ConnectedGeometry
@@ -174,7 +174,7 @@ class HomogeneousSection(ISection, NamedTracker):
                     ta + (tb - ta) * i / nsubdiv for i in range(1, nsubdiv)
                 ]
             subknots += [tb] * maxdegree
-            basis = BasisFunc.cyclic(subknots, degree=maxdegree)
+            basis = SplineBasisFunction.cyclic(subknots, degree=maxdegree)
             model.add_basis(curve, basis)
             all_basis.append(basis)
             source_knots = distributed_knots(basis)

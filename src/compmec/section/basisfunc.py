@@ -65,13 +65,13 @@ def cyclic_knotvector(
     return tuple(knotvector)
 
 
-class BasisFunc(IBasisFunction):
+class SplineBasisFunction(IBasisFunction):
     """
     Basis function that uses BSplines
     """
 
     @classmethod
-    def cyclic(cls, knots: Tuple[float], degree: int = 1) -> BasisFunc:
+    def cyclic(cls, knots: Tuple[float], degree: int = 1) -> SplineBasisFunction:
         """
         Creates a cyclic basis function
 
@@ -79,8 +79,8 @@ class BasisFunc(IBasisFunction):
         :type knots: Tuple[float]
         :param degree: The maximum curve degree, default 1
         :type degree: int
-        :return: The BasisFunc instance
-        :rtype: BasisFunc
+        :return: The SplineBasisFunction instance
+        :rtype: SplineBasisFunction
         """
         knotvector = cyclic_knotvector(knots, degree=degree)
         knotvector = ImmutableKnotVector(knotvector, degree=degree)
@@ -129,7 +129,7 @@ class BasisFunc(IBasisFunction):
         return values[:ndofs]
 
 
-def distributed_knots(basis: BasisFunc):
+def distributed_knots(basis: SplineBasisFunction):
     """
     Find 'n' distributed knots on a cyclic basis functions
     such 'n' is the number of degrees of freedom of basis

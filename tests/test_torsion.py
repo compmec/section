@@ -5,7 +5,7 @@ File to tests cases when only bending moments are applied
 import pytest
 from shapepy import Primitive
 
-from compmec.section.basisfunc import BasisFunc
+from compmec.section.basisfunc import SplineBasisFunction
 from compmec.section.bem2d import BEMModel
 from compmec.section.material import Isotropic
 from compmec.section.section import HomogeneousSection
@@ -41,7 +41,7 @@ class TestSolvingSystem:
 
         model = BEMModel(steel_square)
         knots = (0, 1, 2, 3, 4)
-        basis = BasisFunc.cyclic(knots, degree=1)
+        basis = SplineBasisFunction.cyclic(knots, degree=1)
         model.add_basis(curve, basis)
 
         sources = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
@@ -58,8 +58,8 @@ class TestSolvingSystem:
         model = BEMModel(section)
         curve_int = section.geometry.curves[0]
         curve_ext = section.geometry.curves[1]
-        basis_int = BasisFunc.cyclic(curve_int.knots)
-        basis_ext = BasisFunc.cyclic(curve_ext.knots)
+        basis_int = SplineBasisFunction.cyclic(curve_int.knots)
+        basis_ext = SplineBasisFunction.cyclic(curve_ext.knots)
         model.add_basis(curve_int, basis_int)
         model.add_basis(curve_ext, basis_ext)
 
