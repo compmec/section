@@ -668,7 +668,7 @@ class ISection(ABC):  # pylint: disable=too-few-public-methods
         raise NotImplementedError
 
 
-class IBasisFunc(ABC):
+class IBasisFunction(ABC):
     """
     Basis functions abstract class
     """

@@ -13,7 +13,7 @@ from typing import Tuple, Union
 
 import numpy as np
 
-from .abcs import IBasisFunc, ICurve, IPoissonEvaluator, ISection
+from .abcs import IBasisFunction, ICurve, IPoissonEvaluator, ISection
 from .integral import Integration
 
 
@@ -31,7 +31,7 @@ class ComputeStiffness:
 
     # pylint: disable=too-many-locals
     @staticmethod
-    def incurve(curve: ICurve, basis: IBasisFunc, tsources: Tuple[float]):
+    def incurve(curve: ICurve, basis: IBasisFunction, tsources: Tuple[float]):
         """
         Computes the integral when the sources are placed at the curve.
         The emplacement of these sources are given by parameter 'tsources'
@@ -48,7 +48,7 @@ class ComputeStiffness:
         """
         if not isinstance(curve, ICurve):
             raise NotImplementedError
-        if not isinstance(basis, IBasisFunc):
+        if not isinstance(basis, IBasisFunction):
             raise NotImplementedError
         if curve.degree != 1:
             raise NotImplementedError
@@ -89,7 +89,7 @@ class ComputeStiffness:
 
     @staticmethod
     def outcurve(
-        curve: ICurve, basis: IBasisFunc, sources: Tuple[Tuple[float]]
+        curve: ICurve, basis: IBasisFunction, sources: Tuple[Tuple[float]]
     ):
         """
         Computes the integral when the sources are placed outside (or not)
@@ -144,7 +144,7 @@ class TorsionEvaluator:
 
     @staticmethod
     def torsion_center_matrix(
-        curve: ICurve, basis: IBasisFunc
+        curve: ICurve, basis: IBasisFunction
     ) -> Tuple[Tuple[float]]:
         """
         Computes the matrix used to compute the torsion center
@@ -165,7 +165,7 @@ class TorsionEvaluator:
         raise NotImplementedError
 
     @staticmethod
-    def constant_vector(curve: ICurve, basis: IBasisFunc) -> Tuple[float]:
+    def constant_vector(curve: ICurve, basis: IBasisFunction) -> Tuple[float]:
         """
         Computes the vector used to compute the torsion constant
 
@@ -290,7 +290,7 @@ class BEMModel:
     A BEM2D Model to solve laplace's equation
     """
 
-    BASIS_DEGREE = 1
+    BASIS_DEGREE = 3
     NDOFS_BY_CURVE = 20
 
     def __check_model(self):
@@ -308,11 +308,11 @@ class BEMModel:
                 if curve.label not in self.curves:
                     self.curves[curve.label] = curve
 
-    def add_basis(self, curve: Union[int, ICurve], basis: IBasisFunc):
+    def add_basis(self, curve: Union[int, ICurve], basis: IBasisFunction):
         curve_label = curve.label if isinstance(curve, ICurve) else curve
         if curve_label not in self.curves:
             raise ValueError
-        if not isinstance(basis, IBasisFunc):
+        if not isinstance(basis, IBasisFunction):
             raise TypeError
         self.basis[curve_label] = basis
 
@@ -397,7 +397,7 @@ class BEMModel:
 
 class ScalarFunction:
 
-    def __init__(self, basisfunc: IBasisFunc, ctrlpoints: Tuple[float]):
+    def __init__(self, basisfunc: IBasisFunction, ctrlpoints: Tuple[float]):
         self.basis = basisfunc
         self.ctrlpoints = ctrlpoints
 

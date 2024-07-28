@@ -10,7 +10,7 @@ import numpy as np
 from pynurbs import Function, KnotVector
 from pynurbs.heavy import Calculus, ImmutableKnotVector
 
-from .abcs import IBasisFunc
+from .abcs import IBasisFunction
 
 
 def cyclic_knotvector(
@@ -65,7 +65,7 @@ def cyclic_knotvector(
     return tuple(knotvector)
 
 
-class BasisFunc(IBasisFunc):
+class BasisFunc(IBasisFunction):
     """
     Basis function that uses BSplines
     """
