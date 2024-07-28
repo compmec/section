@@ -4,13 +4,65 @@ File that contains the Basis Functions to compute BEM2D
 
 from __future__ import annotations
 
-from typing import Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 from pynurbs import Function, KnotVector
 from pynurbs.heavy import Calculus, ImmutableKnotVector
 
 from .abcs import IBasisFunc
+
+
+def cyclic_knotvector(
+    knots: Tuple[float], degree: int = 1, limits: Optional[Tuple[float]] = None
+) -> ImmutableKnotVector:
+    knots = tuple(sorted(knots))
+    knots = np.array(knots, dtype="object")
+    for knot in set(knots):
+        assert sum(knots == knot) <= degree + 1
+    if limits is None:
+        limits = (knots[0], knots[-1])
+    mult_left = sum(knots == limits[0])
+    mult_righ = sum(knots == limits[1])
+    assert knots[0] == limits[0]
+    assert knots[-1] == limits[-1]
+    assert mult_left == mult_righ
+    knots = list(knots)
+    for _ in range(mult_righ):
+        knots.pop(-1)
+    knots = np.array(knots, dtype="object")
+    differences = list(knots[1:] - knots[:-1])
+    differences.append(limits[1] - knots[-1])
+    mult_left = sum(1 for knot in knots if knot == knots[0])
+
+    npts = len(knots) + degree - mult_left + 1
+    knotvector = [None] * (npts + degree + 1)
+    for i, knot in enumerate(knots):
+        knotvector[i + degree - mult_left + 1] = knot
+    index = degree
+    while index >= 0 and knotvector[index] is not None:
+        index -= 1
+    j = -1
+    while index >= 0:
+        diff = differences[j % len(differences)]
+        knotvector[index] = knotvector[index + 1] - diff
+        j -= 1
+        index -= 1
+    index = npts
+    while index <= npts + degree and knotvector[index] is not None:
+        index += 1
+    index -= 1
+    j = -1
+    while index < npts + degree:
+        diff = differences[j % len(differences)]
+        knotvector[index + 1] = knotvector[index] + diff
+        index += 1
+        j += 1
+
+    knotvector = np.array(knotvector, dtype="object")
+    for knot in set(knots):
+        assert sum(knots == knot) == sum(knotvector == knot)
+    return tuple(knotvector)
 
 
 class BasisFunc(IBasisFunc):
@@ -30,13 +82,8 @@ class BasisFunc(IBasisFunc):
         :return: The BasisFunc instance
         :rtype: BasisFunc
         """
-        knots = np.array(sorted(knots), dtype="float64")
-        start = len(knots) - degree - 1
-        end = 1 + degree
-        left = knots[start:-1] + knots[0] - knots[-1]
-        righ = knots[1:end] + knots[-1] - knots[0]
-        knots = np.concatenate([left, knots, righ])
-        knotvector = KnotVector(knots, degree=degree)
+        knotvector = cyclic_knotvector(knots, degree=degree)
+        knotvector = ImmutableKnotVector(knotvector, degree=degree)
         return cls(knotvector)
 
     def __init__(self, knotvector: Tuple[float]):
@@ -53,6 +100,8 @@ class BasisFunc(IBasisFunc):
         else:
             delta = np.zeros((npts, npts), dtype="float64")
         self.derivate_matrix = delta
+        mult = knotvector.mult(knotvector[knotvector.degree])
+        self.__ndofs = knotvector.npts + mult - knotvector.degree - 1
 
     @property
     def knots(self):
@@ -60,10 +109,7 @@ class BasisFunc(IBasisFunc):
 
     @property
     def ndofs(self):
-        maxknot = self.basis.knotvector.limits[1]
-        ndofs = self.basis.npts - 1 - self.basis.degree
-        ndofs += self.basis.knotvector.mult(maxknot)
-        return ndofs
+        return self.__ndofs
 
     def eval(self, parameters):
         ndofs = self.ndofs
@@ -74,8 +120,9 @@ class BasisFunc(IBasisFunc):
         return values[:ndofs]
 
     def deval(self, parameters):
+        knotvector = self.basis.knotvector
+        degree = knotvector.degree
         ndofs = self.ndofs
-        degree = self.basis.degree
         values = self.basis[:, degree - 1](parameters)
         values = np.dot(self.derivate_matrix, values)
         values[:degree] += values[ndofs:]
