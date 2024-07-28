@@ -195,7 +195,8 @@ class TorsionEvaluator:
         betas = np.einsum("ij,ij->i", vectors, vectors)
 
         cknots = np.array(curve.knots, dtype="float64")
-        tknots = np.array(sorted(set(curve.knots) | set(basis.knots)))
+        tknots = sorted(set(curve.knots) | set(basis.knots))
+        tknots = np.array(tknots, dtype="float64")
         nodes, weights = Integration.closed(2)
 
         for i, (alpha, beta) in enumerate(zip(alphas, betas)):
@@ -290,7 +291,7 @@ class BEMModel:
     A BEM2D Model to solve laplace's equation
     """
 
-    BASIS_DEGREE = 3
+    BASIS_DEGREE = 2
     NDOFS_BY_CURVE = 20
 
     def __check_model(self):

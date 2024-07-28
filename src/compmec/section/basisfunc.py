@@ -4,6 +4,7 @@ File that contains the Basis Functions to compute BEM2D
 
 from __future__ import annotations
 
+from fractions import Fraction
 from typing import Optional, Tuple
 
 import numpy as np
@@ -71,7 +72,9 @@ class SplineBasisFunction(IBasisFunction):
     """
 
     @classmethod
-    def cyclic(cls, knots: Tuple[float], degree: int = 1) -> SplineBasisFunction:
+    def cyclic(
+        cls, knots: Tuple[float], degree: int = 1
+    ) -> SplineBasisFunction:
         """
         Creates a cyclic basis function
 
@@ -98,7 +101,7 @@ class SplineBasisFunction(IBasisFunction):
         if degree != 0:
             delta = Calculus.difference_matrix(knotvector)
         else:
-            delta = np.zeros((npts, npts), dtype="float64")
+            delta = np.zeros((npts, npts), dtype="int64")
         self.derivate_matrix = delta
         mult = knotvector.mult(knotvector[knotvector.degree])
         self.__ndofs = knotvector.npts + mult - knotvector.degree - 1
@@ -128,6 +131,14 @@ class SplineBasisFunction(IBasisFunction):
         values[:degree] += values[ndofs:]
         return values[:ndofs]
 
+    @property
+    def degree(self) -> int:
+        return self.basis.degree
+
+    @property
+    def knotvector(self) -> Tuple[float]:
+        return self.basis.knotvector
+
 
 def distributed_knots(basis: SplineBasisFunction):
     """
@@ -136,6 +147,38 @@ def distributed_knots(basis: SplineBasisFunction):
     and these are knots are not repeted
     """
     ndofs = basis.ndofs
-    if len(basis.knots) != ndofs + 1:
-        raise NotImplementedError
-    return basis.knots[:-1]
+    degree = basis.degree
+    knotvector = basis.knotvector
+    knots = knotvector.knots
+    outknots = [None] * ndofs
+
+    for knot in set(knots[:-1]):
+        if knotvector.mult(knot) == degree:
+            values = basis.eval(knot)
+            index = np.where(values == max(values))[0][0]
+            outknots[index] = knot
+
+    if all(knot is not None for knot in outknots):
+        return tuple(outknots)
+
+    nsubdiv = degree + 1
+    uniform_nodes = tuple(
+        Fraction(i, 2 * nsubdiv) for i in range(1, 2 * nsubdiv, 2)
+    )
+    for ta, tb in zip(knots, knots[1:]):
+        for uni0, uni1 in zip(uniform_nodes, uniform_nodes[1:]):
+            tc0 = (1 - uni0) * ta + uni0 * tb
+            tc1 = (1 - uni1) * ta + uni1 * tb
+            mask = (basis.eval(tc0) != 0) * (basis.eval(tc1) != 0)
+            deri0vals = basis.deval(tc0)
+            deri1vals = basis.deval(tc1)
+            for j, outknot in enumerate(outknots):
+                if outknot is not None:
+                    continue
+                if not mask[j]:
+                    continue
+                df0, df1 = deri0vals[j], deri1vals[j]
+                if df0 * df1 > 0:
+                    continue
+                outknots[j] = (tc0 * df1 - tc1 * df0) / (df1 - df0)
+    return tuple(outknots)
