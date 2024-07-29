@@ -94,7 +94,7 @@ class TestAutoSolve:
         steel_square = HomogeneousSection.from_shape(full_square, steel)
         steel_square.solve()
 
-        sources = [(1, 0), (0, 1), (-1, 0), (0, -1)]
+        sources = [(0, 0), (1, 0), (0, 1), (-1, 0), (0, -1)]
         sources += [(2, 0), (0, 2), (-2, 0), (0, -2)]
         for source in sources:
             steel_square.warping.eval(source)

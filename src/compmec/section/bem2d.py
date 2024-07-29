@@ -386,7 +386,7 @@ class BEMModel:
             for curve in geometry.curves:
                 base = self.basis[curve.label]
                 ctrlpoints = solution[curve.label]
-                warping = ScalarFunction(base, ctrlpoints)
+                warping = ScalarFunction(base, ctrlpoints[:, 0])
                 ctrlpoints = [0 for _ in range(base.ndofs)]
                 normal = ScalarFunction(base, ctrlpoints)
                 poisson_evalcurve = PoissonEvaluatorCurve(
