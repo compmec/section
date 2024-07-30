@@ -408,146 +408,115 @@ class PoissonEvaluatorCurve(IPoissonEvaluator):
     def __init__(
         self,
         curve: ICurve,
-        boundary: ScalarFunction,
-        normal: ScalarFunction,
+        boundary: ScalarFunction = None,
+        normal: ScalarFunction = None,
     ):
-        self.curve = curve
+        self.__curve = curve
         self.bound = boundary
         self.normal = normal
 
-    def __integrate_eval(
-        self, source: Tuple[float], ta: float, tb: float
-    ) -> float:
-        """
-        Direct integral for
+    @property
+    def curve(self) -> ICurve:
+        return self.__curve
 
-            int_{ta}^{tb} u * (r x p')/<r, r> - du/dn * |p'| * ln |r| * dt
-        """
-        nodes, weights = Integration.chebyshev(5)
-        tvals = ta + (tb - ta) * nodes
-        boundvals = self.bound.eval(tvals)
-        normavals = self.normal.eval(tvals)
-        points = self.curve.eval(tvals)
-        dpoints = self.curve.deval(tvals)
-        radius = tuple(point - source for point in points)
-        rinnerr = np.einsum("ij,ij->i", radius, radius)
-        rcrossdp = tuple(np.cross(r, dp) for r, dp in zip(radius, dpoints))
-        logradius = tuple(np.log(rinr) / 2 for rinr in rinnerr)
-        absdpts = tuple(map(np.linalg.norm, dpoints))
-        result = np.einsum(
-            "i,i,i,i", weights, boundvals, rcrossdp, 1 / rinnerr
-        )
-        result -= np.einsum("i,i,i,i", weights, normavals, logradius, absdpts)
-        return (tb - ta) * result
+    @property
+    def bound(self) -> ScalarFunction:
+        return self.__bound
 
-    def __integrate_grad(
-        self, source: Tuple[float], ta: float, tb: float
-    ) -> float:
-        """
-        Direct integral for
+    @property
+    def normal(self) -> ScalarFunction:
+        return self.__normal
 
-            int_{ta}^{tb} u * (r x p')/<r, r> - du/dn * |p'| * ln |r| * dt
-        """
-        nodes, weights = Integration.chebyshev(5)
-        tvals = ta + (tb - ta) * nodes
-        boundvals = self.bound.eval(tvals)
-        normavals = self.normal.eval(tvals)
-        points = self.curve.eval(tvals)
-        dpoints = self.curve.deval(tvals)
-        radius = tuple(point - source for point in points)
-        rinnerr = np.einsum("ij,ij->i", radius, radius)
-        over_rinr = 1 / rinnerr
-        rcrossdp = tuple(np.cross(r, dp) for r, dp in zip(radius, dpoints))
-        absdpts = tuple(map(np.linalg.norm, dpoints))
-        result = 2 * np.einsum(
-            "i,i,i,i,i,ij->j",
-            weights,
-            boundvals,
-            rcrossdp,
-            over_rinr,
-            over_rinr,
-            radius,
-        )
-        result[0] -= np.einsum(
-            "i,i,i,i", weights, boundvals, dpoints[:, 1], over_rinr
-        )
-        result[1] += np.einsum(
-            "i,i,i,i", weights, boundvals, dpoints[:, 0], over_rinr
-        )
-        result += np.einsum(
-            "i,i,i,i,ij->j", weights, normavals, over_rinr, absdpts, radius
-        )
-        return (tb - ta) * result
+    @bound.setter
+    def bound(self, new_func: ScalarFunction):
+        if new_func is None:
+            pass
+        elif not isinstance(new_func, ScalarFunction):
+            raise TypeError
+        self.__bound = new_func
 
-    def __eval_adapt(
-        self,
-        source: Tuple[float],
-        ta: float,
-        tb: float,
-        tolerance: float = 1e-9,
-    ) -> float:
-        """
-        Adapdative integral for
+    @normal.setter
+    def normal(self, new_func: ScalarFunction):
+        if new_func is None:
+            pass
+        elif not isinstance(new_func, ScalarFunction):
+            raise TypeError
+        self.__normal = new_func
 
-            int_{ta}^{tb} u * (r x p')/<r, r> - du/dn * |p'| * ln |r| * dt
+    def eval(self, source: Tuple[float], tolerance: float = 1e-9) -> float:
         """
-        tm = (ta + tb) / 2
-        midd = self.__integrate_eval(source, ta, tb)
-        left = self.__integrate_eval(source, ta, tm)
-        righ = self.__integrate_eval(source, tm, tb)
-        if abs(left + righ - midd) > tolerance:
-            left = self.__eval_adapt(source, ta, tm, tolerance / 2)
-            righ = self.__eval_adapt(source, tm, tb, tolerance / 2)
-        return left + righ
+        Evaluates the integral of
 
-    def __grad_adapt(
-        self,
-        source: Tuple[float],
-        ta: float,
-        tb: float,
-        tolerance: float = 1e-9,
-    ) -> float:
+        int_{ta}^{tb} u * (r x p')/<r, r> - du/dn * |p'| * ln |r| * dt
         """
-        Adapdative integral for
-
-            int_{ta}^{tb} u * (r x p')/<r, r> - du/dn * |p'| * ln |r| * dt
-        """
-        tm = (ta + tb) / 2
-        middx, middy = self.__integrate_grad(source, ta, tb)
-        leftx, lefty = self.__integrate_grad(source, ta, tm)
-        righx, righy = self.__integrate_grad(source, tm, tb)
-        diffx = abs(leftx + righx - middx)
-        diffy = abs(lefty + righy - middy)
-        if diffx > tolerance or diffy > tolerance:
-            leftx, lefty = self.__grad_adapt(source, ta, tm, tolerance / 2)
-            righx, righy = self.__grad_adapt(source, tm, tb, tolerance / 2)
-        return (leftx + righx, lefty + righy)
-
-    def eval(self, source: Tuple[float]) -> float:
         wind = self.curve.winding(source)
         if abs(wind) < 1e-9:  # Outside
             return 0
+        if self.bound is None:
+            raise NotADirectoryError
         if wind < 1:  # At boundary
             param = self.curve.projection(source)[0]
             return self.bound.eval(param)
+        if self.normal is None:
+            raise NotADirectoryError
 
         tknots = set(self.curve.projection(source))
         tknots |= set(self.curve.knots)
         tknots |= set(self.bound.knots)
         tknots |= set(self.normal.knots)
-        tknots = sorted(tknots)
-        tknots += [(ta + tb) / 2 for ta, tb in zip(tknots, tknots[1:])]
-        tknots = sorted(tknots)
+        tknots = tuple(sorted(tknots))
 
+        nodes, weights = Integration.chebyshev(5)
+
+        def direct_integral(ta: float, tb: float):
+            tvals = ta + (tb - ta) * nodes
+            boundvals = self.bound.eval(tvals)
+            normavals = self.normal.eval(tvals)
+            points = self.curve.eval(tvals)
+            dpoints = self.curve.deval(tvals)
+            radius = tuple(point - source for point in points)
+            rinnerr = np.einsum("ij,ij->i", radius, radius)
+            rcrossdp = tuple(np.cross(r, dp) for r, dp in zip(radius, dpoints))
+            logradius = tuple(np.log(rinr) / 2 for rinr in rinnerr)
+            absdpts = np.linalg.norm(dpoints, axis=1)
+            result = np.einsum(
+                "i,i,i,i", weights, boundvals, rcrossdp, 1 / rinnerr
+            )
+            result -= np.einsum(
+                "i,i,i,i", weights, normavals, logradius, absdpts
+            )
+            return (tb - ta) * result
+
+        def adaptative_integral(ta: float, tb: float, tolerance: float = 1e-9):
+            tm = (ta + tb) / 2
+            midd = direct_integral(source, ta, tb)
+            left = direct_integral(source, ta, tm)
+            righ = direct_integral(source, tm, tb)
+            if abs(left + righ - midd) > tolerance:
+                left = adaptative_integral(ta, tm, tolerance / 2)
+                righ = adaptative_integral(tm, tb, tolerance / 2)
+            return left + righ
+
+        tolerance /= tknots[-1] - tknots[0]
         result = 0
         for ta, tb in zip(tknots, tknots[1:]):
-            result += self.__eval_adapt(source, ta, tb)
+            tol = tolerance * (tb - ta)
+            result += adaptative_integral(ta, tb, tol)
         return result / (2 * np.pi)
 
-    def grad(self, source: Tuple[float]) -> Tuple[float]:
+    def grad(
+        self, source: Tuple[float], tolerance: float = 1e-9
+    ) -> Tuple[float]:
+        """
+        Evaluates the integral of
+
+        d/ds int_{ta}^{tb} u * (r x p')/<r, r> - du/dn * |p'| * ln |r| * dt
+        """
         wind = self.curve.winding(source)
         if abs(wind) < 1e-9:  # Outside
             return (0, 0)
+        if self.bound is None or self.normal is None:
+            raise NotADirectoryError
         if wind < 1:  # At boundary
             param = self.curve.projection(source)[0]
             dpdt = self.curve.deval(param)
@@ -565,9 +534,56 @@ class PoissonEvaluatorCurve(IPoissonEvaluator):
         tknots |= set(self.normal.knots)
         tknots = tuple(sorted(tknots))
 
+        nodes, weights = Integration.chebyshev(5)
+
+        def direct_integral(ta: float, tb: float):
+            tvals = ta + (tb - ta) * nodes
+            boundvals = self.bound.eval(tvals)
+            normavals = self.normal.eval(tvals)
+            points = self.curve.eval(tvals)
+            dpoints = self.curve.deval(tvals)
+            radius = tuple(point - source for point in points)
+            rinnerr = np.einsum("ij,ij->i", radius, radius)
+            over_rinr = 1 / rinnerr
+            rcrossdp = tuple(np.cross(r, dp) for r, dp in zip(radius, dpoints))
+            absdpts = tuple(map(np.linalg.norm, dpoints))
+            result = 2 * np.einsum(
+                "i,i,i,i,i,ij->j",
+                weights,
+                boundvals,
+                rcrossdp,
+                over_rinr,
+                over_rinr,
+                radius,
+            )
+            result[0] -= np.einsum(
+                "i,i,i,i", weights, boundvals, dpoints[:, 1], over_rinr
+            )
+            result[1] += np.einsum(
+                "i,i,i,i", weights, boundvals, dpoints[:, 0], over_rinr
+            )
+            result += np.einsum(
+                "i,i,i,i,ij->j", weights, normavals, over_rinr, absdpts, radius
+            )
+            return (tb - ta) * result
+
+        def adaptative_integral(ta: float, tb: float, tolerance: float):
+            tm = (ta + tb) / 2
+            middx, middy = direct_integral(source, ta, tb)
+            leftx, lefty = direct_integral(source, ta, tm)
+            righx, righy = direct_integral(source, tm, tb)
+            diffx = abs(leftx + righx - middx)
+            diffy = abs(lefty + righy - middy)
+            if diffx > tolerance or diffy > tolerance:
+                leftx, lefty = adaptative_integral(ta, tm, tolerance / 2)
+                righx, righy = adaptative_integral(tm, tb, tolerance / 2)
+            return (leftx + righx, lefty + righy)
+
+        tolerance /= tknots[-1] - tknots[0]
         result = np.zeros(2, dtype="float64")
         for ta, tb in zip(tknots, tknots[1:]):
-            result += self.__grad_adapt(source, ta, tb)
+            tol = (tb - ta) * tolerance
+            result += adaptative_integral(ta, tb, tol)
         return result / (2 * np.pi)
 
 
