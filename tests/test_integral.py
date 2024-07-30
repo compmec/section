@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from compmec.section.curve import Curve
-from compmec.section.integral import Integration, Polynomial, comb
+from compmec.section.integral import Bidimensional, Integration, comb
 
 
 @pytest.mark.order(1)
@@ -247,39 +247,45 @@ def test_integral_polygon():
     Tests the polynomial integrals of polygons
     """
     vertices = ((1, 1), (-1, 1), (-1, -1), (1, -1))
-    geomprops = Polynomial.polygon(vertices)
-    assert geomprops[0] == 4  # area
-    assert geomprops[1] == 0  # Qx
-    assert geomprops[2] == 0  # Qy
-    assert geomprops[3] == 4 / 3  # Ixx
-    assert geomprops[4] == 0  # Ixy
-    assert geomprops[5] == 4 / 3  # Iyy
-    assert geomprops[6] == 0  # Ixxx
-    assert geomprops[7] == 0  # Ixxy
-    assert geomprops[8] == 0  # Ixyy
-    assert geomprops[9] == 0  # Iyyy
+
+    def integrator(a: int, b: int):
+        return Bidimensional.polygon(vertices, a, b)
+
+    assert integrator(0, 0) == 4  # area
+    assert integrator(0, 1) == 0  # Qx
+    assert integrator(1, 0) == 0  # Qy
+    assert integrator(0, 2) == 4 / 3  # Ixx
+    assert integrator(1, 1) == 0  # Ixy
+    assert integrator(2, 0) == 4 / 3  # Iyy
+    assert integrator(0, 3) == 0  # Ixxx
+    assert integrator(1, 2) == 0  # Ixxy
+    assert integrator(2, 1) == 0  # Ixyy
+    assert integrator(3, 0) == 0  # Iyyy
 
 
 @pytest.mark.order(1)
 @pytest.mark.timeout(10)
 @pytest.mark.dependency(depends=["test_begin"])
-def test_integral_polygon_adaptative():
+def test_integral_polygon_general():
     """
     Tests the polynomial integrals of polygons
     """
     vertices = ((1, 1), (-1, 1), (-1, -1), (1, -1))
     curve = Curve.from_vertices(vertices)
-    geomprops = Polynomial.adaptative(curve)
-    assert geomprops[0] == 4  # area
-    assert geomprops[1] == 0  # Qx
-    assert geomprops[2] == 0  # Qy
-    assert abs(geomprops[3] - 4 / 3) < 1e-9  # Ixx
-    assert abs(geomprops[4]) < 1e-9  # Ixy
-    assert abs(geomprops[5] - 4 / 3) < 1e-9  # Iyy
-    assert abs(geomprops[6]) < 1e-9  # Ixxx
-    assert abs(geomprops[7]) < 1e-9  # Ixxy
-    assert abs(geomprops[8]) < 1e-9  # Ixyy
-    assert abs(geomprops[9]) < 1e-9  # Iyyy
+
+    def integrator(a: int, b: int):
+        return Bidimensional.general(curve, a, b)
+
+    assert abs(integrator(0, 0) - 4) < 1e-9  # area
+    assert integrator(0, 1) == 0  # Qx
+    assert integrator(1, 0) == 0  # Qy
+    assert abs(integrator(0, 2) - 4 / 3) < 1e-9  # Ixx
+    assert integrator(1, 1) == 0  # Ixy
+    assert abs(integrator(2, 0) - 4 / 3) < 1e-9  # Iyy
+    assert integrator(0, 3) == 0  # Ixxx
+    assert integrator(1, 2) == 0  # Ixxy
+    assert integrator(2, 1) == 0  # Ixyy
+    assert integrator(3, 0) == 0  # Iyyy
 
 
 @pytest.mark.order(1)
@@ -311,7 +317,7 @@ def test_fail():
         "test_gauss",
         "test_singular_logarithm",
         "test_integral_polygon",
-        "test_integral_polygon_adaptative",
+        "test_integral_polygon_general",
         "test_fail",
     ]
 )

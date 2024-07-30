@@ -113,8 +113,8 @@ class TestSinglePolygon:
         Qx, Qy = section.first_moment()
         Ixx, Ixy, Iyy = section.second_moment()
         assert area == width * height
-        assert Qx == area * center[1]
-        assert Qy == area * center[0]
+        assert abs(Qx - area * center[1]) < 1e-9
+        assert abs(Qy - area * center[0]) < 1e-9
         good_Ixx = width * height**3 / 12 + area * center[1] * center[1]
         good_Iyy = height * width**3 / 12 + area * center[0] * center[0]
         assert abs(Ixx - good_Ixx) < 1e-6

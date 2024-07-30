@@ -133,7 +133,8 @@ class Curve(LabeledTracker, ICurve):
         ctrlpoints = tuple(map(np.array, ctrlpoints))
         self.__internal = pynurbs.Curve(knotvector, ctrlpoints, weights)
         self.__dinternal = pynurbs.Derivate.curve(self.__internal)
-        self.__area = float(integral.Polynomial.curve_area(self))
+        area = integral.Bidimensional.general(self, 0, 0)
+        self.__area = float(area)
         self.label = label
 
     def eval(self, parameters: Tuple[float]) -> Tuple[Tuple[float]]:

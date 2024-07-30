@@ -10,7 +10,7 @@ from shapepy import ConnectedShape, SimpleShape
 
 from .abcs import ICurve, IGeometry, NamedTracker
 from .curve import Curve
-from .integral import AdaptativePolynomialIntegrator
+from .integral import Bidimensional
 
 
 class ConnectedGeometry(IGeometry, NamedTracker):
@@ -65,11 +65,7 @@ class ConnectedGeometry(IGeometry, NamedTracker):
 
         result = 0
         for curve in self:
-            integrator = AdaptativePolynomialIntegrator(
-                curve, tolerance=tolerance
-            )
-            value = integrator.integrate(expx, expy)
-            result += value / (2 + expx + expy)
+            result += Bidimensional.general(curve, expx, expy)
         return result
 
     def winding(self, point: Tuple[float]) -> float:
