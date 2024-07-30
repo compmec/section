@@ -14,6 +14,7 @@ from typing import Optional, Tuple, Union
 import numpy as np
 
 from .abcs import IBasisFunction, ICurve, IModel, IPoissonEvaluator, ISection
+from .basisfunc import SplineBasisFunction, distributed_knots
 from .integral import Integration
 
 
@@ -194,6 +195,10 @@ class TorsionEvaluator:
         Where w(t) is the warping function on the boundary of the curve.
 
         """
+        if not isinstance(curve, ICurve):
+            raise TypeError
+        if not isinstance(warping, ScalarFunction):
+            raise TypeError
         result = 0
         tknots = tuple(sorted(set(curve.knots) | set(warping.knots)))
         nodes, weights = Integration.chebyshev(6)
@@ -217,7 +222,7 @@ class TorsionEvaluator:
             return integ_lef + integ_rig
 
         for ta, tb in zip(tknots, tknots[1:]):
-            result += adaptative_integral(ta, tb)
+            result += adaptative_integral(ta, tb, 1e-6)
 
         return result
 
@@ -303,6 +308,14 @@ class BEMModel(IModel):
 
     def __check_model(self):
         if set(self.basis.keys()) ^ set(self.curves.keys()):
+            msg = "There are curves that has no basis functions:\n"
+            msg += f"    curves: {sorted(self.curves.keys())}\n"
+            msg += f"     basis: {sorted(self.basis.keys())}"
+            raise ValueError(msg)
+        if self.sources is None:
+            raise NotImplementedError
+        total_ndofs = sum(basis.ndofs for basis in self.basis.values())
+        if total_ndofs != len(self.sources):
             raise NotImplementedError
 
     def __init__(self, section: ISection):
@@ -310,7 +323,8 @@ class BEMModel(IModel):
             raise TypeError
         self.section = section
         self.curves = {}
-        self.basis = None
+        self.basis = {}
+        self.__sources = None
         for homosection in section:
             for curve in homosection.geometry.curves:
                 if curve.label not in self.curves:
@@ -323,7 +337,17 @@ class BEMModel(IModel):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.__within_context = False
-        pass
+
+    @property
+    def sources(self) -> Tuple[Tuple[float]]:
+        return self.__sources
+
+    @sources.setter
+    def sources(self, points: Tuple[Tuple[float]]):
+        points = np.array(points, dtype="float64")
+        if points.ndim != 2 or points.shape[1] != 2:
+            raise ValueError(f"Invalid points: {points.shape} != (n, 2)")
+        self.__sources = points
 
     def add_basis(self, curve: Union[int, ICurve], basis: IBasisFunction):
         if not self.__within_context:
@@ -339,6 +363,57 @@ class BEMModel(IModel):
         if not self.__within_context:
             raise NotImplementedError
 
+        for curve in self.curves.values():
+            print("   -")
+            self.__generate_mesh_curve(curve, mesh_size)
+
+        sources = []
+        for label, curve in self.curves.items():
+            basis = self.basis[label]
+            tsources = distributed_knots(basis)
+            sources += list(curve.eval(tsources))
+        self.sources = sources
+
+    def __generate_mesh_curve(
+        self, curve: ICurve, mesh_size: Optional[float] = None
+    ):
+
+        nodes, weights = Integration.chebyshev(3)
+
+        def direct_lenght(curve: ICurve, ta: float, tb: float) -> float:
+            tvals = ta + (tb - ta) * nodes
+            absdpoints = np.linalg.norm(curve.deval(tvals), axis=1)
+            return (tb - ta) * np.inner(weights, absdpoints)
+
+        def adaptive_lenght(
+            curve: ICurve, ta: float, tb: float, tolerance: float
+        ) -> float:
+            tm = (ta + tb) / 2
+            len_mid = direct_lenght(curve, ta, tb)
+            len_lef = direct_lenght(curve, ta, tm)
+            len_rig = direct_lenght(curve, tm, tb)
+            if abs(len_lef + len_rig - len_mid) > tolerance:
+                len_lef = adaptive_lenght(curve, ta, tm, tolerance / 2)
+                len_rig = adaptive_lenght(curve, tm, tb, tolerance / 2)
+            return len_lef + len_rig
+
+        sublenghts = []
+        for ta, tb in zip(curve.knots, curve.knots[1:]):
+            sublenght = adaptive_lenght(curve, ta, tb, 1e-9)
+            sublenghts.append(sublenght)
+        if mesh_size is None:
+            mesh_size = sum(sublenghts) / self.NDOFS_BY_CURVE
+
+        basis_knots = set(curve.knots)
+        for i, (ta, tb) in enumerate(zip(curve.knots, curve.knots[1:])):
+            ndiv = int(np.ceil(sublenghts[i] / mesh_size))
+            basis_knots |= set(
+                ((ndiv - i) * ta + i * tb) / ndiv for i in range(ndiv)
+            )
+        basis_knots = tuple(sorted(basis_knots))
+        basis = SplineBasisFunction.cyclic(basis_knots, degree=1)
+        self.add_basis(curve, basis)
+
     def solve(self):
         """
         Solves the BEM problem, computing
@@ -346,23 +421,15 @@ class BEMModel(IModel):
         if not self.__within_context:
             raise NotImplementedError
         self.__check_model()
-        sources = np.array(sources, dtype="float64")
-        if sources.ndim != 2 or sources.shape[1] != 2:
-            raise NotImplementedError
-        total_ndofs = sum(base.ndofs for base in self.basis.values())
-        nsources = len(sources)
-        if nsources != total_ndofs:
-            msg = f"The number of sources ({nsources}) must be"
-            msg += f" equal to the total ndofs ({total_ndofs})"
-            raise ValueError(msg)
-        matrix = np.zeros((total_ndofs, total_ndofs), dtype="float64")
-        vector = np.zeros((total_ndofs, 1), dtype="float64")
+        nsources = len(self.sources)
+        matrix = np.zeros((nsources, nsources), dtype="float64")
+        vector = np.zeros((nsources, 1), dtype="float64")
 
         all_labels = tuple(sorted(self.basis.keys()))
         all_basis = tuple(self.basis[key] for key in all_labels)
         all_curves = tuple(self.curves[key] for key in all_labels)
         all_winds = tuple(
-            tuple(map(curve.winding, sources)) for curve in all_curves
+            tuple(map(curve.winding, self.sources)) for curve in all_curves
         )
         all_winds = np.array(all_winds)
         if not np.all(np.any((0 < all_winds) * (all_winds < 1), axis=0)):
@@ -376,17 +443,19 @@ class BEMModel(IModel):
             mask = np.array(tuple(0 < wind < 1 for wind in winds))
             slicej = slice(index_basis, index_basis + basis.ndofs)
             if any(mask):
-                subsources = sources[mask]
+                subsources = self.sources[mask]
                 tsources = tuple(
                     curve.projection(source)[0] for source in subsources
                 )
                 submatrix = ComputeStiffness.incurve(curve, basis, tsources)
                 matrix[mask, slicej] += submatrix
             if not all(mask):
-                subsources = sources[~mask]
+                subsources = self.sources[~mask]
                 submatrix = ComputeStiffness.outcurve(curve, basis, subsources)
                 matrix[~mask, slicej] += submatrix
-            vector[:, 0] += TorsionEvaluator.warping_source(curve, sources)
+            vector[:, 0] += TorsionEvaluator.warping_source(
+                curve, self.sources
+            )
             index_basis += basis.ndofs
 
         # Constraint solution
