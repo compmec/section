@@ -17,6 +17,26 @@ from .abcs import IBasisFunction, ICurve, IPoissonEvaluator, ISection
 from .integral import Integration
 
 
+class ScalarFunction:
+
+    def __init__(self, basisfunc: IBasisFunction, ctrlpoints: Tuple[float]):
+        # map(float, ctrlpoints)
+        self.basis = basisfunc
+        self.ctrlpoints = ctrlpoints
+
+    @property
+    def knots(self) -> Tuple[float]:
+        return self.basis.knots
+
+    def eval(self, parameters: Tuple[float]) -> Tuple[float]:
+        matrix = self.basis.eval(parameters)
+        return np.dot(np.transpose(matrix), self.ctrlpoints)
+
+    def deval(self, parameters: Tuple[float]) -> Tuple[float]:
+        matrix = self.basis.deval(parameters)
+        return np.dot(np.transpose(matrix), self.ctrlpoints)
+
+
 class ComputeStiffness:
     """
     This class is resposible to compute the matrix [M]
@@ -165,53 +185,40 @@ class TorsionEvaluator:
         raise NotImplementedError
 
     @staticmethod
-    def constant_vector(curve: ICurve, basis: IBasisFunction) -> Tuple[float]:
+    def constant_torsion(curve: ICurve, warping: ScalarFunction) -> float:
         """
-        Computes the vector used to compute the torsion constant
-
-        It's interested to compute J:
+        Returns the value of
 
         J = int_{tmin}^{tmax} w * <p, p'> dt
 
         Where w(t) is the warping function on the boundary of the curve.
-        This function, on the boundary is defined as
-
-        w(t) = sum_{i} F_{i}(t) * W_{i}
-
-        This function returns a vector [V], of lenght 'n', such
-
-        V_i = int_{tmin}^{tmax} F_{i}(t) * <p, p'> dt
-
-        .. note:
-            We suppose the curve is a polygon
 
         """
-        if curve.degree != 1:
-            raise NotImplementedError
-        result = np.zeros(basis.ndofs, dtype="float64")
-        vertices = curve.eval(curve.knots[:-1])
-        vectors = np.roll(vertices, shift=-1, axis=0) - vertices
-        alphas = np.einsum("ij,ij->i", vertices, vectors)
-        betas = np.einsum("ij,ij->i", vectors, vectors)
+        result = 0
+        tknots = tuple(sorted(set(curve.knots) | set(warping.knots)))
+        nodes, weights = Integration.chebyshev(6)
 
-        cknots = np.array(curve.knots, dtype="float64")
-        tknots = sorted(set(curve.knots) | set(basis.knots))
-        tknots = np.array(tknots, dtype="float64")
-        nodes, weights = Integration.closed(2)
+        def direct_integral(ta: float, tb: float):
+            tvalues = ta + (tb - ta) * nodes
+            points = curve.eval(tvalues)
+            dpoints = curve.deval(tvalues)
+            wvalues = warping.eval(tvalues)
+            pinnerdp = np.einsum("ij,ij->i", points, dpoints)
+            return (tb - ta) * np.einsum("i,i,i", weights, wvalues, pinnerdp)
 
-        for i, (alpha, beta) in enumerate(zip(alphas, betas)):
-            tva, tvb = cknots[i], cknots[i + 1]
-            mask = (tva <= tknots) * (tknots <= tvb)
-            tmesh = tknots[mask]
-            for tk0, tk1 in zip(tmesh, tmesh[1:]):
-                diff = tk1 - tk0
-                tvals = tk0 + nodes * diff
-                zvals = (tvals - tva) / (tvb - tva)
-                phis = basis.eval(tvals)
-                result += diff * alpha * np.einsum("ij,j->i", phis, weights)
-                result += (
-                    diff * beta * np.einsum("ij,j,j->i", phis, weights, zvals)
-                )
+        def adaptative_integral(ta: float, tb: float, tolerance: float = 1e-9):
+            tm = (ta + tb) / 2
+            integ_mid = direct_integral(ta, tb)
+            integ_lef = direct_integral(ta, tm)
+            integ_rig = direct_integral(tm, tb)
+            if abs(integ_lef + integ_rig - integ_mid) > tolerance:
+                integ_lef = adaptative_integral(ta, tm, tolerance / 2)
+                integ_rig = adaptative_integral(tm, tb, tolerance / 2)
+            return integ_lef + integ_rig
+
+        for ta, tb in zip(tknots, tknots[1:]):
+            result += adaptative_integral(ta, tb)
+
         return result
 
     @staticmethod
@@ -394,25 +401,6 @@ class BEMModel:
                 )
                 evaluators.append(poisson_evalcurve)
             homosection.warping = PoissonEvaluatorGeometry(evaluators)
-
-
-class ScalarFunction:
-
-    def __init__(self, basisfunc: IBasisFunction, ctrlpoints: Tuple[float]):
-        self.basis = basisfunc
-        self.ctrlpoints = ctrlpoints
-
-    @property
-    def knots(self) -> Tuple[float]:
-        return self.basis.knots
-
-    def eval(self, parameters: Tuple[float]) -> Tuple[float]:
-        matrix = self.basis.eval(parameters)
-        return np.dot(np.transpose(matrix), self.ctrlpoints)
-
-    def deval(self, parameters: Tuple[float]) -> Tuple[float]:
-        matrix = self.basis.deval(parameters)
-        return np.dot(np.transpose(matrix), self.ctrlpoints)
 
 
 class PoissonEvaluatorCurve(IPoissonEvaluator):

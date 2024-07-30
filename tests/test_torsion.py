@@ -110,7 +110,43 @@ class TestAutoSolve:
         pass
 
 
+class TestTorsionConstant:
+
+    @pytest.mark.order(10)
+    @pytest.mark.dependency(depends=["TestAutoSolve::test_end"])
+    def test_begin(self):
+        pass
+
+    @pytest.mark.order(10)
+    @pytest.mark.timeout(10)
+    @pytest.mark.dependency(depends=["TestTorsionConstant::test_begin"])
+    def test_full_square(self):
+        full_square = Primitive.square(side=2)
+        steel = Isotropic(young_modulus=210, poissons_ratio=0.3)
+        steel_square = HomogeneousSection.from_shape(full_square, steel)
+        steel_square.solve()
+
+        ipolar = 2
+        assert steel_square.torsion_constant() == 10
+
+    @pytest.mark.order(10)
+    @pytest.mark.dependency(
+        depends=[
+            "TestTorsionConstant::test_begin",
+            "TestTorsionConstant::test_full_square",
+        ]
+    )
+    def test_end(self):
+        pass
+
+
 @pytest.mark.order(10)
-@pytest.mark.dependency(depends=["TestSolvingSystem::test_end"])
+@pytest.mark.dependency(
+    depends=[
+        "TestSolvingSystem::test_end",
+        "TestAutoSolve::test_end",
+        "TestTorsionConstant::test_end",
+    ]
+)
 def test_end():
     pass

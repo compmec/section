@@ -23,7 +23,7 @@ from .abcs import (
     NamedTracker,
 )
 from .basisfunc import SplineBasisFunction, distributed_knots
-from .bem2d import BEMModel
+from .bem2d import BEMModel, TorsionEvaluator
 from .field import ChargedField
 from .geometry import ConnectedGeometry
 from .material import Material
@@ -62,6 +62,7 @@ class HomogeneousSection(ISection, NamedTracker):
         self.material = material
         self.__geomintegs = None
         self.__warping = None
+        self.__torsion_const = None
         self.name = name
 
     def __compute_geomintegs(self):
@@ -134,9 +135,17 @@ class HomogeneousSection(ISection, NamedTracker):
         return (0, 0)
 
     def torsion_constant(self) -> float:
+        if self.__torsion_const is not None:
+            return self.__torsion_const
         center = self.geometric_center()
         ixx, _, iyy = self.second_moment(center)
-        return ixx + iyy
+        jay_warp_const = 0
+        for evaluator in self.warping.evaluators:
+            curve = evaluator.curve
+            bound = evaluator.bound
+            jay_warp_const += TorsionEvaluator.constant_torsion(curve, bound)
+        self.__torsion_const = ixx + iyy - jay_warp_const
+        return self.__torsion_const
 
     def shear_center(self) -> Tuple[float]:
         return (0, 0)
