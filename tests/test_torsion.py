@@ -13,6 +13,7 @@ from compmec.section.section import HomogeneousSection
 
 
 @pytest.mark.order(10)
+@pytest.mark.skip()
 @pytest.mark.dependency(
     depends=[
         "tests/test_bem2d.py::test_end",

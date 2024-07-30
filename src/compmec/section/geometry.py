@@ -9,7 +9,7 @@ from typing import Optional, Tuple, Union
 from shapepy import ConnectedShape, SimpleShape
 
 from .abcs import ICurve, IGeometry, NamedTracker
-from .curve import Curve
+from .curve import NurbsCurve
 from .integral import Bidimensional
 
 
@@ -28,25 +28,25 @@ class ConnectedGeometry(IGeometry, NamedTracker):
         assert isinstance(shape, (SimpleShape, ConnectedShape))
         curves = []
         for jordan in shape.jordans:
-            curve = Curve.from_jordan(jordan)
+            curve = NurbsCurve.from_jordan(jordan)
             curves.append(curve)
         return cls(curves)
 
     def __init__(
-        self, curves: Tuple[Union[int, Curve]], *, name: Optional[str] = None
+        self, curves: Tuple[Union[int, ICurve]], *, name: Optional[str] = None
     ):
         curves = list(curves)
         for i, curve in enumerate(curves):
-            if isinstance(curve, Curve):
+            if isinstance(curve, ICurve):
                 continue
             if not isinstance(curve, int):
                 raise NotImplementedError
-            if abs(curve) not in Curve.instances:
+            if abs(curve) not in NurbsCurve.instances:
                 raise NotImplementedError
             if curve > 0:
-                curves[i] = Curve.instances[curve]
+                curves[i] = NurbsCurve.instances[curve]
             else:
-                curves[i] = ~Curve.instances[-curve]
+                curves[i] = ~NurbsCurve.instances[-curve]
         self.__curves = tuple(curves)
         self.name = name
 

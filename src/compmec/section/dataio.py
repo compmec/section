@@ -12,7 +12,7 @@ from typing import Dict, Optional
 import jsonschema
 
 from .abcs import IFileIO
-from .curve import Curve, Node
+from .curve import Node, NurbsCurve
 from .geometry import ConnectedGeometry
 from .material import Material
 from .section import HomogeneousSection
@@ -150,7 +150,7 @@ class JsonIO(FileIO):
         curves = self.read_json(str(schema_path))["curves"]
         if self.overwrite:
             labels = tuple(int(label) for label in curves.keys())
-            Curve.clear(labels)
+            NurbsCurve.clear(labels)
         for label, infos in curves.items():
             label = int(label)
             knotvector = infos["knotvector"]
@@ -160,7 +160,7 @@ class JsonIO(FileIO):
             else:
                 ctrlpoints = infos["ctrlpoints"]
             weights = None if "weights" not in infos else infos["weights"]
-            Curve(knotvector, ctrlpoints, weights=weights, label=label)
+            NurbsCurve(knotvector, ctrlpoints, weights=weights, label=label)
 
     def load_materials(self):
         """

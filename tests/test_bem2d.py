@@ -13,7 +13,7 @@ from compmec.section.bem2d import (
     ScalarFunction,
     TorsionEvaluator,
 )
-from compmec.section.curve import Curve
+from compmec.section.curve import NurbsCurve
 
 
 @pytest.mark.order(8)
@@ -62,7 +62,7 @@ class TestComputeMatrixIncurve:
         angles = np.linspace(0, 2 * np.pi, 3, endpoint=False)
         vertices = tuple((np.cos(angle), np.sin(angle)) for angle in angles)
         tsources = (0, 1, 2)
-        curve = Curve.from_vertices(vertices)
+        curve = NurbsCurve.from_vertices(vertices)
         basis = SplineBasisFunction.cyclic(curve.knots)
         test_matrix = ComputeStiffness.incurve(curve, basis, tsources)
 
@@ -81,7 +81,7 @@ class TestComputeMatrixIncurve:
         angles = np.linspace(0, 2 * pi, 3, endpoint=False)
         vertices = tuple((np.cos(angle), np.sin(angle)) for angle in angles)
         tsources = (0.5, 1.5, 2.5)
-        curve = Curve.from_vertices(vertices)
+        curve = NurbsCurve.from_vertices(vertices)
         basis = SplineBasisFunction.cyclic(curve.knots)
         test_matrix = ComputeStiffness.incurve(curve, basis, tsources)
 
@@ -99,7 +99,7 @@ class TestComputeMatrixIncurve:
 
         vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1]]
         tsources = (0, 1, 2, 3)
-        curve = Curve.from_vertices(vertices)
+        curve = NurbsCurve.from_vertices(vertices)
         basis = SplineBasisFunction.cyclic(curve.knots)
         test_matrix = ComputeStiffness.incurve(curve, basis, tsources)
 
@@ -117,7 +117,7 @@ class TestComputeMatrixIncurve:
 
         vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1]]
         tsources = (0.5, 1.5, 2.5, 3.5)
-        curve = Curve.from_vertices(vertices)
+        curve = NurbsCurve.from_vertices(vertices)
         basis = SplineBasisFunction.cyclic(curve.knots)
         test_matrix = ComputeStiffness.incurve(curve, basis, tsources)
 
@@ -145,7 +145,7 @@ class TestComputeMatrixIncurve:
         angles = np.linspace(0, 2 * np.pi, 6, endpoint=False)
         vertices = tuple((np.cos(angle), np.sin(angle)) for angle in angles)
         tsources = (0, 1, 2, 3, 4, 5)
-        curve = Curve.from_vertices(vertices)
+        curve = NurbsCurve.from_vertices(vertices)
         basis = SplineBasisFunction.cyclic(curve.knots)
         test_matrix = ComputeStiffness.incurve(curve, basis, tsources)
 
@@ -179,7 +179,7 @@ class TestComputeMatrixIncurve:
         angles = np.linspace(0, 2 * np.pi, 6, endpoint=False)
         vertices = tuple((np.cos(angle), np.sin(angle)) for angle in angles)
         tsources = (0.5, 1.5, 2.5, 3.5, 4.5, 5.5)
-        curve = Curve.from_vertices(vertices)
+        curve = NurbsCurve.from_vertices(vertices)
         basis = SplineBasisFunction.cyclic(curve.knots)
         test_matrix = ComputeStiffness.incurve(curve, basis, tsources)
 
@@ -271,7 +271,7 @@ class TestComputeMatrixOutcurve:
 
         vertices = [(-2, -2), (2, -2), (2, 2), (-2, 2)]
         sources = [(0, 0), (1, 0), (1, 1)]
-        curve = Curve.from_vertices(vertices)
+        curve = NurbsCurve.from_vertices(vertices)
         basis = SplineBasisFunction.cyclic(curve.knots)
         test_matrix = ComputeStiffness.outcurve(curve, basis, sources)
 
@@ -308,7 +308,7 @@ class TestPoissonEvaluator:
 
         vertices = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
         vertices = np.array(vertices, dtype="float64")
-        curve = Curve.from_vertices(vertices)
+        curve = NurbsCurve.from_vertices(vertices)
         basis = SplineBasisFunction.cyclic(curve.knots, degree=1)
         ctrlpoints = tuple(funct(x, y) for x, y in vertices)
         bound = ScalarFunction(basis, ctrlpoints)
@@ -357,7 +357,7 @@ class TestPoissonEvaluator:
 
         vertices = [(-1, -1), (-1, 1), (1, 1), (1, -1)]
         vertices = np.array(vertices, dtype="float64")
-        curve_in = Curve.from_vertices(vertices)
+        curve_in = NurbsCurve.from_vertices(vertices)
         basis_in = SplineBasisFunction.cyclic(curve_in.knots, degree=1)
         ctrlpoints = tuple(funct(x, y) for x, y in vertices)
         bound_in = ScalarFunction(basis_in, ctrlpoints)
@@ -368,7 +368,7 @@ class TestPoissonEvaluator:
 
         vertices = [(-2, -2), (2, -2), (2, 2), (-2, 2)]
         vertices = np.array(vertices, dtype="float64")
-        curve_out = Curve.from_vertices(vertices)
+        curve_out = NurbsCurve.from_vertices(vertices)
         basis_out = SplineBasisFunction.cyclic(curve_out.knots, degree=1)
         ctrlpoints = tuple(funct(x, y) for x, y in vertices)
         bound_out = ScalarFunction(basis_out, ctrlpoints)

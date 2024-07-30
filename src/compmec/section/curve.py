@@ -6,6 +6,7 @@ deal with the boundary curves.
 
 from __future__ import annotations
 
+import math
 from collections import OrderedDict
 from typing import Optional, Tuple
 
@@ -69,7 +70,7 @@ class Node(LabeledTracker):
         return tuple(Node.instances[label] for label in labels)
 
 
-class Curve(LabeledTracker, ICurve):
+class NurbsCurve(LabeledTracker, ICurve):
     """
     Base class that tracks the instances
     """
@@ -77,7 +78,7 @@ class Curve(LabeledTracker, ICurve):
     instances = OrderedDict()
 
     @classmethod
-    def from_jordan(cls, jordan: JordanCurve) -> Curve:
+    def from_jordan(cls, jordan: JordanCurve) -> NurbsCurve:
         """
         Converts a jordan curve into a Curve instance
 
@@ -105,7 +106,7 @@ class Curve(LabeledTracker, ICurve):
         return cls(curve.knotvector, ctrlpoints, weights=curve.weights)
 
     @classmethod
-    def from_vertices(cls, vertices: Tuple[Tuple[float]]) -> Curve:
+    def from_vertices(cls, vertices: Tuple[Tuple[float]]) -> NurbsCurve:
         """
         Creates a Curve instance based on given vertices
 
@@ -191,3 +192,82 @@ class Curve(LabeledTracker, ICurve):
 
     def projection(self, point: Tuple[float]) -> Tuple[float]:
         return pynurbs.Projection.point_on_curve(point, self.__internal)
+
+
+class PolygonCurve(ICurve):
+
+    def __init__(self, vertices: Tuple[Tuple[float]]):
+        vertices = np.array(vertices, dtype="float64")
+        if vertices.ndim != 2 or vertices.shape[1] != 2:
+            raise ValueError
+        cross = vertices[:, 0] * np.roll(vertices[:, 1], shift=-1)
+        cross -= vertices[:, 1] * np.roll(vertices[:, 0], shift=-1)
+        self.__vertices = vertices
+        self.__vectors = np.roll(vertices, shift=-1, axis=0) - vertices
+        self.__area = float(sum(cross) / 2)
+
+    @property
+    def knots(self) -> Tuple[float]:
+        return tuple(range(len(self.vertices) + 1))
+
+    @property
+    def vertices(self) -> Tuple[Tuple[float]]:
+        return self.__vertices
+
+    @property
+    def vectors(self) -> Tuple[Tuple[float]]:
+        return self.__vectors
+
+    def __float__(self):
+        return self.__area
+
+    def eval(self, parameters: Tuple[float]) -> Tuple[Tuple[float]]:
+        nverts = len(self.vertices)
+        indexs = (math.floor(param) % nverts for param in parameters)
+        return tuple(
+            self.vertices[i] + (p % 1) * self.vectors[i]
+            for i, p in zip(indexs, parameters)
+        )
+
+    def deval(self, parameters: Tuple[float]) -> Tuple[Tuple[float]]:
+        nverts = len(self.vertices)
+        indexs = map(math.floor(param) % nverts for param in parameters)
+        return tuple(self.vertices[i] for i in indexs)
+
+    def projection(self, point: Tuple[float]) -> Tuple[float]:
+        min_dist_square = float("inf")
+        vertices = (point - vertex for vertex in self.vertices)
+        for i, vertex in enumerate(vertices):
+            vector = self.vectors[i]
+            param = np.inner(vertex, vector) / np.inner(vector, vector)
+            param = max(0, min(1, param))
+            vectdist = param * vector - vertex
+            dist_square = np.inner(vectdist, vectdist)
+            if dist_square < min_dist_square:
+                min_dist_square = dist_square
+                project = (i + param,)
+        return project
+
+    def winding(self, point: Tuple[float]) -> float:
+        nverts = len(self.vertices)
+        proj = self.projection(point)[0]
+        proj_vec = self.eval([proj])[0] - point
+        if np.inner(proj_vec, proj_vec) < 1e-6:
+            if not isinstance(proj, int):
+                return 0.5
+            v0, v1 = self.vectors[proj], self.vectors[(proj + 1) % nverts]
+            inner = np.inner(v0, v1)
+            cross = np.cross(v0, v1)
+            wind = np.arctan2(cross, inner) / math.tau
+            return wind % 1
+
+        vertices = tuple(vertex - point for vertex in self.vertices)
+        wind = 0
+        for i, vertex0 in enumerate(vertices):
+            vertex1 = vertices[(i + 1) % nverts]
+            cross = np.cross(vertex0, vertex1)
+            inner = np.inner(vertex0, vertex1)
+            wind += np.arctan2(cross, inner) / math.tau
+        if float(self) > 0:
+            return wind
+        return 0 if wind == -1 else 1 - wind
