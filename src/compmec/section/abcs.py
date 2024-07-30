@@ -252,6 +252,7 @@ class IGeometry(ABC):
     def curves(self) -> Tuple[ICurve]:
         raise NotImplementedError
 
+    @abstractmethod
     def integrate(
         self, expx: int, expy: int, tolerance: Optional[float] = 1e-9
     ) -> float:
@@ -264,6 +265,7 @@ class IGeometry(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def winding(self, point: Tuple[float]) -> float:
         """
         Computes the winding number of the giving point
@@ -660,13 +662,6 @@ class ISection(ABC):  # pylint: disable=too-few-public-methods
         """
         raise NotImplementedError
 
-    @abstractmethod
-    def solve(self):
-        """
-        Solves the poisson problem
-        """
-        raise NotImplementedError
-
 
 class IBasisFunction(ABC):
     """
@@ -716,5 +711,28 @@ class IBasisFunction(ABC):
         :type parameters: Tuple[float]
         :return: The results in a matrix of shape (m, n)
         :rtype: Tuple[Tuple[float]]
+        """
+        raise NotImplementedError
+
+
+class IModel(ABC):
+
+    @abstractmethod
+    def __init__(self, section: ISection):
+        raise NotImplementedError
+
+    @abstractmethod
+    def generate_mesh(self, mesh_size: Optional[float] = None):
+        """
+        Generates the mesh based on the given parameter
+
+        If mesh_size is not given, it computes one arbitrary
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def solve(self):
+        """
+        Solves the poisson problem
         """
         raise NotImplementedError

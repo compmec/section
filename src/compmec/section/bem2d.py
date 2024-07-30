@@ -9,11 +9,11 @@ subject only to neumman's boundary condition
 """
 
 import math
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 
 import numpy as np
 
-from .abcs import IBasisFunction, ICurve, IPoissonEvaluator, ISection
+from .abcs import IBasisFunction, ICurve, IModel, IPoissonEvaluator, ISection
 from .integral import Integration
 
 
@@ -293,7 +293,7 @@ class TorsionEvaluator:
         return results
 
 
-class BEMModel:
+class BEMModel(IModel):
     """
     A BEM2D Model to solve laplace's equation
     """
@@ -310,13 +310,24 @@ class BEMModel:
             raise TypeError
         self.section = section
         self.curves = {}
-        self.basis = {}
+        self.basis = None
         for homosection in section:
             for curve in homosection.geometry.curves:
                 if curve.label not in self.curves:
                     self.curves[curve.label] = curve
+        self.__within_context = False
+
+    def __enter__(self):
+        self.__within_context = True
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.__within_context = False
+        pass
 
     def add_basis(self, curve: Union[int, ICurve], basis: IBasisFunction):
+        if not self.__within_context:
+            raise NotImplementedError
         curve_label = curve.label if isinstance(curve, ICurve) else curve
         if curve_label not in self.curves:
             raise ValueError
@@ -324,10 +335,16 @@ class BEMModel:
             raise TypeError
         self.basis[curve_label] = basis
 
-    def solve(self, sources: Tuple[Tuple[float]]):
+    def generate_mesh(self, mesh_size: Optional[float] = None):
+        if not self.__within_context:
+            raise NotImplementedError
+
+    def solve(self):
         """
         Solves the BEM problem, computing
         """
+        if not self.__within_context:
+            raise NotImplementedError
         self.__check_model()
         sources = np.array(sources, dtype="float64")
         if sources.ndim != 2 or sources.shape[1] != 2:
@@ -489,9 +506,9 @@ class PoissonEvaluatorCurve(IPoissonEvaluator):
 
         def adaptative_integral(ta: float, tb: float, tolerance: float = 1e-9):
             tm = (ta + tb) / 2
-            midd = direct_integral(source, ta, tb)
-            left = direct_integral(source, ta, tm)
-            righ = direct_integral(source, tm, tb)
+            midd = direct_integral(ta, tb)
+            left = direct_integral(ta, tm)
+            righ = direct_integral(tm, tb)
             if abs(left + righ - midd) > tolerance:
                 left = adaptative_integral(ta, tm, tolerance / 2)
                 righ = adaptative_integral(tm, tb, tolerance / 2)
@@ -569,9 +586,9 @@ class PoissonEvaluatorCurve(IPoissonEvaluator):
 
         def adaptative_integral(ta: float, tb: float, tolerance: float):
             tm = (ta + tb) / 2
-            middx, middy = direct_integral(source, ta, tb)
-            leftx, lefty = direct_integral(source, ta, tm)
-            righx, righy = direct_integral(source, tm, tb)
+            middx, middy = direct_integral(ta, tb)
+            leftx, lefty = direct_integral(ta, tm)
+            righx, righy = direct_integral(tm, tb)
             diffx = abs(leftx + righx - middx)
             diffy = abs(lefty + righy - middy)
             if diffx > tolerance or diffy > tolerance:

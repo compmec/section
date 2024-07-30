@@ -2,11 +2,12 @@
 File to tests cases when only bending moments are applied
 """
 
+import numpy as np
 import pytest
 from shapepy import Primitive
 
 from compmec.section.basisfunc import SplineBasisFunction
-from compmec.section.bem2d import BEMModel
+from compmec.section.bem2d import BEMModel, ScalarFunction
 from compmec.section.material import Isotropic
 from compmec.section.section import HomogeneousSection
 
@@ -37,15 +38,13 @@ class TestSolvingSystem:
         full_square = Primitive.square(side=2, center=(0, 0))
         steel = Isotropic(young_modulus=210, poissons_ratio=0.3)
         steel_square = HomogeneousSection.from_shape(full_square, steel)
-        curve = steel_square.geometry.curves[0]
 
-        model = BEMModel(steel_square)
-        knots = (0, 1, 2, 3, 4)
-        basis = SplineBasisFunction.cyclic(knots, degree=1)
-        model.add_basis(curve, basis)
-
-        sources = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
-        model.solve(sources)
+        with BEMModel(steel_square) as model:
+            curve = steel_square.geometry.curves[0]
+            knots = (0, 1, 2, 3, 4)
+            basis = SplineBasisFunction.cyclic(knots, degree=1)
+            model.sources = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
+            model.solve()
 
     @pytest.mark.order(10)
     @pytest.mark.timeout(10)
@@ -92,7 +91,9 @@ class TestAutoSolve:
         full_square = Primitive.square(side=2, center=(0, 0))
         steel = Isotropic(young_modulus=210, poissons_ratio=0.3)
         steel_square = HomogeneousSection.from_shape(full_square, steel)
-        steel_square.solve()
+        with BEMModel(steel_square) as model:
+            model.generate_mesh()
+            model.solve()
 
         sources = [(0, 0), (1, 0), (0, 1), (-1, 0), (0, -1)]
         sources += [(2, 0), (0, 2), (-2, 0), (0, -2)]
@@ -121,13 +122,54 @@ class TestTorsionConstant:
     @pytest.mark.timeout(10)
     @pytest.mark.dependency(depends=["TestTorsionConstant::test_begin"])
     def test_full_square(self):
+
+        def torsion_constant_rectangle(a: float, b: float, nmax: int):
+            """
+            Gives the value of torsion contant for a rectangle profile
+            of lenght 'a' and height 'b'
+            """
+            r = b / a
+            temp = sum(
+                np.tanh(np.pi * (2 * n + 1) / 2 * r) / (2 * n + 1) ** 5
+                for n in range(nmax + 1)
+            )
+            tors_const = r / 3 - 64 * temp / np.pi**5
+            return tors_const * a**4
+
         full_square = Primitive.square(side=2)
         steel = Isotropic(young_modulus=210, poissons_ratio=0.3)
         steel_square = HomogeneousSection.from_shape(full_square, steel)
-        steel_square.solve()
 
-        ipolar = 2
-        assert steel_square.torsion_constant() == 10
+        ndiv = 5
+        knots = tuple(i / ndiv for i in range(4 * ndiv + 1))
+        basis = SplineBasisFunction.cyclic(knots, degree=1)
+        ctrlpoints = [
+            4.524489888226429e-05,
+            -1.761717469582290e-01,
+            -6.775319276312486e-02,
+            6.775319276312486e-02,
+            1.761717469582290e-01,
+            -4.524489888225453e-05,
+            -1.761463600718403e-01,
+            -6.776131453206423e-02,
+            6.776131453206423e-02,
+            1.761463600718403e-01,
+            4.524489888224952e-05,
+            -1.761717469582290e-01,
+            -6.775319276312486e-02,
+            6.775319276312487e-02,
+            1.761717469582290e-01,
+            -4.524489888225529e-05,
+            -1.761463600718403e-01,
+            -6.776131453206426e-02,
+            6.776131453206424e-02,
+            1.761463600718403e-01,
+        ]
+        warping_curve = ScalarFunction(basis, ctrlpoints)
+
+        good_torconst = torsion_constant_rectangle(2, 2, 10)
+        test_torconst = steel_square.torsion_constant()
+        assert abs(test_torconst - good_torconst) < 1e-3
 
     @pytest.mark.order(10)
     @pytest.mark.dependency(

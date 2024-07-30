@@ -428,7 +428,7 @@ class Bidimensional:
             dpoints = curve.deval(tvals)
             cross = points[:, 0] * dpoints[:, 1] - points[:, 1] * dpoints[:, 0]
             xvals = points[:, 0] ** a
-            yvals = points[:, 0] ** b
+            yvals = points[:, 1] ** b
             result = np.einsum("i,i,i,i", weights, cross, xvals, yvals)
             return (tb - ta) * result
 
