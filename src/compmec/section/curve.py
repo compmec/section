@@ -235,18 +235,21 @@ class PolygonCurve(ICurve):
         return tuple(self.vertices[i] for i in indexs)
 
     def projection(self, point: Tuple[float]) -> Tuple[float]:
-        min_dist_square = float("inf")
         vertices = (point - vertex for vertex in self.vertices)
+        projects = []
+        dist_squares = []
         for i, vertex in enumerate(vertices):
             vector = self.vectors[i]
             param = np.inner(vertex, vector) / np.inner(vector, vector)
             param = max(0, min(1, param))
             vectdist = param * vector - vertex
-            dist_square = np.inner(vectdist, vectdist)
-            if dist_square < min_dist_square:
-                min_dist_square = dist_square
-                project = (i + param,)
-        return project
+            projects.append(i + param)
+            dist_squares.append(np.inner(vectdist, vectdist))
+        min_distsquare = min(dist_squares)
+        params = set(
+            p for p, d2 in zip(projects, dist_squares) if d2 == min_distsquare
+        )
+        return tuple(sorted(params))
 
     def winding(self, point: Tuple[float]) -> float:
         nverts = len(self.vertices)
