@@ -100,4 +100,4 @@ def cyclic_knotvector(
     knotvector = np.array(knotvector, dtype="object")
     for knot in set(knots):
         assert sum(knots == knot) == sum(knotvector == knot)
-    return tuple(knotvector)
+    return KnotVector(knotvector, degree)

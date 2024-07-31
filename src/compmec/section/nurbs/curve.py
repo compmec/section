@@ -16,6 +16,7 @@ class CyclicScalarSpline:
         mult = knotvector.mult(knotvector[knotvector.degree])
         ndofs = knotvector.npts + mult - knotvector.degree - 1
         self.__ndofs = ndofs
+        self.degree = knotvector.degree
 
         matrix2d = []
         for i, span in enumerate(knotvector.spans):
@@ -29,10 +30,6 @@ class CyclicScalarSpline:
     @property
     def npts(self) -> int:
         return self.__ndofs
-
-    @property
-    def degree(self) -> int:
-        return self.knotvector.degree
 
     def eval(self, nodes: Tuple[float]) -> Tuple[Tuple[float]]:
         spans = self.knotvector.spans

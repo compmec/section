@@ -108,19 +108,6 @@ def global_speval_matrix(
     return global_matrix
 
 
-def derivate_matrix(matrix: Tuple[Tuple[Tuple[float]]]) -> float:
-    m, p, q = matrix.shape
-    result = np.zeros((m, p, q - 1), dtype=matrix.dtype)
-    if q == 1:
-        return result
-    for i in range(m):
-        for j in range(p):
-            for k in range(1, q):
-                value = matrix[i, j, k]
-                result[i, j, k - 1] = k * value
-    return result
-
-
 def horner_method(coefs: Tuple[float], node: float):
     """
     Horner method is a efficient method of computing polynomials
@@ -150,29 +137,29 @@ class CyclicSplineBasisFunction:
         self.matrix = global_speval_matrix(knotvector)
         mult = knotvector.mult(knotvector[knotvector.degree])
         self.__ndofs = knotvector.npts + mult - knotvector.degree - 1
+        self.degree = knotvector.degree
 
     @property
     def npts(self) -> int:
         return self.__ndofs
 
-    @property
-    def degree(self) -> int:
-        return self.knotvector.degree
-
     def eval(self, nodes: Tuple[float]) -> Tuple[Tuple[float]]:
+        degree = self.knotvector.degree
         spans = self.knotvector.spans
         result = np.zeros((self.npts, len(nodes)), dtype="object")
         lima, limb = self.knotvector.knots[0], self.knotvector.knots[-1]
         diff = limb - lima
+
         nodes = (
             node if lima <= node < limb else lima + ((node - lima) % diff)
             for node in nodes
         )
+        nodes = tuple(nodes)
         for j, node in enumerate(nodes):
             span = self.knotvector.span(node)
             ind = spans.index(span)
-            for y in range(self.degree + 1):
-                i = (y + span - self.degree) % self.npts
+            for y in range(degree + 1):
+                i = (y + span - degree) % self.npts
                 coefs = self.matrix[ind, y]
                 result[i, j] += horner_method(coefs, node)
         return result
