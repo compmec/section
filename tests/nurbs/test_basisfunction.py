@@ -58,7 +58,7 @@ def test_uniform():
             good_matrix = np.array(good_matrix)
             test_matrix = test_basis.eval(usample)
             assert test_matrix.shape == good_matrix.shape
-            np.testing.assert_equal(test_matrix, good_matrix)
+            np.testing.assert_almost_equal(test_matrix, good_matrix)
 
 
 @pytest.mark.order(2)

@@ -1,12 +1,40 @@
-from typing import Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 
 from .knotvector import KnotVector
 
 
-def speval_matrix(
-    knotvector: KnotVector, reqdegree: int
+# pylint: disable=invalid-name
+def comb(a, b):
+    """
+    Computes the binomial coeffient of a, b:
+
+    comb(a, b) = a! /((a-b)! * b!)
+
+    Parameters
+    ----------
+    a: int
+    b: int
+    return: int
+
+    Example
+    -------
+    >>> comb(1, 0)
+    1
+    >>> comb(5, 2)
+    10
+
+    """
+    prod = 1
+    for i in range(min(b, a - b)):
+        prod *= a - i
+        prod //= i + 1
+    return prod
+
+
+def local_speval_matrix(
+    knotvector: KnotVector, reqdegree: Optional[int] = None
 ) -> Tuple[Tuple[Tuple[float]]]:
     """
     Given a knotvector, it has properties like
@@ -20,7 +48,10 @@ def speval_matrix(
         - m is the number of segments: len(knots)-1
         - j is the requested degree
     """
-    if reqdegree < 0:
+    knotvector = KnotVector(knotvector)
+    if reqdegree is None:
+        reqdegree = knotvector.degree
+    elif reqdegree < 0:
         raise ValueError(f"reqdegree must be in [0, {knotvector.degree}]")
     knots = knotvector.knots
     spans = knotvector.spans
@@ -31,7 +62,7 @@ def speval_matrix(
         one = knotvector.knots[-1] - knotvector.knots[0]
         matrix.fill(one / one)
         return matrix
-    matrix_less1 = speval_matrix(knotvector, j - 1)
+    matrix_less1 = local_speval_matrix(knotvector, j - 1)
     for y in range(j):
         for z, sz in enumerate(spans):
             i = y + sz - j + 1
@@ -47,7 +78,34 @@ def speval_matrix(
             matrix[z, y, 1:] += b1 * matrix_less1[z, y]
             matrix[z, y + 1, :-1] += a0 * matrix_less1[z, y]
             matrix[z, y + 1, 1:] += a1 * matrix_less1[z, y]
+
     return matrix
+
+
+def local_to_global_matrix(
+    knots: Tuple[float], matrix: Tuple[Tuple[Tuple[float]]]
+):
+    matrix3d = 0 * np.copy(matrix)
+    degree = matrix.shape[2] - 1
+    for i, (ta, tb) in enumerate(zip(knots, knots[1:])):
+        delta = tb - ta
+        for j in range(degree + 1):
+            line = matrix[i, :, j] / delta**j
+            for k in range(j + 1):
+                val = comb(j, k) * line * ta ** (j - k)
+                if (j + k) % 2:
+                    val *= -1
+                matrix3d[i, :, k] += val
+    return matrix3d
+
+
+def global_speval_matrix(
+    knotvector: KnotVector, reqdegree: Optional[int] = None
+):
+    knotvector = KnotVector(knotvector)
+    local_matrix = local_speval_matrix(knotvector, reqdegree)
+    global_matrix = local_to_global_matrix(knotvector.knots, local_matrix)
+    return global_matrix
 
 
 def derivate_matrix(matrix: Tuple[Tuple[Tuple[float]]]) -> float:
@@ -84,13 +142,12 @@ def horner_method(coefs: Tuple[float], node: float):
     return soma
 
 
-
 class CyclicSplineBasisFunction:
 
     def __init__(self, knotvector: KnotVector):
         knotvector = KnotVector(knotvector)
         self.knotvector = knotvector
-        self.matrix = speval_matrix(knotvector, knotvector.degree)
+        self.matrix = global_speval_matrix(knotvector)
         mult = knotvector.mult(knotvector[knotvector.degree])
         self.__ndofs = knotvector.npts + mult - knotvector.degree - 1
 
@@ -103,7 +160,6 @@ class CyclicSplineBasisFunction:
         return self.knotvector.degree
 
     def eval(self, nodes: Tuple[float]) -> Tuple[Tuple[float]]:
-        knots = self.knotvector.knots
         spans = self.knotvector.spans
         result = np.zeros((self.npts, len(nodes)), dtype="object")
         lima, limb = self.knotvector.knots[0], self.knotvector.knots[-1]
@@ -115,10 +171,8 @@ class CyclicSplineBasisFunction:
         for j, node in enumerate(nodes):
             span = self.knotvector.span(node)
             ind = spans.index(span)
-            shifnode = node - knots[ind]
-            shifnode /= knots[ind + 1] - knots[ind]
             for y in range(self.degree + 1):
                 i = (y + span - self.degree) % self.npts
                 coefs = self.matrix[ind, y]
-                result[i, j] += horner_method(coefs, shifnode)
+                result[i, j] += horner_method(coefs, node)
         return result

@@ -2,7 +2,7 @@ from typing import Tuple
 
 import numpy as np
 
-from .basisfunction import horner_method, speval_matrix
+from .basisfunction import global_speval_matrix, horner_method
 from .knotvector import KnotVector
 
 
@@ -12,7 +12,7 @@ class CyclicScalarSpline:
         knotvector = KnotVector(knotvector)
         self.knotvector = knotvector
 
-        matrix3d = speval_matrix(knotvector, knotvector.degree)
+        matrix3d = global_speval_matrix(knotvector)
         mult = knotvector.mult(knotvector[knotvector.degree])
         ndofs = knotvector.npts + mult - knotvector.degree - 1
         self.__ndofs = ndofs
@@ -35,13 +35,11 @@ class CyclicScalarSpline:
         return self.knotvector.degree
 
     def eval(self, nodes: Tuple[float]) -> Tuple[Tuple[float]]:
-        knots = self.knotvector.knots
         spans = self.knotvector.spans
         result = [0] * len(nodes)
         for j, node in enumerate(nodes):
             span = self.knotvector.span(node)
             ind = spans.index(span)
-            shifnode = node - knots[ind]
-            shifnode /= knots[ind + 1] - knots[ind]
-            result[j] = horner_method(self.matrix[ind], shifnode)
+            coefs = self.matrix[ind]
+            result[j] = horner_method(coefs, node)
         return np.array(result)
