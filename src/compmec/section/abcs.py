@@ -5,7 +5,7 @@ File that contains base classes
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Optional, Tuple, Union
 
 
 class Tracker(ABC):  # pylint: disable=too-few-public-methods
@@ -104,7 +104,11 @@ class LabeledTracker(Tracker):
         :type: str
 
         """
-        return int(self._get_key())
+        key = self._get_key()
+        if key is None:
+            key = self._next_available_key()
+            self._set_key(key)
+        return key
 
     @label.setter
     def label(self, new_label: Union[int, None]):
@@ -147,7 +151,7 @@ class NamedTracker(Tracker):
         self._set_key(new_name)
 
 
-class ICurve(ABC):
+class ICurve(LabeledTracker):
     """
     Interface abstract curve to be parent of others.
 
@@ -266,21 +270,6 @@ class IMaterial(ABC):
     """
     Material abstract class, the parent of other more specific materials
     """
-
-    @abstractmethod
-    def to_dict(self) -> Dict:
-        """
-        Converts the material to a dictionary
-        """
-        raise NotImplementedError
-
-    @classmethod
-    @abstractmethod
-    def from_dict(cls, dictionary: Dict) -> IMaterial:
-        """
-        Converts the dictionary in a material instance
-        """
-        raise NotImplementedError
 
 
 class IFileIO(ABC):

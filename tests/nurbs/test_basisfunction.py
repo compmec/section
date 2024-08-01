@@ -2,7 +2,6 @@ from fractions import Fraction
 
 import numpy as np
 import pytest
-from matplotlib import pyplot as plt
 from pynurbs import Function, GeneratorKnotVector
 
 from compmec.section.nurbs import CyclicSplineBasisFunction, KnotVector

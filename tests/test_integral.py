@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from compmec.section.curve import NurbsCurve
+from compmec.section.curve import PolygonCurve
 from compmec.section.integral import Bidimensional, Integration, comb
 
 
@@ -271,7 +271,7 @@ def test_integral_polygon_general():
     Tests the polynomial integrals of polygons
     """
     vertices = ((1, 1), (-1, 1), (-1, -1), (1, -1))
-    curve = NurbsCurve.from_vertices(vertices)
+    curve = PolygonCurve(vertices)
 
     def integrator(a: int, b: int):
         return Bidimensional.general(curve, a, b)

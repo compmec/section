@@ -12,7 +12,6 @@ from collections import OrderedDict
 from typing import Optional, Tuple, Union
 
 import numpy as np
-from shapepy.shape import DefinedShape
 
 from .abcs import (
     IGeometry,
@@ -38,11 +37,6 @@ class HomogeneousSection(ISection, NamedTracker):
     """
 
     instances = OrderedDict()
-
-    @classmethod
-    def from_shape(cls, shape: DefinedShape, material: Material):
-        geometry = ConnectedGeometry.from_shape(shape)
-        return cls(geometry, material)
 
     def __init__(
         self,

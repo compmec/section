@@ -14,7 +14,7 @@ def test_begin():
 @pytest.mark.dependency(depends=["test_begin"])
 def test_winding_square_counterclock():
     vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1]]
-    curve = NurbsCurve.from_vertices(vertices)
+    curve = PolygonCurve(vertices)
 
     assert float(curve) == 4
 
@@ -45,7 +45,7 @@ def test_winding_square_counterclock():
 @pytest.mark.dependency(depends=["test_begin"])
 def test_winding_square_clockwise():
     vertices = [[1, 1], [1, -1], [-1, -1], [-1, 1]]
-    curve = NurbsCurve.from_vertices(vertices)
+    curve = PolygonCurve(vertices)
 
     assert float(curve) == -4
 

@@ -4,7 +4,7 @@ File to test src/compmec/section/geometry.py module
 
 import pytest
 
-from compmec.section.curve import NurbsCurve
+from compmec.section.curve import PolygonCurve
 from compmec.section.geometry import ConnectedGeometry
 
 
@@ -24,7 +24,7 @@ def test_begin():
 @pytest.mark.dependency(depends=["test_begin"])
 def test_full_square():
     vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1]]
-    curve = NurbsCurve.from_vertices(vertices)
+    curve = PolygonCurve(vertices)
 
     geometry = ConnectedGeometry([curve.label])
 
@@ -45,10 +45,10 @@ def test_full_square():
 @pytest.mark.dependency(depends=["test_begin"])
 def test_hollow_square():
     vertices = [[3, 3], [-3, 3], [-3, -3], [3, -3]]
-    curve_ext = NurbsCurve.from_vertices(vertices)
+    curve_ext = PolygonCurve(vertices)
 
     vertices = [[-1, -1], [-1, 1], [1, 1], [1, -1]]
-    curve_int = NurbsCurve.from_vertices(vertices)
+    curve_int = PolygonCurve(vertices)
 
     geometry = ConnectedGeometry([curve_ext, curve_int])
 

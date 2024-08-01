@@ -12,7 +12,7 @@ from typing import Dict, Optional
 import jsonschema
 
 from .abcs import IFileIO
-from .curve import Node, NurbsCurve
+from .curve import NurbsCurve
 from .geometry import ConnectedGeometry
 from .material import Material
 from .section import HomogeneousSection

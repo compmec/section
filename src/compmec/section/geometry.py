@@ -6,10 +6,7 @@ from __future__ import annotations
 
 from typing import Optional, Tuple, Union
 
-from shapepy import ConnectedShape, SimpleShape
-
 from .abcs import ICurve, IGeometry, NamedTracker
-from .curve import NurbsCurve
 from .integral import Bidimensional
 
 
@@ -20,18 +17,6 @@ class ConnectedGeometry(IGeometry, NamedTracker):
     are inside the region
     """
 
-    @classmethod
-    def from_shape(cls, shape: Union[SimpleShape, ConnectedShape]):
-        """
-        Creates a Geometry instance from a shape of shapepy package
-        """
-        assert isinstance(shape, (SimpleShape, ConnectedShape))
-        curves = []
-        for jordan in shape.jordans:
-            curve = NurbsCurve.from_jordan(jordan)
-            curves.append(curve)
-        return cls(curves)
-
     def __init__(
         self, curves: Tuple[Union[int, ICurve]], *, name: Optional[str] = None
     ):
@@ -41,21 +26,15 @@ class ConnectedGeometry(IGeometry, NamedTracker):
                 continue
             if not isinstance(curve, int):
                 raise NotImplementedError
-            if abs(curve) not in NurbsCurve.instances:
+            if curve not in ICurve.instances:
                 raise NotImplementedError
-            if curve > 0:
-                curves[i] = NurbsCurve.instances[curve]
-            else:
-                curves[i] = ~NurbsCurve.instances[-curve]
+            curves[i] = ICurve.instances[curve]
         self.__curves = tuple(curves)
         self.name = name
 
     @property
     def curves(self) -> Tuple[ICurve]:
         return self.__curves
-
-    def __iter__(self):
-        yield from self.curves
 
     def integrate(
         self, expx: int, expy: int, tolerance: Optional[float] = 1e-9
@@ -64,13 +43,13 @@ class ConnectedGeometry(IGeometry, NamedTracker):
         assert isinstance(expy, int) and expy >= 0
 
         result = 0
-        for curve in self:
+        for curve in self.curves:
             result += Bidimensional.general(curve, expx, expy)
         return result
 
     def winding(self, point: Tuple[float]) -> float:
         wind_tolerance = 1e-9
-        for curve in self:
+        for curve in self.curves:
             wind = curve.winding(point)
             if wind < 1 - wind_tolerance:
                 return wind
