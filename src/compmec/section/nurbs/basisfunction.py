@@ -3,6 +3,7 @@ from typing import Optional, Tuple
 import numpy as np
 
 from .knotvector import KnotVector
+from .util import vectorize
 
 
 # pylint: disable=invalid-name
@@ -129,37 +130,60 @@ def horner_method(coefs: Tuple[float], node: float):
     return soma
 
 
+def derivate_matrix(
+    matrix: Tuple[Tuple[Tuple[float]]],
+) -> Tuple[Tuple[Tuple[float]]]:
+    degree = matrix.shape[-1] - 1
+    shape = tuple(matrix.shape[:-1]) + (degree,)
+    result = np.zeros(shape, dtype=matrix.dtype)
+    if degree == 0:
+        return result
+    for k in range(degree):
+        result[:, :, k] = (k + 1) * matrix[:, :, k + 1]
+    return result
+
+
 class CyclicSplineBasisFunction:
 
     def __init__(self, knotvector: KnotVector):
         knotvector = KnotVector(knotvector)
         self.knotvector = knotvector
-        self.matrix = global_speval_matrix(knotvector)
         mult = knotvector.mult(knotvector[knotvector.degree])
         self.__ndofs = knotvector.npts + mult - knotvector.degree - 1
-        self.degree = knotvector.degree
+
+        matrices = [global_speval_matrix(knotvector)]
+        for i in range(self.degree):
+            matrices.append(derivate_matrix(matrices[i]))
+        self.matrices = tuple(matrices)
+
+    @property
+    def degree(self) -> int:
+        return self.knotvector.degree
 
     @property
     def npts(self) -> int:
         return self.__ndofs
 
-    def eval(self, nodes: Tuple[float]) -> Tuple[Tuple[float]]:
+    @property
+    def knots(self) -> Tuple[float]:
+        return self.knotvector.knots
+
+    @vectorize
+    def eval(self, node: float, derivate: int = 0) -> Tuple[float]:
+        float(node)
+        matrix = self.matrices[min(derivate, self.degree)]
         degree = self.knotvector.degree
         spans = self.knotvector.spans
-        result = np.zeros((self.npts, len(nodes)), dtype="object")
-        lima, limb = self.knotvector.knots[0], self.knotvector.knots[-1]
-        diff = limb - lima
+        result = [0] * self.npts
+        if node < self.knots[0] or self.knots[-1] <= node:
+            node -= self.knots[0]
+            node %= self.knots[-1] - self.knots[0]
+            node += self.knots[0]
 
-        nodes = (
-            node if lima <= node < limb else lima + ((node - lima) % diff)
-            for node in nodes
-        )
-        nodes = tuple(nodes)
-        for j, node in enumerate(nodes):
-            span = self.knotvector.span(node)
-            ind = spans.index(span)
-            for y in range(degree + 1):
-                i = (y + span - degree) % self.npts
-                coefs = self.matrix[ind, y]
-                result[i, j] += horner_method(coefs, node)
-        return result
+        span = self.knotvector.span(node)
+        ind = spans.index(span)
+        for y in range(degree + 1):
+            i = (y + span - degree) % self.npts
+            coefs = matrix[ind, y]
+            result[i] += horner_method(coefs, node)
+        return np.array(result)

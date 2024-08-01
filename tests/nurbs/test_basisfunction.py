@@ -32,7 +32,7 @@ def test_bezier():
         assert test_basis.npts == degree + 1
 
         good_matrix = good_basis.eval(usample)
-        good_matrix = np.array(good_matrix)
+        good_matrix = np.array(good_matrix).T
         test_matrix = test_basis.eval(usample)
         assert test_matrix.shape == good_matrix.shape
         np.testing.assert_equal(test_matrix, good_matrix)
@@ -55,7 +55,7 @@ def test_uniform():
             assert test_basis.npts == npts
 
             good_matrix = good_basis.eval(usample)
-            good_matrix = np.array(good_matrix)
+            good_matrix = np.array(good_matrix).T
             test_matrix = test_basis.eval(usample)
             assert test_matrix.shape == good_matrix.shape
             np.testing.assert_almost_equal(test_matrix, good_matrix)
@@ -72,11 +72,18 @@ def test_custom1():
     assert test_basis.npts == 2
 
     good_matrix = [
-        [1.0, 0.75, 0.5, 0.25, 0.0, 0.25, 0.5, 0.75, 1.0],
-        [0.0, 0.25, 0.5, 0.75, 1.0, 0.75, 0.5, 0.25, 0.0],
+        [1.0, 0.0],
+        [0.75, 0.25],
+        [0.5, 0.5],
+        [0.25, 0.75],
+        [0.0, 1.0],
+        [0.25, 0.75],
+        [0.5, 0.5],
+        [0.75, 0.25],
+        [1.0, 0.0],
     ]
     test_matrix = test_basis.eval(nodes)
-    assert np.all(test_matrix == good_matrix)
+    np.testing.assert_almost_equal(test_matrix, good_matrix)
 
 
 @pytest.mark.order(2)
@@ -90,12 +97,22 @@ def test_custom2():
     assert test_basis.npts == 3
 
     good_matrix = [
-        [1, 0.75, 0.5, 0.25, 0, 0, 0, 0, 0, 0.25, 0.5, 0.75, 1],
-        [0, 0.25, 0.5, 0.75, 1, 0.75, 0.5, 0.25, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0.25, 0.5, 0.75, 1, 0.75, 0.5, 0.25, 0],
+        [1.0, 0.0, 0.0],
+        [0.75, 0.25, 0.0],
+        [0.5, 0.5, 0.0],
+        [0.25, 0.75, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.75, 0.25],
+        [0.0, 0.5, 0.5],
+        [0.0, 0.25, 0.75],
+        [0.0, 0.0, 1.0],
+        [0.25, 0.0, 0.75],
+        [0.5, 0.0, 0.5],
+        [0.75, 0.0, 0.25],
+        [1.0, 0.0, 0.0],
     ]
     test_matrix = test_basis.eval(nodes)
-    assert np.all(test_matrix == good_matrix)
+    np.testing.assert_almost_equal(test_matrix, good_matrix)
 
 
 @pytest.mark.order(2)
@@ -107,11 +124,9 @@ def test_custom3():
     knotvector = KnotVector(knotvector, degree=2)
     test_basis = CyclicSplineBasisFunction(knotvector)
     assert test_basis.npts == 1
-    good_matrix = [
-        [1, 1, 1, 1, 1],
-    ]
+    good_matrix = [[1], [1], [1], [1], [1]]
     test_matrix = test_basis.eval(nodes)
-    assert np.all(test_matrix == good_matrix)
+    np.testing.assert_almost_equal(test_matrix, good_matrix)
 
 
 @pytest.mark.order(2)
@@ -123,12 +138,20 @@ def test_custom4():
     knotvector = KnotVector(knotvector, degree=2)
     test_basis = CyclicSplineBasisFunction(knotvector)
     assert test_basis.npts == 2
+
     good_matrix = [
-        [0.5, 0.3125, 0.25, 0.3125, 0.5, 0.6875, 0.75, 0.6875, 0.5],
-        [0.5, 0.6875, 0.75, 0.6875, 0.5, 0.3125, 0.25, 0.3125, 0.5],
+        [0.5, 0.5],
+        [0.3125, 0.6875],
+        [0.25, 0.75],
+        [0.3125, 0.6875],
+        [0.5, 0.5],
+        [0.6875, 0.3125],
+        [0.75, 0.25],
+        [0.6875, 0.3125],
+        [0.5, 0.5],
     ]
     test_matrix = test_basis.eval(nodes)
-    assert np.all(test_matrix == good_matrix)
+    np.testing.assert_almost_equal(test_matrix, good_matrix)
 
 
 @pytest.mark.order(2)
@@ -141,12 +164,16 @@ def test_custom5():
     test_basis = CyclicSplineBasisFunction(knotvector)
     assert test_basis.npts == 3
     good_matrix = [
-        [0.5, 0.125, 0, 0.125, 0.5, 0.75, 0.5],
-        [0.5, 0.75, 0.5, 0.125, 0, 0.125, 0.5],
-        [0, 0.125, 0.5, 0.75, 0.5, 0.125, 0],
+        [0.5, 0.5, 0.0],
+        [0.125, 0.75, 0.125],
+        [0.0, 0.5, 0.5],
+        [0.125, 0.125, 0.75],
+        [0.5, 0.0, 0.5],
+        [0.75, 0.125, 0.125],
+        [0.5, 0.5, 0.0],
     ]
     test_matrix = test_basis.eval(nodes)
-    assert np.all(test_matrix == good_matrix)
+    np.testing.assert_almost_equal(test_matrix, good_matrix)
 
 
 @pytest.mark.order(2)
@@ -164,7 +191,3 @@ def test_custom5():
 )
 def test_end():
     pass
-
-
-if __name__ == "__main__":
-    test_custom()

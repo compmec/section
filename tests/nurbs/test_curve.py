@@ -1,8 +1,5 @@
-from fractions import Fraction
-
 import numpy as np
 import pytest
-from pynurbs import Curve, GeneratorKnotVector
 
 from compmec.section.nurbs import CyclicScalarSpline, KnotVector
 
