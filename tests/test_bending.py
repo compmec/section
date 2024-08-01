@@ -8,6 +8,7 @@ from shapepy import Primitive
 
 from compmec.section import HomogeneousSection
 from compmec.section.material import Isotropic
+from compmec.section.shape import shape2geometry
 
 
 @pytest.mark.order(4)
@@ -34,9 +35,10 @@ class TestSinglePolygon:
     @pytest.mark.dependency(depends=["TestSinglePolygon::test_begin"])
     def test_centered_square(self):
         side = 2
-        geometry = Primitive.square(side)
+        shape = Primitive.square(side)
+        geometry = shape2geometry(shape)
         material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
-        section = HomogeneousSection.from_shape(geometry, material)
+        section = HomogeneousSection(geometry, material)
         field = section.charged_field()
 
         points = [(0, 0)]
@@ -106,10 +108,11 @@ class TestHollowPolygon:
     @pytest.mark.dependency(depends=["TestSinglePolygon::test_begin"])
     def test_centered_square(self):
         int_side, ext_side = 1, 2
-        geometry = Primitive.square(ext_side)
-        geometry -= Primitive.square(int_side)
+        shape = Primitive.square(ext_side)
+        shape -= Primitive.square(int_side)
+        geometry = shape2geometry(shape)
         material = Isotropic(young_modulus=210e3, poissons_ratio=0.3)
-        section = HomogeneousSection.from_shape(geometry, material)
+        section = HomogeneousSection(geometry, material)
         field = section.charged_field()
 
         points = [(0, 0)]  # origin
