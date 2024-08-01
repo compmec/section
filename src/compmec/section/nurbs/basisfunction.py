@@ -134,10 +134,10 @@ def derivate_matrix(
     matrix: Tuple[Tuple[Tuple[float]]],
 ) -> Tuple[Tuple[Tuple[float]]]:
     degree = matrix.shape[-1] - 1
+    if degree == 0:
+        return np.zeros(matrix.shape, dtype=matrix.dtype)
     shape = tuple(matrix.shape[:-1]) + (degree,)
     result = np.zeros(shape, dtype=matrix.dtype)
-    if degree == 0:
-        return result
     for k in range(degree):
         result[:, :, k] = (k + 1) * matrix[:, :, k + 1]
     return result
@@ -152,7 +152,7 @@ class CyclicSplineBasisFunction:
         self.__ndofs = knotvector.npts + mult - knotvector.degree - 1
 
         matrices = [global_speval_matrix(knotvector)]
-        for i in range(self.degree):
+        for i in range(self.degree + 1):
             matrices.append(derivate_matrix(matrices[i]))
         self.matrices = tuple(matrices)
 
@@ -171,7 +171,7 @@ class CyclicSplineBasisFunction:
     @vectorize
     def eval(self, node: float, derivate: int = 0) -> Tuple[float]:
         float(node)
-        matrix = self.matrices[min(derivate, self.degree)]
+        matrix = self.matrices[min(derivate, self.degree + 1)]
         degree = self.knotvector.degree
         spans = self.knotvector.spans
         result = [0] * self.npts

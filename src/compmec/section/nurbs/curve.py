@@ -9,10 +9,10 @@ from .util import vectorize
 
 def derivate_matrix(matrix: Tuple[Tuple[float]]) -> Tuple[Tuple[float]]:
     degree = matrix.shape[-1] - 1
+    if degree == 0:
+        return np.zeros(matrix.shape, dtype=matrix.dtype)
     shape = tuple(matrix.shape[:-1]) + (degree,)
     result = np.zeros(shape, dtype=matrix.dtype)
-    if degree == 0:
-        return result
     for k in range(degree):
         result[:, k] = (k + 1) * matrix[:, k + 1]
     return result
@@ -37,7 +37,7 @@ class CyclicScalarSpline:
                 line += ctrlpoints[z] * matrix3d[i, y, :]
             matrix2d.append(line)
         matrices = [np.array(matrix2d)]
-        for i in range(self.degree):
+        for i in range(self.degree + 1):
             matrices.append(derivate_matrix(matrices[i]))
         self.matrices = tuple(matrices)
 
@@ -56,7 +56,7 @@ class CyclicScalarSpline:
     @vectorize
     def eval(self, node: float, derivate: int = 0) -> float:
         float(node)
-        matrix = self.matrices[min(derivate, self.degree)]
+        matrix = self.matrices[min(derivate, self.degree + 1)]
         span = self.knotvector.span(node)
         ind = self.knotvector.spans.index(span)
         return horner_method(matrix[ind], node)

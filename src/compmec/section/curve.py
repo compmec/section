@@ -197,9 +197,43 @@ class NurbsCurve(LabeledTracker, ICurve):
             weights = internal.weights[::-1]
         return self.__class__(knotvector, ctrlpoints, weights=weights)
 
-    @vectorize
     def projection(self, point: Tuple[float]) -> Tuple[float]:
-        raise NotImplementedError
+        x0, y0 = point
+        ndiv = 4
+        knots = self.knotvector.knots
+        projvals = [float("inf")]
+        distsquares = [float("inf")]
+        for ta, tb in zip(knots, knots[1:]):
+            tvs = (((ndiv - i) * ta + i * tb) / ndiv for i in range(1, ndiv))
+            for tv in tvs:
+                for _ in range(3):  # Newton iteration
+                    deltax = self.__xfunction.eval(tv, 0) - x0
+                    derix = self.__xfunction.eval(tv, 1)
+                    deltay = self.__yfunction.eval(tv, 0) - y0
+                    deriy = self.__yfunction.eval(tv, 1)
+                    ftv = deltax * derix + deltay * deriy
+                    if ftv == 0:
+                        break
+                    deri2x = self.__xfunction.eval(tv, 2)
+                    deri2y = self.__yfunction.eval(tv, 2)
+                    dftv = deltax * deri2x + deltay * deri2y
+                    dftv += derix**2 + deriy**2
+                    tv -= ftv / dftv
+                    tv = max(ta, min(tb, tv))
+                deltax = self.__xfunction.eval(tv, 0) - x0
+                deltay = self.__yfunction.eval(tv, 0) - y0
+                dist_square = deltax**2 + deltay**2
+                min_dist_square = min(distsquares)
+                if dist_square <= min_dist_square:
+                    projvals.append(tv)
+                    distsquares.append(dist_square)
+        min_dist_square = min(distsquares)
+        projvals = set(
+            tv
+            for tv, ds in zip(projvals, distsquares)
+            if ds == min_dist_square
+        )
+        return tuple(sorted(projvals))
 
 
 class PolygonCurve(ICurve):
