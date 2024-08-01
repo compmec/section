@@ -11,11 +11,11 @@ from collections import OrderedDict
 from typing import Optional, Tuple
 
 import numpy as np
-import pynurbs
 from shapepy import JordanCurve
 
 from . import integral
 from .abcs import ICurve, LabeledTracker
+from .nurbs import CyclicScalarSpline, KnotVector, vectorize
 
 
 class Node(LabeledTracker):
@@ -87,6 +87,7 @@ class NurbsCurve(LabeledTracker, ICurve):
         :return: A Curve instance
         :rtype: Curve
         """
+        raise NotImplementedError
         bezier_curves = []
         for i, segment in enumerate(jordan.segments):
             knotvector = pynurbs.GeneratorKnotVector.bezier(segment.degree)
@@ -115,12 +116,10 @@ class NurbsCurve(LabeledTracker, ICurve):
         :return: A Curve instance
         :rtype: Curve
         """
-        npts = len(vertices)
-        vertices = list(vertices) + [vertices[0]]
-        ctrlpoints = np.array(vertices, dtype="float64")
-        knotvector = [0] + list(range(npts + 1)) + [npts]
-        knotvector = pynurbs.KnotVector(knotvector)
-        return cls(knotvector, ctrlpoints)
+        nverts = len(vertices)
+        knots = tuple(range(nverts + 1))
+        knotvector = KnotVector.cyclic(knots, 1)
+        return cls(knotvector, vertices)
 
     def __init__(
         self,
@@ -130,32 +129,40 @@ class NurbsCurve(LabeledTracker, ICurve):
         weights: Tuple[float] = None,
         label: Optional[int] = None,
     ):
-        knotvector = pynurbs.KnotVector(knotvector)
-        ctrlpoints = tuple(map(np.array, ctrlpoints))
-        self.__internal = pynurbs.Curve(knotvector, ctrlpoints, weights)
-        self.__dinternal = pynurbs.Derivate.curve(self.__internal)
+        knotvector = KnotVector(knotvector)
+        self.knotvector = knotvector
+        xvalues, yvalues = np.transpose(ctrlpoints)
+        if weights is not None:
+            raise NotImplementedError
+        self.__xfunction = CyclicScalarSpline(knotvector, xvalues)
+        self.__yfunction = CyclicScalarSpline(knotvector, yvalues)
+
         area = integral.Bidimensional.general(self, 0, 0)
         self.__area = float(area)
         self.label = label
 
-    def eval(self, parameters: Tuple[float]) -> Tuple[Tuple[float]]:
-        values = self.__internal.eval(parameters)
-        return np.array(values, dtype="float64")
+    @vectorize
+    def eval(self, parameter: float) -> Tuple[float]:
+        xvalue = self.__xfunction.eval(parameter, 0)
+        yvalue = self.__yfunction.eval(parameter, 0)
+        return (xvalue, yvalue)
 
-    def deval(self, parameters: Tuple[float]) -> Tuple[Tuple[float]]:
-        values = self.__dinternal.eval(parameters)
-        return np.array(values, dtype="float64")
+    @vectorize
+    def deval(self, parameter: float) -> Tuple[float]:
+        dxvalue = self.__xfunction.eval(parameter, 1)
+        dyvalue = self.__yfunction.eval(parameter, 1)
+        return (dxvalue, dyvalue)
 
     def __float__(self) -> float:
         return self.__area
 
     @property
     def knots(self) -> Tuple[float]:
-        return self.__internal.knotvector.knots
+        return self.knotvector.knots
 
     @property
     def degree(self) -> int:
-        return self.__internal.knotvector.degree
+        return self.knotvector.degree
 
     def winding(self, point: Tuple[float]) -> float:
         # Verify if the point is at any vertex
@@ -190,8 +197,9 @@ class NurbsCurve(LabeledTracker, ICurve):
             weights = internal.weights[::-1]
         return self.__class__(knotvector, ctrlpoints, weights=weights)
 
+    @vectorize
     def projection(self, point: Tuple[float]) -> Tuple[float]:
-        return pynurbs.Projection.point_on_curve(point, self.__internal)
+        raise NotImplementedError
 
 
 class PolygonCurve(ICurve):
@@ -221,18 +229,15 @@ class PolygonCurve(ICurve):
     def __float__(self):
         return self.__area
 
-    def eval(self, parameters: Tuple[float]) -> Tuple[Tuple[float]]:
-        nverts = len(self.vertices)
-        indexs = (math.floor(param) % nverts for param in parameters)
-        return tuple(
-            self.vertices[i] + (p % 1) * self.vectors[i]
-            for i, p in zip(indexs, parameters)
-        )
+    @vectorize
+    def eval(self, parameter: float) -> Tuple[float]:
+        index = math.floor(parameter) % len(self.vertices)
+        return self.vertices[index] + (parameter % 1) * self.vectors[index]
 
-    def deval(self, parameters: Tuple[float]) -> Tuple[Tuple[float]]:
-        nverts = len(self.vertices)
-        indexs = map(math.floor(param) % nverts for param in parameters)
-        return tuple(self.vertices[i] for i in indexs)
+    @vectorize
+    def deval(self, parameter: float) -> Tuple[float]:
+        index = math.floor(parameter) % len(self.vertices)
+        return self.vectors[index]
 
     def projection(self, point: Tuple[float]) -> Tuple[float]:
         vertices = (point - vertex for vertex in self.vertices)

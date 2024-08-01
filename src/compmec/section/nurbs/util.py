@@ -8,16 +8,16 @@ import numpy as np
 def vectorize(func):
     uncastable = (types.GeneratorType, range)
 
-    def wrapper(self, nodes: Sequence[Any]) -> Sequence[Any]:
+    def wrapper(self, nodes: Sequence[Any], *args, **kwargs) -> Sequence[Any]:
         try:
             iter(nodes)
         except TypeError:
-            return func(self, nodes)
-        values_generator = (func(self, node) for node in nodes)
+            return func(self, nodes, *args, **kwargs)
+        generator = (func(self, node, *args, **kwargs) for node in nodes)
         if isinstance(nodes, np.ndarray):
-            return np.array(tuple(values_generator))
+            return np.array(tuple(generator))
         elif not isinstance(nodes, uncastable):
-            values_generator = np.array(tuple(values_generator))
-        return values_generator
+            return np.array(tuple(generator))
+        return generator
 
     return wrapper

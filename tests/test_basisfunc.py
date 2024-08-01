@@ -5,7 +5,7 @@ File to tests the basis functions
 import numpy as np
 import pytest
 
-from compmec.section.basisfunc import SplineBasisFunction, cyclic_knotvector
+from compmec.section.basisfunc import KnotVector, SplineBasisFunction
 
 
 @pytest.mark.order(1)
@@ -31,7 +31,7 @@ class TestCyclicKnotVector:
 
         for degree in range(5):
             knots = [0] * (degree + 1) + [1] * (degree + 1)
-            knotvector = cyclic_knotvector(knots, degree=degree)
+            knotvector = KnotVector.cyclic(knots, degree)
             np.testing.assert_equal(knotvector, knots)
 
         for degree in range(5):
@@ -40,7 +40,7 @@ class TestCyclicKnotVector:
                 knots = [0] * degree
                 knots += [i / ninters for i in range(ninters + 1)]
                 knots += [1] * degree
-                knotvector = cyclic_knotvector(knots, degree=degree)
+                knotvector = KnotVector.cyclic(knots, degree)
                 np.testing.assert_equal(knotvector, knots)
 
     @pytest.mark.order(1)
@@ -48,11 +48,11 @@ class TestCyclicKnotVector:
     @pytest.mark.dependency(depends=["TestCyclicKnotVector::test_standard"])
     def test_constant(self):
         knots = (0, 1)
-        knotvector = cyclic_knotvector(knots, degree=0)
+        knotvector = KnotVector.cyclic(knots, 0)
         np.testing.assert_equal(knotvector, (0, 1))
 
         knots = (0, 1, 3)
-        knotvector = cyclic_knotvector(knots, degree=0)
+        knotvector = KnotVector.cyclic(knots, 0)
         np.testing.assert_equal(knotvector, (0, 1, 3))
 
     @pytest.mark.order(1)
@@ -61,27 +61,23 @@ class TestCyclicKnotVector:
     def test_linear(self):
 
         knots = (0, 1)
-        knotvector = cyclic_knotvector(knots, degree=1)
+        knotvector = KnotVector.cyclic(knots, 1)
         np.testing.assert_equal(knotvector, (-1, 0, 1, 2))
 
         knots = (0, 1, 3)
-        knotvector = cyclic_knotvector(knots, degree=0)
-        np.testing.assert_equal(knotvector, (0, 1, 3))
-
-        knots = (0, 1, 3)
-        knotvector = cyclic_knotvector(knots, degree=1)
+        knotvector = KnotVector.cyclic(knots, 1)
         np.testing.assert_equal(knotvector, (-2, 0, 1, 3, 4))
 
         knots = (0, 0, 1, 1)
-        knotvector = cyclic_knotvector(knots, degree=1)
+        knotvector = KnotVector.cyclic(knots, 1)
         np.testing.assert_equal(knotvector, (0, 0, 1, 1))
 
         knots = (0, 1, 2)
-        knotvector = cyclic_knotvector(knots, degree=1)
+        knotvector = KnotVector.cyclic(knots, 1)
         np.testing.assert_equal(knotvector, (-1, 0, 1, 2, 3))
 
         knots = (0, 0, 1, 2, 2)
-        knotvector = cyclic_knotvector(knots, degree=1)
+        knotvector = KnotVector.cyclic(knots, 1)
         np.testing.assert_equal(knotvector, (0, 0, 1, 2, 2))
 
     @pytest.mark.order(1)
@@ -90,11 +86,11 @@ class TestCyclicKnotVector:
     def test_quadratic(self):
 
         knots = (0, 1)
-        knotvector = cyclic_knotvector(knots, degree=2)
+        knotvector = KnotVector.cyclic(knots, 2)
         np.testing.assert_equal(knotvector, (-2, -1, 0, 1, 2, 3))
 
         knots = (0, 1, 3)
-        knotvector = cyclic_knotvector(knots, degree=2)
+        knotvector = KnotVector.cyclic(knots, 2)
         np.testing.assert_equal(knotvector, (-3, -2, 0, 1, 3, 4, 6))
 
     @pytest.mark.order(1)
@@ -103,7 +99,7 @@ class TestCyclicKnotVector:
     def test_cubic(self):
 
         knots = (0, 1)
-        knotvector = cyclic_knotvector(knots, degree=3)
+        knotvector = KnotVector.cyclic(knots, 3)
         np.testing.assert_equal(knotvector, (-3, -2, -1, 0, 1, 2, 3, 4))
 
     @pytest.mark.order(1)
@@ -136,15 +132,15 @@ class TestCyclic:
 
         umesh = (0, 0.25, 0.5, 0.75, 1)
         valus = basis.eval(umesh)
-        assert valus.shape == (basis.ndofs, len(umesh))
-        np.testing.assert_equal(valus[0], (1, 0.5, 0, 0.5, 1))
-        np.testing.assert_equal(valus[1], (0, 0.5, 1, 0.5, 0))
+        assert valus.shape == (len(umesh), basis.ndofs)
+        np.testing.assert_equal(valus[:, 0], (1, 0.5, 0, 0.5, 1))
+        np.testing.assert_equal(valus[:, 1], (0, 0.5, 1, 0.5, 0))
 
         umesh = (0.1, 0.49, 0.51, 0.99)
         valus = basis.deval(umesh)
-        assert valus.shape == (basis.ndofs, len(umesh))
-        np.testing.assert_equal(valus[0], (-2.0, -2.0, 2.0, 2.0))
-        np.testing.assert_equal(valus[1], (2.0, 2.0, -2.0, -2.0))
+        assert valus.shape == (len(umesh), basis.ndofs)
+        np.testing.assert_equal(valus[:, 0], (-2.0, -2.0, 2.0, 2.0))
+        np.testing.assert_equal(valus[:, 1], (2.0, 2.0, -2.0, -2.0))
 
     @pytest.mark.order(1)
     @pytest.mark.timeout(10)
@@ -156,15 +152,15 @@ class TestCyclic:
 
         umesh = (0, 0.5, 1, 2, 3)
         valus = basis.eval(umesh)
-        assert valus.shape == (basis.ndofs, len(umesh))
-        np.testing.assert_equal(valus[0], (1, 0.5, 0, 0.5, 1))
-        np.testing.assert_equal(valus[1], (0, 0.5, 1, 0.5, 0))
+        assert valus.shape == (len(umesh), basis.ndofs)
+        np.testing.assert_equal(valus[:, 0], (1, 0.5, 0, 0.5, 1))
+        np.testing.assert_equal(valus[:, 1], (0, 0.5, 1, 0.5, 0))
 
         umesh = (0.1, 0.99, 1.01, 2.99)
         valus = basis.deval(umesh)
-        assert valus.shape == (basis.ndofs, len(umesh))
-        np.testing.assert_equal(valus[0], (-1.0, -1.0, 0.5, 0.5))
-        np.testing.assert_equal(valus[1], (1.0, 1.0, -0.5, -0.5))
+        assert valus.shape == (len(umesh), basis.ndofs)
+        np.testing.assert_equal(valus[:, 0], (-1.0, -1.0, 0.5, 0.5))
+        np.testing.assert_equal(valus[:, 1], (1.0, 1.0, -0.5, -0.5))
 
     @pytest.mark.order(1)
     @pytest.mark.timeout(10)
@@ -176,15 +172,15 @@ class TestCyclic:
 
         umesh = (0, 0.25, 0.5, 0.75, 1)
         valus = basis.eval(umesh)
-        assert valus.shape == (basis.ndofs, len(umesh))
-        np.testing.assert_equal(valus[0], (0.5, 0.25, 0.5, 0.75, 0.5))
-        np.testing.assert_equal(valus[1], (0.5, 0.75, 0.5, 0.25, 0.5))
+        assert valus.shape == (len(umesh), basis.ndofs)
+        np.testing.assert_equal(valus[:, 0], (0.5, 0.25, 0.5, 0.75, 0.5))
+        np.testing.assert_equal(valus[:, 1], (0.5, 0.75, 0.5, 0.25, 0.5))
 
         umesh = (0, 0.5, 1)
         valus = basis.deval(umesh)
-        assert valus.shape == (basis.ndofs, len(umesh))
-        np.testing.assert_equal(valus[0], (-2.0, 2.0, -2.0))
-        np.testing.assert_equal(valus[1], (2.0, -2.0, 2.0))
+        assert valus.shape == (len(umesh), basis.ndofs)
+        np.testing.assert_equal(valus[:, 0], (-2.0, 2.0, -2.0))
+        np.testing.assert_equal(valus[:, 1], (2.0, -2.0, 2.0))
 
     @pytest.mark.order(1)
     @pytest.mark.dependency(
