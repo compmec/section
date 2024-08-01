@@ -7,6 +7,11 @@ import numpy as np
 
 class KnotVector(tuple):
 
+    @classmethod
+    def cyclic(cls, knots: Tuple[float], degree: int = 1):
+        knotvector = cyclic_knotvector(knots, degree)
+        return cls(knotvector, degree)
+
     def __new__(cls, knotvector: Tuple[float], degree: Optional[int] = None):
         if isinstance(knotvector, cls):
             return knotvector
@@ -100,4 +105,4 @@ def cyclic_knotvector(
     knotvector = np.array(knotvector, dtype="object")
     for knot in set(knots):
         assert sum(knots == knot) == sum(knotvector == knot)
-    return KnotVector(knotvector, degree)
+    return tuple(knotvector)

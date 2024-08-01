@@ -57,8 +57,6 @@ class CyclicScalarSpline:
     def eval(self, node: float, derivate: int = 0) -> float:
         float(node)
         matrix = self.matrices[min(derivate, self.degree)]
-        derivate = min(derivate, len(self.matrices))
-        spans = self.knotvector.spans
         span = self.knotvector.span(node)
-        ind = spans.index(span)
+        ind = self.knotvector.spans.index(span)
         return horner_method(matrix[ind], node)
