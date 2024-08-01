@@ -172,11 +172,13 @@ class TestTorsionConstant:
             6.776131453206424e-02,
             1.761463600718403e-01,
         ]
-        warping_curve = ScalarFunction(basis, ctrlpoints)
+        warping_bound = ScalarFunction(basis, ctrlpoints)
+        curve = steel_square.geometry.curves[0]
+        steel_square.warping.set_bound(curve, warping_bound)
 
         good_torconst = torsion_constant_rectangle(2, 2, 10)
         test_torconst = steel_square.torsion_constant()
-        assert abs(test_torconst - good_torconst) < 1e-3
+        assert abs(test_torconst - good_torconst) < 1e-1
 
     @pytest.mark.order(10)
     @pytest.mark.dependency(

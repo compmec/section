@@ -676,6 +676,24 @@ class PoissonEvaluatorGeometry(IPoissonEvaluator):
     def __init__(self, evaluators: Tuple[PoissonEvaluatorCurve]):
         self.evaluators = evaluators
 
+    def set_bound(self, curve: ICurve, bound: ScalarFunction):
+        if not isinstance(curve, ICurve):
+            raise TypeError
+        if not isinstance(bound, ScalarFunction):
+            raise TypeError
+        for evaluator in self.evaluators:
+            if curve.label == evaluator.curve.label:
+                evaluator.bound = bound
+
+    def set_normal(self, curve: ICurve, normal: ScalarFunction):
+        if not isinstance(curve, ICurve):
+            raise TypeError
+        if not isinstance(normal, ScalarFunction):
+            raise TypeError
+        for evaluator in self.evaluators:
+            if curve.label == evaluator.curve.label:
+                evaluator.normal = normal
+
     def eval(self, source: Tuple[float]) -> float:
         wind_tolerance = 1e-6
         winds = np.zeros(len(self.evaluators), dtype="float64")
