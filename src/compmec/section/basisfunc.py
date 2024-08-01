@@ -25,10 +25,6 @@ class SplineBasisFunction(IBasisFunction):
     :rtype: SplineBasisFunction
     """
 
-    @classmethod
-    def cyclic(cls, knots, degree: int = 1):
-        return cls(knots, degree)
-
     def __init__(self, knots: Tuple[float], degree: int = 1):
         knotvector = KnotVector.cyclic(knots, degree)
         self.__internal = CyclicSplineBasisFunction(knotvector)

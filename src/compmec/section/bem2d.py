@@ -406,7 +406,7 @@ class BEMModel(IModel):
                 ((ndiv - i) * ta + i * tb) / ndiv for i in range(ndiv)
             )
         basis_knots = tuple(sorted(basis_knots))
-        basis = SplineBasisFunction.cyclic(basis_knots, degree=1)
+        basis = SplineBasisFunction(basis_knots, degree=1)
         self.add_basis(curve, basis)
 
     def solve(self):

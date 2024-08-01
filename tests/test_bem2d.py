@@ -63,7 +63,7 @@ class TestComputeMatrixIncurve:
         vertices = tuple((np.cos(angle), np.sin(angle)) for angle in angles)
         tsources = (0, 1, 2)
         curve = PolygonCurve(vertices)
-        basis = SplineBasisFunction.cyclic(curve.knots)
+        basis = SplineBasisFunction(curve.knots)
         test_matrix = ComputeStiffness.incurve(curve, basis, tsources)
 
         assert test_matrix.shape == good_matrix.shape
@@ -82,7 +82,7 @@ class TestComputeMatrixIncurve:
         vertices = tuple((np.cos(angle), np.sin(angle)) for angle in angles)
         tsources = (0.5, 1.5, 2.5)
         curve = PolygonCurve(vertices)
-        basis = SplineBasisFunction.cyclic(curve.knots)
+        basis = SplineBasisFunction(curve.knots)
         test_matrix = ComputeStiffness.incurve(curve, basis, tsources)
 
         assert test_matrix.shape == good_matrix.shape
@@ -100,7 +100,7 @@ class TestComputeMatrixIncurve:
         vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1]]
         tsources = (0, 1, 2, 3)
         curve = PolygonCurve(vertices)
-        basis = SplineBasisFunction.cyclic(curve.knots)
+        basis = SplineBasisFunction(curve.knots)
         test_matrix = ComputeStiffness.incurve(curve, basis, tsources)
 
         assert test_matrix.shape == good_matrix.shape
@@ -118,7 +118,7 @@ class TestComputeMatrixIncurve:
         vertices = [[1, 1], [-1, 1], [-1, -1], [1, -1]]
         tsources = (0.5, 1.5, 2.5, 3.5)
         curve = PolygonCurve(vertices)
-        basis = SplineBasisFunction.cyclic(curve.knots)
+        basis = SplineBasisFunction(curve.knots)
         test_matrix = ComputeStiffness.incurve(curve, basis, tsources)
 
         assert test_matrix.shape == good_matrix.shape
@@ -146,7 +146,7 @@ class TestComputeMatrixIncurve:
         vertices = tuple((np.cos(angle), np.sin(angle)) for angle in angles)
         tsources = (0, 1, 2, 3, 4, 5)
         curve = PolygonCurve(vertices)
-        basis = SplineBasisFunction.cyclic(curve.knots)
+        basis = SplineBasisFunction(curve.knots)
         test_matrix = ComputeStiffness.incurve(curve, basis, tsources)
 
         assert test_matrix.shape == good_matrix.shape
@@ -180,7 +180,7 @@ class TestComputeMatrixIncurve:
         vertices = tuple((np.cos(angle), np.sin(angle)) for angle in angles)
         tsources = (0.5, 1.5, 2.5, 3.5, 4.5, 5.5)
         curve = PolygonCurve(vertices)
-        basis = SplineBasisFunction.cyclic(curve.knots)
+        basis = SplineBasisFunction(curve.knots)
         test_matrix = ComputeStiffness.incurve(curve, basis, tsources)
 
         assert test_matrix.shape == good_matrix.shape
@@ -272,7 +272,7 @@ class TestComputeMatrixOutcurve:
         vertices = [(-2, -2), (2, -2), (2, 2), (-2, 2)]
         sources = [(0, 0), (1, 0), (1, 1)]
         curve = PolygonCurve(vertices)
-        basis = SplineBasisFunction.cyclic(curve.knots)
+        basis = SplineBasisFunction(curve.knots)
         test_matrix = ComputeStiffness.outcurve(curve, basis, sources)
 
         assert test_matrix.shape == good_matrix.shape
@@ -309,10 +309,10 @@ class TestPoissonEvaluator:
         vertices = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
         vertices = np.array(vertices, dtype="float64")
         curve = PolygonCurve(vertices)
-        basis = SplineBasisFunction.cyclic(curve.knots, degree=1)
+        basis = SplineBasisFunction(curve.knots, degree=1)
         ctrlpoints = tuple(funct(x, y) for x, y in vertices)
         bound = ScalarFunction(basis, ctrlpoints)
-        basis = SplineBasisFunction.cyclic(curve.knots, degree=0)
+        basis = SplineBasisFunction(curve.knots, degree=0)
         ctrlpoints = (-b, a, b, -a)
         normal = ScalarFunction(basis, ctrlpoints)
         evaluator = PoissonEvaluatorCurve(curve, bound, normal)
@@ -358,10 +358,10 @@ class TestPoissonEvaluator:
         vertices = [(-1, -1), (-1, 1), (1, 1), (1, -1)]
         vertices = np.array(vertices, dtype="float64")
         curve_in = PolygonCurve(vertices)
-        basis_in = SplineBasisFunction.cyclic(curve_in.knots, degree=1)
+        basis_in = SplineBasisFunction(curve_in.knots, degree=1)
         ctrlpoints = tuple(funct(x, y) for x, y in vertices)
         bound_in = ScalarFunction(basis_in, ctrlpoints)
-        basis_in = SplineBasisFunction.cyclic(curve_in.knots, degree=0)
+        basis_in = SplineBasisFunction(curve_in.knots, degree=0)
         ctrlpoints = (a, -b, -a, b)
         normal = ScalarFunction(basis_in, ctrlpoints)
         evaluator_in = PoissonEvaluatorCurve(curve_in, bound_in, normal)
@@ -369,10 +369,10 @@ class TestPoissonEvaluator:
         vertices = [(-2, -2), (2, -2), (2, 2), (-2, 2)]
         vertices = np.array(vertices, dtype="float64")
         curve_out = PolygonCurve(vertices)
-        basis_out = SplineBasisFunction.cyclic(curve_out.knots, degree=1)
+        basis_out = SplineBasisFunction(curve_out.knots, degree=1)
         ctrlpoints = tuple(funct(x, y) for x, y in vertices)
         bound_out = ScalarFunction(basis_out, ctrlpoints)
-        basis_out = SplineBasisFunction.cyclic(curve_out.knots, degree=0)
+        basis_out = SplineBasisFunction(curve_out.knots, degree=0)
         ctrlpoints = (-b, a, b, -a)
         normal = ScalarFunction(basis_out, ctrlpoints)
         evaluator_out = PoissonEvaluatorCurve(curve_out, bound_out, normal)
