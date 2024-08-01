@@ -21,7 +21,6 @@ from .integral import Integration
 class ScalarFunction:
 
     def __init__(self, basisfunc: IBasisFunction, ctrlpoints: Tuple[float]):
-        # map(float, ctrlpoints)
         self.basis = basisfunc
         self.ctrlpoints = ctrlpoints
 
@@ -31,11 +30,11 @@ class ScalarFunction:
 
     def eval(self, parameters: Tuple[float]) -> Tuple[float]:
         matrix = self.basis.eval(parameters)
-        return np.dot(np.transpose(matrix), self.ctrlpoints)
+        return np.dot(matrix, self.ctrlpoints)
 
     def deval(self, parameters: Tuple[float]) -> Tuple[float]:
         matrix = self.basis.deval(parameters)
-        return np.dot(np.transpose(matrix), self.ctrlpoints)
+        return np.dot(matrix, self.ctrlpoints)
 
 
 class ComputeStiffness:
@@ -71,8 +70,6 @@ class ComputeStiffness:
             raise NotImplementedError
         if not isinstance(basis, IBasisFunction):
             raise NotImplementedError
-        if curve.degree != 1:
-            raise NotImplementedError
         cknots = np.array(curve.knots, dtype="float64")
         tknots = set(curve.knots) | set(basis.knots) | set(tsources)
         tknots = np.array(sorted(tknots))
@@ -103,7 +100,7 @@ class ComputeStiffness:
                     rcrossdp -= vector[0] * radius[:, 1]
                     over_rinr = 1 / np.einsum("ij,ij->i", radius, radius)
                     matrix[i] += jacobin * np.einsum(
-                        "ij,j,j,j->i", phis, weights, rcrossdp, over_rinr
+                        "ji,j,j,j->i", phis, weights, rcrossdp, over_rinr
                     )
         matrix[np.abs(matrix) < 1e-9] = 0
         return matrix / math.tau
@@ -155,7 +152,7 @@ class ComputeStiffness:
                     rcrossdp -= vector[0] * radius[:, 1]
                     over_rinr = 1 / np.einsum("ij,ij->i", radius, radius)
                     matrix[i] += jacobin * np.einsum(
-                        "ij,j,j,j->i", phis, weights, rcrossdp, over_rinr
+                        "ji,j,j,j->i", phis, weights, rcrossdp, over_rinr
                     )
         matrix[np.abs(matrix) < 1e-9] = 0
         return matrix
@@ -243,8 +240,6 @@ class TorsionEvaluator:
 
         I = sum_{k} dt_k * int_{0}^{1} (alpha + z * beta) * ln |r| dz
         """
-        if curve.degree != 1:
-            raise NotImplementedError
         sources = np.array(sources, dtype="float64")
         vertices = curve.eval(curve.knots[:-1])
         vectors = np.roll(vertices, shift=-1, axis=0) - vertices
