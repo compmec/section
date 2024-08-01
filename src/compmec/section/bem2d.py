@@ -194,7 +194,9 @@ class TorsionEvaluator:
         """
         if not isinstance(curve, ICurve):
             raise TypeError
-        if not isinstance(warping, ScalarFunction):
+        if warping is None:
+            raise ValueError("You must solve Poisson problem at first")
+        elif not isinstance(warping, ScalarFunction):
             raise TypeError
         result = 0
         tknots = tuple(sorted(set(curve.knots) | set(warping.knots)))
@@ -358,8 +360,9 @@ class BEMModel(IModel):
         if not self.__within_context:
             raise NotImplementedError
 
-        for curve in self.curves.values():
-            print("   -")
+        labels = set(self.curves.keys()) - set(self.basis.keys())
+        for label in labels:
+            curve = self.curves[label]
             self.__generate_mesh_curve(curve, mesh_size)
 
         sources = []

@@ -34,12 +34,16 @@ class SplineBasisFunction(IBasisFunction):
         return self.__internal.degree
 
     @property
-    def ndofs(self):
+    def ndofs(self) -> int:
         return self.__internal.npts
 
     @property
-    def knots(self):
+    def knots(self) -> Tuple[float]:
         return self.__internal.knotvector.knots
+
+    @property
+    def knotvector(self) -> KnotVector:
+        return self.__internal.knotvector
 
     def eval(self, parameters):
         return self.__internal.eval(parameters, 0)
